@@ -1,0 +1,19 @@
+# Compiled object files, static and dynamic libs
+*.o
+*.a
+*.so
+*.dll
+*.exe
+*.dylib
+
+# Test files
+*.out
+*.test
+
+# Test reports
+cover.out
+reports/
+
+# Compiled binary files
+main
+gotls

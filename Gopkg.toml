@@ -1,0 +1,11 @@
+[[constraint]]
+  branch = "master"
+  name = "github.com/mitchellh/cli"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/moorara/go-box"
+
+[[constraint]]
+  name = "github.com/stretchr/testify"
+  version = "1.1.4"
