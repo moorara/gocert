@@ -5,18 +5,15 @@ import (
 	"os"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/gotls/cmd"
-	"github.com/moorara/gotls/version"
+	"github.com/moorara/gocert/version"
 )
 
+var ()
+
 func runApp(args []string) int {
-	app := cli.NewCLI("gotls", version.GetFullSpec())
+	app := cli.NewCLI("gocert", version.GetFullSpec())
 	app.Args = args
-	app.Commands = map[string]cli.CommandFactory{
-		"cert": func() (cli.Command, error) {
-			return cmd.NewCert(), nil
-		},
-	}
+	app.Commands = map[string]cli.CommandFactory{}
 
 	status, err := app.Run()
 	if err != nil {

@@ -1,13 +1,34 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
 
-	"github.com/moorara/go-box/test"
+	"github.com/moorara/go-box/util"
+	"github.com/moorara/gocert/version"
 	"github.com/stretchr/testify/assert"
 )
+
+var (
+	helpRegexes = []string{
+		`Usage: gocert \[--version\] \[--help\] <command> \[<args>\]`,
+		`Available commands are:`,
+	}
+	versionRegexes = []string{
+		`\d+\.\d+\.\d+-\d+\+[0-9a-f]{7}`,
+		`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\+\d{4}`,
+		`go\d\.\d(\.\d+)?`,
+	}
+)
+
+func mockVersion() {
+	version.Version = "0.1.0-27"
+	version.Revision = "abcdeff"
+	version.Branch = "test"
+	version.BuildTime = "2017-12-03T20:00:17Z+0000"
+}
 
 func TestRunApp(t *testing.T) {
 	tests := []struct {
@@ -18,54 +39,54 @@ func TestRunApp(t *testing.T) {
 		{
 			[]string{},
 			127,
-			[]string{},
+			helpRegexes,
 		},
 		{
 			[]string{"invalid"},
 			127,
-			[]string{},
+			helpRegexes,
 		},
 		{
 			[]string{"-version"},
 			0,
-			[]string{},
+			versionRegexes,
 		},
 		{
 			[]string{"--version"},
 			0,
-			[]string{},
+			versionRegexes,
 		},
 		{
 			[]string{"-help"},
 			0,
-			[]string{},
+			helpRegexes,
 		},
 		{
 			[]string{"--help"},
 			0,
-			[]string{},
-		},
-		{
-			[]string{"cert"},
-			0,
-			[]string{},
-		},
-		{
-			[]string{"cert", "-root"},
-			0,
-			[]string{},
+			helpRegexes,
 		},
 	}
 
-	// Null out standard io streams temporarily
-	_, _, _, _, _, _, restore, err := test.PipeStdAll()
-	defer restore()
-	assert.NoError(t, err)
+	for _, test := range tests {
+		r, w, restore, err := util.PipeStdoutAndStderr()
+		assert.NoError(t, err)
 
-	for _, tc := range tests {
-		status := runApp(tc.args)
+		mockVersion()
+		status := runApp(test.args)
 
-		assert.Equal(t, tc.expectedExit, status)
+		err = w.Close()
+		assert.NoError(t, err)
+		data, err := ioutil.ReadAll(r)
+		assert.NoError(t, err)
+		output := string(data)
+
+		assert.Equal(t, test.expectedExit, status)
+		for _, rx := range test.expectedRegexes {
+			assert.Regexp(t, rx, output)
+		}
+
+		restore()
 	}
 }
 
@@ -73,12 +94,12 @@ func TestMain(t *testing.T) {
 	/* main calls os.Exit(), so we need to deal with it! */
 
 	if os.Getenv("TEST_SUCCESS") == "1" {
-		os.Args = []string{"gotls", "--version"}
+		os.Args = []string{"gocert", "-version"}
 		main()
 	}
 
 	if os.Getenv("TEST_FAIL") == "1" {
-		os.Args = []string{"gotls"}
+		os.Args = []string{"gocert"}
 		main()
 	}
 

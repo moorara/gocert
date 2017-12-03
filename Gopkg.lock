@@ -46,8 +46,8 @@
 [[projects]]
   branch = "master"
   name = "github.com/moorara/go-box"
-  packages = ["test"]
-  revision = "3023c12337687f99c3c4b65323f4a33b9981d01f"
+  packages = ["dt","util"]
+  revision = "37dc2ccabdaedc5a23f4a051c5dacd2774fcf0cb"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -76,6 +76,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e7893fd0e2b4745f33ee9ca384741c45b4c205826f6b31db1af5b7c113708e8c"
+  inputs-digest = "88cf4698bf48b2ce32170201ce92a42502431583b7adf1bd0f418580d43d1c3e"
   solver-name = "gps-cdcl"
   solver-version = 1

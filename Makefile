@@ -17,7 +17,7 @@ ldflags := -ldflags "$(flag_version) $(flag_revision) $(flag_branch) $(flag_buil
 
 
 clean:
-	@ rm -rf gotls reports
+	@ rm -rf gocert reports
 
 run:
 	@ go run main.go

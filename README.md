@@ -1,2 +1,2 @@
-# gotls
-A light lightweight command-line tool for generating self-signed SSL/TLS certificate chain.
+# gocert
+A light lightweight command-line tool for generating self-signed SSL/TLS certificates.

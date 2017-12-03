@@ -1,4 +1,4 @@
-package cmd
+package common
 
 import (
 	"os"
@@ -6,7 +6,8 @@ import (
 	"github.com/mitchellh/cli"
 )
 
-func newColoredUI() *cli.ColoredUi {
+// NewColoredUI creates a colorful ui for commands
+func NewColoredUI() *cli.ColoredUi {
 	return &cli.ColoredUi{
 		OutputColor: cli.UiColorCyan,
 		InfoColor:   cli.UiColorGreen,
