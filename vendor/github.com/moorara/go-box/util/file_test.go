@@ -171,17 +171,24 @@ func TestDeleteAll(t *testing.T) {
 			[]string{"test.txt"},
 			false,
 		},
+		{
+			"",
+			[]string{"bin", "src", "src/server", "src/client"},
+			[]string{"README.md", "src/server/index.js", "src/client/index.js"},
+			false,
+		},
 	}
 
 	for _, test := range tests {
 		_, err := MkDirs(test.basePath, test.dirs...)
 		assert.NoError(t, err)
+
 		for _, file := range test.files {
 			err = ioutil.WriteFile(file, []byte(""), 0644)
 			assert.NoError(t, err)
 		}
 
-		paths := append(test.dirs, test.files...)
+		paths := append(test.files, test.dirs...)
 		err = DeleteAll(test.basePath, paths...)
 
 		if test.expectError {

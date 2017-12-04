@@ -76,7 +76,7 @@ func WriteTempFile(content string) (string, func(), error) {
 func DeleteAll(basePath string, items ...string) error {
 	for _, item := range items {
 		absPath := path.Join(basePath, item)
-		err := os.Remove(absPath)
+		err := os.RemoveAll(absPath)
 		if err != nil {
 			return err
 		}

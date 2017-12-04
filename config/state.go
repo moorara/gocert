@@ -113,3 +113,8 @@ func SaveState(state *State, file string) error {
 
 	return nil
 }
+
+// FillIn asks for input for empty fields
+func (s *Settings) FillIn(ui cli.Ui) {
+	fillIn(s, "yaml", true, ui)
+}

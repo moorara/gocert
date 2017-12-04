@@ -275,3 +275,38 @@ func TestSaveStateWithError(t *testing.T) {
 	err := SaveState(nil, "")
 	assert.Error(t, err)
 }
+
+func TestSettingsFillIn(t *testing.T) {
+	tests := []struct {
+		settings         Settings
+		input            string
+		expectedSettings Settings
+	}{
+		{
+			Settings{},
+			``,
+			Settings{},
+		},
+		{
+			Settings{
+				Length: 2048,
+			},
+			`1000
+			375
+			`,
+			Settings{
+				Serial: int64(1000),
+				Length: 2048,
+				Days:   375,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		mockUI := cli.NewMockUi()
+		mockUI.InputReader = strings.NewReader(test.input)
+		test.settings.FillIn(mockUI)
+
+		assert.Equal(t, test.expectedSettings, test.settings)
+	}
+}

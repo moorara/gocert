@@ -35,7 +35,7 @@
   branch = "master"
   name = "github.com/hashicorp/go-multierror"
   packages = ["."]
-  revision = "83588e72410abfbe4df460eeb6f30841ae47d4c4"
+  revision = "b7773ae218740a7be65057fc60b366a49b538a44"
 
 [[projects]]
   name = "github.com/mattn/go-isatty"
@@ -53,7 +53,7 @@
   branch = "master"
   name = "github.com/moorara/go-box"
   packages = ["dt","util"]
-  revision = "37dc2ccabdaedc5a23f4a051c5dacd2774fcf0cb"
+  revision = "7089a871ff23924e447d4e0457cecd00afcc3c70"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"

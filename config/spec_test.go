@@ -373,3 +373,42 @@ func TestSaveSpecError(t *testing.T) {
 	err := SaveSpec(nil, "")
 	assert.Error(t, err)
 }
+
+func TestClaimFillIn(t *testing.T) {
+	tests := []struct {
+		claim         Claim
+		input         string
+		expectedClaim Claim
+	}{
+		{
+			Claim{},
+			``,
+			Claim{},
+		},
+		{
+			Claim{
+				Country:      []string{"CA"},
+				Province:     []string{"Ontario"},
+				Organization: []string{"Milad"},
+			},
+			`IntermediateCA
+			Ottawa
+			`,
+			Claim{
+				CommonName:   "IntermediateCA",
+				Country:      []string{"CA"},
+				Province:     []string{"Ontario"},
+				Locality:     []string{"Ottawa"},
+				Organization: []string{"Milad"},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		mockUI := cli.NewMockUi()
+		mockUI.InputReader = strings.NewReader(test.input)
+		test.claim.FillIn(mockUI)
+
+		assert.Equal(t, test.expectedClaim, test.claim)
+	}
+}

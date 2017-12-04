@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/mitchellh/cli"
 	"github.com/moorara/go-box/util"
 	"github.com/moorara/gocert/version"
 	"github.com/stretchr/testify/assert"
@@ -21,6 +22,8 @@ var (
 		`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z\+\d{4}`,
 		`go\d\.\d(\.\d+)?`,
 	}
+
+	helpMockedNew = "help text for mocked new"
 )
 
 func mockVersion() {
@@ -30,42 +33,28 @@ func mockVersion() {
 	version.BuildTime = "2017-12-03T20:00:17Z+0000"
 }
 
+func mockCommands() {
+	cmdNew = &cli.MockCommand{RunResult: 0, HelpText: helpMockedNew}
+}
+
 func TestRunApp(t *testing.T) {
 	tests := []struct {
 		args            []string
 		expectedExit    int
 		expectedRegexes []string
 	}{
-		{
-			[]string{},
-			127,
-			helpRegexes,
-		},
-		{
-			[]string{"invalid"},
-			127,
-			helpRegexes,
-		},
-		{
-			[]string{"-version"},
-			0,
-			versionRegexes,
-		},
-		{
-			[]string{"--version"},
-			0,
-			versionRegexes,
-		},
-		{
-			[]string{"-help"},
-			0,
-			helpRegexes,
-		},
-		{
-			[]string{"--help"},
-			0,
-			helpRegexes,
-		},
+		{[]string{}, 127, helpRegexes},
+		{[]string{"invalid"}, 127, helpRegexes},
+
+		{[]string{"-version"}, 0, versionRegexes},
+		{[]string{"--version"}, 0, versionRegexes},
+
+		{[]string{"-help"}, 0, helpRegexes},
+		{[]string{"--help"}, 0, helpRegexes},
+
+		{[]string{"new"}, 0, []string{}},
+		{[]string{"new", "-help"}, 0, []string{helpMockedNew}},
+		{[]string{"new", "--help"}, 0, []string{helpMockedNew}},
 	}
 
 	for _, test := range tests {
@@ -73,6 +62,7 @@ func TestRunApp(t *testing.T) {
 		assert.NoError(t, err)
 
 		mockVersion()
+		mockCommands()
 		status := runApp(test.args)
 
 		err = w.Close()

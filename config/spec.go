@@ -123,3 +123,8 @@ func SaveSpec(spec *Spec, file string) error {
 
 	return nil
 }
+
+// FillIn asks for input for empty fields
+func (c *Claim) FillIn(ui cli.Ui) {
+	fillIn(c, "toml", true, ui)
+}
