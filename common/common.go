@@ -9,7 +9,7 @@ import (
 // NewColoredUI creates a colorful ui for commands
 func NewColoredUI() *cli.ColoredUi {
 	return &cli.ColoredUi{
-		OutputColor: cli.UiColorCyan,
+		OutputColor: cli.UiColorNone,
 		InfoColor:   cli.UiColorGreen,
 		ErrorColor:  cli.UiColorRed,
 		WarnColor:   cli.UiColorYellow,

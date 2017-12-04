@@ -2,6 +2,12 @@
 
 
 [[projects]]
+  name = "github.com/BurntSushi/toml"
+  packages = ["."]
+  revision = "b26d9c308763d68093482582cea63d69be07a0f0"
+  version = "v0.3.0"
+
+[[projects]]
   branch = "master"
   name = "github.com/armon/go-radix"
   packages = ["."]
@@ -73,9 +79,15 @@
   packages = ["unix"]
   revision = "8b4580aae2a0dd0c231a45d3ccb8434ff533b840"
 
+[[projects]]
+  branch = "v2"
+  name = "gopkg.in/yaml.v2"
+  packages = ["."]
+  revision = "287cf08546ab5e7e37d55a84f7ed3fd1db036de5"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "88cf4698bf48b2ce32170201ce92a42502431583b7adf1bd0f418580d43d1c3e"
+  inputs-digest = "4a0b2804b738b75eab1d836cbfe10a443ec027505a695a04c3616ac27b056a5f"
   solver-name = "gps-cdcl"
   solver-version = 1

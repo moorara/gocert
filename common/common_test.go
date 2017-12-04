@@ -23,7 +23,7 @@ func TestNewColoredUi(t *testing.T) {
 
 		ui := NewColoredUI()
 
-		assert.Equal(t, cli.UiColorCyan, ui.OutputColor)
+		assert.Equal(t, cli.UiColorNone, ui.OutputColor)
 		assert.Equal(t, cli.UiColorGreen, ui.InfoColor)
 		assert.Equal(t, cli.UiColorRed, ui.ErrorColor)
 		assert.Equal(t, cli.UiColorYellow, ui.WarnColor)
