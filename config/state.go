@@ -17,10 +17,10 @@ const (
 type (
 	// State represents the type for state
 	State struct {
-		Root   Settings `yaml:"root"`
-		Interm Settings `yaml:"intermediate"`
-		Server Settings `yaml:"server"`
-		Client Settings `yaml:"client"`
+		Root   SettingsCA `yaml:"root"`
+		Interm SettingsCA `yaml:"intermediate"`
+		Server Settings   `yaml:"server"`
+		Client Settings   `yaml:"client"`
 	}
 
 	// Settings represents the subtype for settings
@@ -29,20 +29,30 @@ type (
 		Length int   `yaml:"length"`
 		Days   int   `yaml:"days"`
 	}
+
+	// SettingsCA represents the subtype for settings
+	SettingsCA struct {
+		Settings `yaml:",inline"`
+		Password string `yaml:"-" secret:"true"`
+	}
 )
 
 // NewState creates a new state
 func NewState() *State {
 	return &State{
-		Root: Settings{
-			Serial: defaultRootCASerial,
-			Length: defaultRootCALength,
-			Days:   defaultRootCADays,
+		Root: SettingsCA{
+			Settings: Settings{
+				Serial: defaultRootCASerial,
+				Length: defaultRootCALength,
+				Days:   defaultRootCADays,
+			},
 		},
-		Interm: Settings{
-			Serial: defaultIntermCASerial,
-			Length: defaultIntermCALength,
-			Days:   defaultIntermCADays,
+		Interm: SettingsCA{
+			Settings: Settings{
+				Serial: defaultIntermCASerial,
+				Length: defaultIntermCALength,
+				Days:   defaultIntermCADays,
+			},
 		},
 		Server: Settings{
 			Serial: defaultServerCertSerial,
@@ -59,21 +69,21 @@ func NewState() *State {
 
 // NewStateWithInput creates a new state with user inputs
 func NewStateWithInput(ui cli.Ui) *State {
-	root := Settings{}
+	root := SettingsCA{}
 	ui.Output(textSettingsEnterRoot)
-	fillIn(&root, "yaml", false, ui)
+	fillIn(&root, "yaml", true, ui)
 
-	interm := Settings{}
+	interm := SettingsCA{}
 	ui.Output(textSettingsEnterInterm)
-	fillIn(&interm, "yaml", false, ui)
+	fillIn(&interm, "yaml", true, ui)
 
 	server := Settings{}
 	ui.Output(textSettingsEnterServer)
-	fillIn(&server, "yaml", false, ui)
+	fillIn(&server, "yaml", true, ui)
 
 	client := Settings{}
 	ui.Output(textSettingsEnterClient)
-	fillIn(&client, "yaml", false, ui)
+	fillIn(&client, "yaml", true, ui)
 
 	return &State{
 		Root:   root,
@@ -116,5 +126,10 @@ func SaveState(state *State, file string) error {
 
 // FillIn asks for input for empty fields
 func (s *Settings) FillIn(ui cli.Ui) {
-	fillIn(s, "yaml", true, ui)
+	fillIn(s, "yaml", false, ui)
+}
+
+// FillIn asks for input for empty fields
+func (s *SettingsCA) FillIn(ui cli.Ui) {
+	fillIn(s, "yaml", false, ui)
 }

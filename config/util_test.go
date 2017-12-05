@@ -8,116 +8,146 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type toy struct {
-	ID        string   `custom:"-"`
-	Name      string   `custom:"name"`
-	Available bool     `custom:"available"`
-	Count     int      `custom:"count"`
-	Serial    int64    `custom:"serial"`
-	Parts     []string `custom:"parts"`
+type inner struct {
+	Int    int
+	String string
+}
+
+type example struct {
+	unexported   int
+	Bool         bool    `custom:"-"`
+	Int          int     `custom:"int"`
+	Int64        int64   `custom:"int64"`
+	Float32      float32 `custom:"float32"`
+	Float64      float64 `custom:"float64"`
+	String       string  `custom:"-" secret:"true"`
+	Text         string  `custom:"text,omitempty" secret:"true"`
+	IntSlice     []int
+	Int64Slice   []int64
+	Float32Slice []float32
+	Float64Slice []float64
+	StringSlice  []string
+	Inner        inner
 }
 
 func TestFillIn(t *testing.T) {
 	tests := []struct {
-		tagKey         string
-		includeOmitted bool
-		toy            toy
-		input          string
-		expectedToy    toy
+		tagKey          string
+		ignoreOmitted   bool
+		example         example
+		input           string
+		expectedExample example
 	}{
 		{
 			"custom", false,
-			toy{},
-			`Fidget
-			false
-			0
-			1111
-			cube,spinner
+			example{},
+			``,
+			example{},
+		},
+		{
+			"custom", true,
+			example{},
+			`27
+			64
+			2.71
+			3.1415
 			`,
-			toy{
-				Name:      "Fidget",
-				Available: false,
-				Count:     0,
-				Serial:    1111,
-				Parts:     []string{"cube", "spinner"},
+			example{
+				Int:     27,
+				Int64:   64,
+				Float32: 2.71,
+				Float64: 3.1415,
 			},
 		},
 		{
 			"custom", true,
-			toy{
-				Name: "Robo",
+			example{
+				Int:     27,
+				Int64:   64,
+				Float32: 2.71,
+				Float64: 3.1415,
 			},
-			`bbbb
-			true
-			2
-			2222
-			body,head,hands,legs
+			`sp
 			`,
-			toy{
-				ID:        "bbbb",
-				Name:      "Robo",
-				Available: true,
-				Count:     2,
-				Serial:    2222,
-				Parts:     []string{"body", "head", "hands", "legs"},
+			example{
+				Int:     27,
+				Int64:   64,
+				Float32: 2.71,
+				Float64: 3.1415,
 			},
 		},
 		{
 			"custom", true,
-			toy{
-				Name:      "Laser",
-				Available: true,
-				Count:     5,
+			example{
+				Int:     27,
+				Int64:   64,
+				Float32: 2.71,
+				Float64: 3.1415,
 			},
-			`dddd
-      4444
-      emitter,filter
+			`secret
 			`,
-			toy{
-				ID:        "dddd",
-				Name:      "Laser",
-				Available: true,
-				Count:     5,
-				Serial:    4444,
-				Parts:     []string{"emitter", "filter"},
+			example{
+				Int:     27,
+				Int64:   64,
+				Float32: 2.71,
+				Float64: 3.1415,
+			},
+		},
+		{
+			"custom", true,
+			example{
+				Int:     27,
+				Int64:   64,
+				Float32: 2.71,
+				Float64: 3.1415,
+			},
+			`secret
+			differentSecret
+			`,
+			example{
+				Int:     27,
+				Int64:   64,
+				Float32: 2.71,
+				Float64: 3.1415,
 			},
 		},
 		{
 			"custom", false,
-			toy{
-				Name:      "Car",
-				Available: true,
-				Count:     10,
-				Serial:    248,
-				Parts:     []string{"wheel", "engine"},
-			},
-			``,
-			toy{
-				Name:      "Car",
-				Available: true,
-				Count:     10,
-				Serial:    248,
-				Parts:     []string{"wheel", "engine"},
-			},
-		},
-		{
-			"custom", true,
-			toy{
-				ID:        "abcdef",
-				Name:      "Drone",
-				Available: true,
-				Count:     1,
-				Serial:    123456789,
-				Parts:     []string{"wing", "camera"},
-			},
-			``,
-			toy{
-				ID:        "abcdef",
-				Name:      "Drone",
-				Available: true,
-				Count:     1,
-				Serial:    123456789,
-				Parts:     []string{"wing", "camera"},
+			example{},
+			`true
+			27
+			64
+			2.71
+			3.1415
+			secret
+			secret
+			password
+			password
+			1,2,3,4
+			1000000,1000000000
+			2.71,3.14
+			2.7182818284,3.1415926535
+			Milad,Mona
+			1001
+			nested
+			`,
+			example{
+				Bool:         true,
+				Int:          27,
+				Int64:        64,
+				Float32:      2.71,
+				Float64:      3.1415,
+				String:       "secret",
+				Text:         "password",
+				IntSlice:     []int{1, 2, 3, 4},
+				Int64Slice:   []int64{1000000, 1000000000},
+				Float32Slice: []float32{2.71, 3.14},
+				Float64Slice: []float64{2.7182818284, 3.1415926535},
+				StringSlice:  []string{"Milad", "Mona"},
+				Inner: inner{
+					Int:    1001,
+					String: "nested",
+				},
 			},
 		},
 	}
@@ -125,8 +155,8 @@ func TestFillIn(t *testing.T) {
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
-		fillIn(&test.toy, test.tagKey, test.includeOmitted, mockUI)
+		fillIn(&test.example, test.tagKey, test.ignoreOmitted, mockUI)
 
-		assert.Equal(t, test.expectedToy, test.toy)
+		assert.Equal(t, test.expectedExample, test.example)
 	}
 }

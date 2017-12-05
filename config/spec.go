@@ -67,23 +67,23 @@ func NewSpecWithInput(ui cli.Ui) *Spec {
 	// Common specs
 	common := Claim{}
 	ui.Output(textClaimEnterCommon)
-	fillIn(&common, "toml", false, ui)
+	fillIn(&common, "toml", true, ui)
 
 	root := copyClaim(common)
 	ui.Output(textClaimEnterRoot)
-	fillIn(&root, "toml", false, ui)
+	fillIn(&root, "toml", true, ui)
 
 	interm := copyClaim(common)
 	ui.Output(textClaimEnterInterm)
-	fillIn(&interm, "toml", false, ui)
+	fillIn(&interm, "toml", true, ui)
 
 	server := copyClaim(common)
 	ui.Output(textClaimEnterServer)
-	fillIn(&server, "toml", false, ui)
+	fillIn(&server, "toml", true, ui)
 
 	client := copyClaim(common)
 	ui.Output(textClaimEnterClient)
-	fillIn(&client, "toml", false, ui)
+	fillIn(&client, "toml", true, ui)
 
 	return &Spec{
 		Root:   root,
@@ -126,5 +126,5 @@ func SaveSpec(spec *Spec, file string) error {
 
 // FillIn asks for input for empty fields
 func (c *Claim) FillIn(ui cli.Ui) {
-	fillIn(c, "toml", true, ui)
+	fillIn(c, "toml", false, ui)
 }

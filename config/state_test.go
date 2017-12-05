@@ -38,8 +38,8 @@ func TestNewStateWithInput(t *testing.T) {
 		{
 			``,
 			State{
-				Root:   Settings{},
-				Interm: Settings{},
+				Root:   SettingsCA{},
+				Interm: SettingsCA{},
 				Server: Settings{},
 				Client: Settings{},
 			},
@@ -58,10 +58,29 @@ func TestNewStateWithInput(t *testing.T) {
 			2048
 			40`,
 			State{
-				Root:   Settings{Serial: int64(10), Length: 4098, Days: 7300},
-				Interm: Settings{Serial: int64(100), Length: 4098, Days: 3650},
-				Server: Settings{Serial: int64(1000), Length: 2048, Days: 375},
-				Client: Settings{Serial: int64(10000), Length: 2048, Days: 40},
+				Root: SettingsCA{
+					Settings: Settings{
+						Serial: int64(10),
+						Length: 4098,
+						Days:   7300,
+					},
+				},
+				Interm: SettingsCA{
+					Settings: Settings{
+						Serial: int64(100),
+						Length: 4098,
+						Days:   3650,
+					},
+				},
+				Server: Settings{
+					Serial: int64(1000),
+					Length: 2048, Days: 375,
+				},
+				Client: Settings{
+					Serial: int64(10000),
+					Length: 2048,
+					Days:   40,
+				},
 			},
 		},
 	}
@@ -79,24 +98,24 @@ func TestLoadState(t *testing.T) {
 	tests := []struct {
 		yaml           string
 		expectError    bool
-		expectedRoot   Settings
-		expectedInterm Settings
+		expectedRoot   SettingsCA
+		expectedInterm SettingsCA
 		expectedServer Settings
 		expectedClient Settings
 	}{
 		{
 			``,
 			false,
-			Settings{},
-			Settings{},
+			SettingsCA{},
+			SettingsCA{},
 			Settings{},
 			Settings{},
 		},
 		{
 			`invalid yaml`,
 			true,
-			Settings{},
-			Settings{},
+			SettingsCA{},
+			SettingsCA{},
 			Settings{},
 			Settings{},
 		},
@@ -112,8 +131,20 @@ func TestLoadState(t *testing.T) {
 				days: 3650
 			`,
 			false,
-			Settings{Serial: int64(10), Length: 4096, Days: 7300},
-			Settings{Serial: int64(100), Length: 4096, Days: 3650},
+			SettingsCA{
+				Settings: Settings{
+					Serial: int64(10),
+					Length: 4096,
+					Days:   7300,
+				},
+			},
+			SettingsCA{
+				Settings: Settings{
+					Serial: int64(100),
+					Length: 4096,
+					Days:   3650,
+				},
+			},
 			Settings{},
 			Settings{},
 		},
@@ -137,10 +168,30 @@ func TestLoadState(t *testing.T) {
 				days: 40
 			`,
 			false,
-			Settings{Serial: int64(10), Length: 4096, Days: 7300},
-			Settings{Serial: int64(100), Length: 4096, Days: 3650},
-			Settings{Serial: int64(1000), Length: 2048, Days: 375},
-			Settings{Serial: int64(10000), Length: 2048, Days: 40},
+			SettingsCA{
+				Settings: Settings{
+					Serial: int64(10),
+					Length: 4096,
+					Days:   7300,
+				},
+			},
+			SettingsCA{
+				Settings: Settings{
+					Serial: int64(100),
+					Length: 4096,
+					Days:   3650,
+				},
+			},
+			Settings{
+				Serial: int64(1000),
+				Length: 2048,
+				Days:   375,
+			},
+			Settings{
+				Serial: int64(10000),
+				Length: 2048,
+				Days:   40,
+			},
 		},
 	}
 
@@ -179,8 +230,8 @@ func TestSaveState(t *testing.T) {
 	}{
 		{
 			&State{
-				Root:   Settings{},
-				Interm: Settings{},
+				Root:   SettingsCA{},
+				Interm: SettingsCA{},
 				Server: Settings{},
 				Client: Settings{},
 			},
@@ -204,8 +255,19 @@ func TestSaveState(t *testing.T) {
 		},
 		{
 			&State{
-				Root:   Settings{Serial: 10, Length: 4096, Days: 7300},
-				Interm: Settings{Serial: 100, Length: 4096, Days: 3650},
+				Root: SettingsCA{
+					Settings: Settings{
+						Serial: 10,
+						Length: 4096,
+						Days:   7300,
+					},
+				},
+				Interm: SettingsCA{
+					Settings: Settings{
+						Serial: 100,
+						Length: 4096, Days: 3650,
+					},
+				},
 				Server: Settings{},
 				Client: Settings{},
 			},
@@ -229,8 +291,20 @@ func TestSaveState(t *testing.T) {
 		},
 		{
 			&State{
-				Root:   Settings{Serial: 10, Length: 4096, Days: 7300},
-				Interm: Settings{Serial: 100, Length: 4096, Days: 3650},
+				Root: SettingsCA{
+					Settings: Settings{
+						Serial: 10,
+						Length: 4096,
+						Days:   7300,
+					},
+				},
+				Interm: SettingsCA{
+					Settings: Settings{
+						Serial: 100,
+						Length: 4096,
+						Days:   3650,
+					},
+				},
 				Server: Settings{Serial: 1000, Length: 2048, Days: 375},
 				Client: Settings{Serial: 10000, Length: 2048, Days: 40},
 			},
@@ -308,5 +382,44 @@ func TestSettingsFillIn(t *testing.T) {
 		test.settings.FillIn(mockUI)
 
 		assert.Equal(t, test.expectedSettings, test.settings)
+	}
+}
+
+func TestSettingsCAFillIn(t *testing.T) {
+	tests := []struct {
+		settingsCA         SettingsCA
+		input              string
+		expectedSettingsCA SettingsCA
+	}{
+		{
+			SettingsCA{},
+			``,
+			SettingsCA{},
+		},
+		{
+			SettingsCA{},
+			`100
+			4098
+			3650
+			secret
+			secret
+			`,
+			SettingsCA{
+				Settings: Settings{
+					Serial: int64(100),
+					Length: 4098,
+					Days:   3650,
+				},
+				Password: "secret",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		mockUI := cli.NewMockUi()
+		mockUI.InputReader = strings.NewReader(test.input)
+		test.settingsCA.FillIn(mockUI)
+
+		assert.Equal(t, test.expectedSettingsCA, test.settingsCA)
 	}
 }
