@@ -23,7 +23,8 @@ var (
 		`go\d\.\d(\.\d+)?`,
 	}
 
-	helpMockedNew = "help text for mocked new"
+	helpMockedNew = "help text for mocked new command"
+	helpMockedGen = "help text for mocked gen command"
 )
 
 func mockVersion() {
@@ -35,6 +36,7 @@ func mockVersion() {
 
 func mockCommands() {
 	cmdNew = &cli.MockCommand{RunResult: 0, HelpText: helpMockedNew}
+	cmdGen = &cli.MockCommand{RunResult: 0, HelpText: helpMockedGen}
 }
 
 func TestRunApp(t *testing.T) {
@@ -55,6 +57,10 @@ func TestRunApp(t *testing.T) {
 		{[]string{"new"}, 0, []string{}},
 		{[]string{"new", "-help"}, 0, []string{helpMockedNew}},
 		{[]string{"new", "--help"}, 0, []string{helpMockedNew}},
+
+		{[]string{"gen"}, 0, []string{}},
+		{[]string{"gen", "-help"}, 0, []string{helpMockedGen}},
+		{[]string{"gen", "--help"}, 0, []string{helpMockedGen}},
 	}
 
 	for _, test := range tests {
