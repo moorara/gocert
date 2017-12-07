@@ -1,4 +1,4 @@
-package config
+package cli
 
 import (
 	"errors"
@@ -8,26 +8,44 @@ import (
 	"strings"
 
 	"github.com/mitchellh/cli"
+	"github.com/moorara/go-box/util"
 )
 
 const (
-	tagSecret   = "secret"
-	askTemplate = "[%s] %s:"
+	tagSecret     = "secret"
+	defaultMinLen = 8
+
+	askTemplate = "%s (%s):"
 )
 
-func secretOK(password string) bool {
-	if len(password) < 6 {
+func secretOK(pass string, minLen int) bool {
+	if len(pass) < minLen {
 		return false
 	}
 
 	return true
 }
 
-func getAskSecret(ui cli.Ui) func(query string) (string, error) {
+func getAskSecret(tag string, ui cli.Ui) func(query string) (string, error) {
+	tagOpts := strings.Split(tag, ",")
+	obligation := tagOpts[0]
+
+	if !util.IsStringIn(obligation, "required", "optional") {
+		return ui.Ask
+	}
+
+	minLen := defaultMinLen
+	if len(tagOpts) > 1 {
+		n, err := strconv.ParseInt(tagOpts[1], 10, 32)
+		if err == nil {
+			minLen = int(n)
+		}
+	}
+
 	return func(query string) (string, error) {
 		secret, err := ui.AskSecret(query)
-		if err != nil || !secretOK(secret) {
-			ui.Error("Secret is not valid (ignored).")
+		if err != nil || !secretOK(secret, minLen) {
+			ui.Error("Secret not valid (ignored).")
 			return "", errors.New("secret is not valid")
 		}
 
@@ -97,7 +115,7 @@ func toFloat64Slice(list string) []float64 {
 	return float64Slice
 }
 
-func fillInV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
+func askForDataV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 	// v: reflect.Value --> v.Kind()
 	t := v.Type() // reflect.Type --> t.Kind(), t.Name()
 
@@ -114,24 +132,21 @@ func fillInV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 		name := tField.Name
 		kind := vField.Kind()
 		value := vField.Interface()
-		tag := tField.Tag.Get(tagKey)
-		tagOpts := strings.Split(tag, ",")
 
-		if ignoreOmitted && tagOpts[0] == "-" {
+		tag := tField.Tag.Get(tagKey)
+		if ignoreOmitted && strings.HasPrefix(tag, "-") {
 			continue
 		}
 
-		ask := ui.Ask
-		if tField.Tag.Get(tagSecret) == "true" {
-			ask = getAskSecret(ui)
-		}
+		secretTag := tField.Tag.Get(tagSecret)
+		ask := getAskSecret(secretTag, ui)
 
 		// fmt.Printf("--> dealing with %+v\n", name)
 
 		if kind == reflect.Struct {
-			fillInV(vField, tagKey, ignoreOmitted, ui)
+			askForDataV(vField, tagKey, ignoreOmitted, ui)
 		} else if kind == reflect.Bool && vField.Bool() == false {
-			str, err := ask(fmt.Sprintf(askTemplate, "boolean", name))
+			str, err := ask(fmt.Sprintf(askTemplate, name, "true|false"))
 			if err == nil {
 				b, err := strconv.ParseBool(str)
 				if err == nil {
@@ -139,7 +154,7 @@ func fillInV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 				}
 			}
 		} else if kind == reflect.Int && vField.Int() == 0 {
-			str, err := ask(fmt.Sprintf(askTemplate, "number", name))
+			str, err := ask(fmt.Sprintf(askTemplate, name, "integer number"))
 			if err == nil {
 				n, err := strconv.ParseInt(str, 10, 32)
 				if err == nil {
@@ -147,7 +162,7 @@ func fillInV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 				}
 			}
 		} else if kind == reflect.Int64 && vField.Int() == 0 {
-			str, err := ask(fmt.Sprintf(askTemplate, "number", name))
+			str, err := ask(fmt.Sprintf(askTemplate, name, "integer number"))
 			if err == nil {
 				n, err := strconv.ParseInt(str, 10, 64)
 				if err == nil {
@@ -155,7 +170,7 @@ func fillInV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 				}
 			}
 		} else if kind == reflect.Float32 && vField.Float() == 0 {
-			str, err := ask(fmt.Sprintf(askTemplate, "number", name))
+			str, err := ask(fmt.Sprintf(askTemplate, name, "real number"))
 			if err == nil {
 				n, err := strconv.ParseFloat(str, 32)
 				if err == nil {
@@ -163,7 +178,7 @@ func fillInV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 				}
 			}
 		} else if kind == reflect.Float64 && vField.Float() == 0 {
-			str, err := ask(fmt.Sprintf(askTemplate, "number", name))
+			str, err := ask(fmt.Sprintf(askTemplate, name, "real number"))
 			if err == nil {
 				n, err := strconv.ParseFloat(str, 64)
 				if err == nil {
@@ -171,38 +186,38 @@ func fillInV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 				}
 			}
 		} else if kind == reflect.String && vField.String() == "" {
-			str, err := ask(fmt.Sprintf(askTemplate, "string", name))
+			str, err := ask(fmt.Sprintf(askTemplate, name, "string"))
 			if err == nil && str != "" {
 				vField.SetString(str)
 			}
 		} else if kind == reflect.Slice && vField.Len() == 0 {
 			sliceKind := reflect.TypeOf(value).Elem().Kind()
 			if sliceKind == reflect.Int {
-				list, err := ask(fmt.Sprintf(askTemplate, "number list", name))
+				list, err := ask(fmt.Sprintf(askTemplate, name, "integer numbers"))
 				if err == nil && list != "" {
 					intSlice := toIntSlice(list)
 					vField.Set(reflect.ValueOf(intSlice))
 				}
 			} else if sliceKind == reflect.Int64 {
-				list, err := ask(fmt.Sprintf(askTemplate, "number list", name))
+				list, err := ask(fmt.Sprintf(askTemplate, name, "integer numbers"))
 				if err == nil && list != "" {
 					int64Slice := toInt64Slice(list)
 					vField.Set(reflect.ValueOf(int64Slice))
 				}
 			} else if sliceKind == reflect.Float32 {
-				list, err := ask(fmt.Sprintf(askTemplate, "number list", name))
+				list, err := ask(fmt.Sprintf(askTemplate, name, "real numbers"))
 				if err == nil && list != "" {
 					float32Slice := toFloat32Slice(list)
 					vField.Set(reflect.ValueOf(float32Slice))
 				}
 			} else if sliceKind == reflect.Float64 {
-				list, err := ask(fmt.Sprintf(askTemplate, "number list", name))
+				list, err := ask(fmt.Sprintf(askTemplate, name, "real numbers"))
 				if err == nil && list != "" {
 					float64Slice := toFloat64Slice(list)
 					vField.Set(reflect.ValueOf(float64Slice))
 				}
 			} else if sliceKind == reflect.String {
-				list, err := ask(fmt.Sprintf(askTemplate, "string list", name))
+				list, err := ask(fmt.Sprintf(askTemplate, name, "string list"))
 				if err == nil && list != "" {
 					slice := strings.Split(list, ",")
 					vField.Set(reflect.ValueOf(slice))
@@ -212,8 +227,8 @@ func fillInV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 	}
 }
 
-func fillIn(target interface{}, tagKey string, ignoreOmitted bool, ui cli.Ui) {
+func askForData(target interface{}, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 	// Get into top-level struct
 	v := reflect.ValueOf(target).Elem()
-	fillInV(v, tagKey, ignoreOmitted, ui)
+	askForDataV(v, tagKey, ignoreOmitted, ui)
 }

@@ -1,4 +1,4 @@
-package cert
+package pki
 
 import (
 	"log"
@@ -6,11 +6,10 @@ import (
 	"testing"
 
 	"github.com/moorara/go-box/util"
-	"github.com/moorara/gocert/config"
 	"github.com/stretchr/testify/assert"
 )
 
-func mockWorkspace(state *config.State, spec *config.Spec) (func(), error) {
+func mockWorkspace(state *State, spec *Spec) (func(), error) {
 	items := make([]string, 0)
 	deleteFunc := func() {
 		for _, item := range items {
@@ -22,22 +21,22 @@ func mockWorkspace(state *config.State, spec *config.Spec) (func(), error) {
 	}
 
 	// Mock sub-directories
-	_, err := util.MkDirs("", config.DirNameRoot, config.DirNameInterm, config.DirNameServer, config.DirNameClient)
-	items = append(items, config.DirNameRoot, config.DirNameInterm, config.DirNameServer, config.DirNameClient)
+	_, err := util.MkDirs("", DirRoot, DirInterm, DirServer, DirClient, DirCSR)
+	items = append(items, DirRoot, DirInterm, DirServer, DirClient, DirCSR)
 	if err != nil {
 		return deleteFunc, err
 	}
 
 	// Write state file
-	err = config.SaveState(state, config.FileNameState)
-	items = append(items, config.FileNameState)
+	err = SaveState(state, FileState)
+	items = append(items, FileState)
 	if err != nil {
 		return deleteFunc, err
 	}
 
 	// Write spec file
-	err = config.SaveSpec(spec, config.FileNameSpec)
-	items = append(items, config.FileNameSpec)
+	err = SaveSpec(spec, FileSpec)
+	items = append(items, FileSpec)
 	if err != nil {
 		return deleteFunc, err
 	}
@@ -47,39 +46,39 @@ func mockWorkspace(state *config.State, spec *config.Spec) (func(), error) {
 
 func TestGenRootCA(t *testing.T) {
 	tests := []struct {
-		settings    config.SettingsCA
-		claim       config.Claim
+		config      ConfigCA
+		claim       Claim
 		expectError bool
 	}{
 		{
-			config.SettingsCA{},
-			config.Claim{},
+			ConfigCA{},
+			Claim{},
 			true,
 		},
 		{
-			config.SettingsCA{
-				Settings: config.Settings{
+			ConfigCA{
+				Config: Config{
 					Serial: int64(10),
 					Length: 1024,
 					Days:   7,
 				},
 			},
-			config.Claim{
+			Claim{
 				Country:      []string{"CA"},
 				Organization: []string{"Moorara"},
 			},
 			false,
 		},
 		{
-			config.SettingsCA{
-				Settings: config.Settings{
+			ConfigCA{
+				Config: Config{
 					Serial: int64(10),
 					Length: 1024,
 					Days:   7,
 				},
 				Password: "secret",
 			},
-			config.Claim{
+			Claim{
 				Country:      []string{"CA"},
 				Province:     []string{"Ontario"},
 				Locality:     []string{"Ottawa"},
@@ -91,13 +90,13 @@ func TestGenRootCA(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		state := &config.State{Root: test.settings}
-		spec := &config.Spec{Root: test.claim}
+		state := &State{Root: test.config}
+		spec := &Spec{Root: test.claim}
 		cleanup, err := mockWorkspace(state, spec)
 		assert.NoError(t, err)
 
 		manager := NewX509Manager()
-		err = manager.GenRootCA(test.settings, test.claim)
+		err = manager.GenRootCA(test.config, test.claim)
 
 		if test.expectError {
 			assert.Error(t, err)

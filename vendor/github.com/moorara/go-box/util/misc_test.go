@@ -23,3 +23,20 @@ func TestIsSorted(t *testing.T) {
 		assert.Equal(t, test.expectedSorted, IsSorted(test.items, test.compare))
 	}
 }
+
+func TestIsStringIn(t *testing.T) {
+	tests := []struct {
+		str            string
+		list           []string
+		expectedResult bool
+	}{
+		{"Alice", []string{}, false},
+		{"Alice", []string{"Alice"}, true},
+		{"Alice", []string{"Bob", "Jackie"}, false},
+		{"Jackie", []string{"Bob", "Jackie"}, true},
+	}
+
+	for _, test := range tests {
+		assert.Equal(t, test.expectedResult, IsStringIn(test.str, test.list...))
+	}
+}

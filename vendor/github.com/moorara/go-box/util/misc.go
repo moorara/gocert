@@ -14,3 +14,14 @@ func IsSorted(items []Generic, compare Compare) bool {
 
 	return true
 }
+
+// IsStringIn checks if a string is in a list of strings
+func IsStringIn(s string, list ...string) bool {
+	for _, str := range list {
+		if str == s {
+			return true
+		}
+	}
+
+	return false
+}

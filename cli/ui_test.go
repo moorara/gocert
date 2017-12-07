@@ -1,4 +1,4 @@
-package config
+package cli
 
 import (
 	"strings"
@@ -20,8 +20,8 @@ type example struct {
 	Int64        int64   `custom:"int64"`
 	Float32      float32 `custom:"float32"`
 	Float64      float64 `custom:"float64"`
-	String       string  `custom:"-" secret:"true"`
-	Text         string  `custom:"text,omitempty" secret:"true"`
+	String       string  `custom:"-" secret:"required,6"`
+	Text         string  `custom:"text,omitempty" secret:"optional"`
 	IntSlice     []int
 	Int64Slice   []int64
 	Float32Slice []float32
@@ -30,7 +30,7 @@ type example struct {
 	Inner        inner
 }
 
-func TestFillIn(t *testing.T) {
+func TestAskForData(t *testing.T) {
 	tests := []struct {
 		tagKey          string
 		ignoreOmitted   bool
@@ -60,16 +60,18 @@ func TestFillIn(t *testing.T) {
 			},
 		},
 		{
-			"custom", true,
+			"custom", false,
 			example{
+				Bool:    true,
 				Int:     27,
 				Int64:   64,
 				Float32: 2.71,
 				Float64: 3.1415,
 			},
-			`sp
+			`five5
 			`,
 			example{
+				Bool:    true,
 				Int:     27,
 				Int64:   64,
 				Float32: 2.71,
@@ -77,8 +79,9 @@ func TestFillIn(t *testing.T) {
 			},
 		},
 		{
-			"custom", true,
+			"custom", false,
 			example{
+				Bool:    true,
 				Int:     27,
 				Int64:   64,
 				Float32: 2.71,
@@ -87,6 +90,7 @@ func TestFillIn(t *testing.T) {
 			`secret
 			`,
 			example{
+				Bool:    true,
 				Int:     27,
 				Int64:   64,
 				Float32: 2.71,
@@ -94,17 +98,19 @@ func TestFillIn(t *testing.T) {
 			},
 		},
 		{
-			"custom", true,
+			"custom", false,
 			example{
+				Bool:    true,
 				Int:     27,
 				Int64:   64,
 				Float32: 2.71,
 				Float64: 3.1415,
 			},
 			`secret
-			differentSecret
+			notMatched
 			`,
 			example{
+				Bool:    true,
 				Int:     27,
 				Int64:   64,
 				Float32: 2.71,
@@ -155,7 +161,7 @@ func TestFillIn(t *testing.T) {
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
-		fillIn(&test.example, test.tagKey, test.ignoreOmitted, mockUI)
+		askForData(&test.example, test.tagKey, test.ignoreOmitted, mockUI)
 
 		assert.Equal(t, test.expectedExample, test.example)
 	}

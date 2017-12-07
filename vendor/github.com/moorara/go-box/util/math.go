@@ -81,14 +81,3 @@ func IsIntIn(n int, list ...int) bool {
 
 	return false
 }
-
-// IsStringIn checks if a string is in a list of strings
-func IsStringIn(s string, list ...string) bool {
-	for _, str := range list {
-		if str == s {
-			return true
-		}
-	}
-
-	return false
-}

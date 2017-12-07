@@ -2,7 +2,7 @@
  * https://tools.ietf.org/html/rfc5280
  */
 
-package cert
+package pki
 
 import (
 	"crypto/rand"
@@ -16,27 +16,25 @@ import (
 	"os"
 	"path"
 	"time"
-
-	"github.com/moorara/gocert/config"
 )
 
 const (
-	fileRootCACert = "root.ca.cert.pem"
-	fileRootCAKey  = "root.ca.key.pem"
+	pemKey  = "RSA PRIVATE KEY"
+	pemCert = "CERTIFICATE"
+	pemCSR  = "CERTIFICATE REQUEST"
 )
 
 type (
-	// Manager provides methods for generating certificates
+	// Manager provides methods for managing certificates
 	Manager interface {
-		GenRootCA(config.SettingsCA, config.Claim) error
-		GenIntermCA(config.SettingsCA, config.Claim) error
-		GenServerCert(config.Settings, config.Claim) error
-		GenClientCert(config.Settings, config.Claim) error
+		GenRootCA(ConfigCA, Claim) error
+		GenIntermCA(ConfigCA, Claim) error
+		GenServerCert(Config, Claim) error
+		GenClientCert(Config, Claim) error
 	}
 
-	// X509Manager provides methods for generating x509 certificates
-	X509Manager struct {
-	}
+	// X509Manager provides methods for managing x509 certificates
+	X509Manager struct{}
 )
 
 // NewX509Manager creates a new X509Manager
@@ -56,17 +54,16 @@ func genKeys(length int) (*rsa.PublicKey, *rsa.PrivateKey, error) {
 }
 
 func getPrivatePem(private *rsa.PrivateKey, password string) (keyPem *pem.Block, err error) {
-	keyType := "RSA PRIVATE KEY"
 	keyData := x509.MarshalPKCS1PrivateKey(private)
 
 	// Encrypt private key if a password set
 	if password == "" {
 		keyPem = &pem.Block{
-			Type:  keyType,
+			Type:  pemKey,
 			Bytes: keyData,
 		}
 	} else {
-		keyPem, err = x509.EncryptPEMBlock(rand.Reader, keyType, keyData, []byte(password), x509.PEMCipherAES256)
+		keyPem, err = x509.EncryptPEMBlock(rand.Reader, pemKey, keyData, []byte(password), x509.PEMCipherAES256)
 		if err != nil {
 			return nil, err
 		}
@@ -76,11 +73,11 @@ func getPrivatePem(private *rsa.PrivateKey, password string) (keyPem *pem.Block,
 }
 
 // GenRootCA generates root certificate authority
-func (m *X509Manager) GenRootCA(settings config.SettingsCA, claim config.Claim) error {
-	settings.Serial++
-	length := settings.Length
+func (m *X509Manager) GenRootCA(config ConfigCA, claim Claim) error {
+	config.Serial++
+	length := config.Length
 	startTime := time.Now()
-	endTime := startTime.AddDate(0, 0, settings.Days)
+	endTime := startTime.AddDate(0, 0, config.Days)
 
 	// Generate a new public-private key pair
 	publicKey, privateKey, err := genKeys(length)
@@ -99,7 +96,7 @@ func (m *X509Manager) GenRootCA(settings config.SettingsCA, claim config.Claim) 
 
 	// Declare certificate
 	rootCA := &x509.Certificate{
-		SerialNumber: big.NewInt(settings.Serial),
+		SerialNumber: big.NewInt(config.Serial),
 
 		NotBefore: startTime,
 		NotAfter:  endTime,
@@ -138,38 +135,15 @@ func (m *X509Manager) GenRootCA(settings config.SettingsCA, claim config.Claim) 
 		return err
 	}
 
-	/* Write certificate file */
-
-	certFilePath := path.Join(config.DirNameRoot, fileRootCACert)
-	certFile, err := os.Create(certFilePath)
-	if err != nil {
-		return err
-	}
-
-	certPem := &pem.Block{
-		Type:  "CERTIFICATE",
-		Bytes: cert,
-	}
-
-	err = pem.Encode(certFile, certPem)
-	if err != nil {
-		return err
-	}
-
-	err = certFile.Close()
-	if err != nil {
-		return err
-	}
-
 	/* Write certificate key file */
 
-	keyFilePath := path.Join(config.DirNameRoot, fileRootCAKey)
+	keyFilePath := path.Join(DirRoot, "root"+extCAKey) //TODO
 	keyFile, err := os.OpenFile(keyFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	if err != nil {
 		return err
 	}
 
-	keyPem, err := getPrivatePem(privateKey, settings.Password)
+	keyPem, err := getPrivatePem(privateKey, config.Password)
 	if err != nil {
 		return err
 	}
@@ -184,20 +158,43 @@ func (m *X509Manager) GenRootCA(settings config.SettingsCA, claim config.Claim) 
 		return err
 	}
 
+	/* Write certificate file */
+
+	certFilePath := path.Join(DirRoot, "root"+extCACert) // TODO
+	certFile, err := os.Create(certFilePath)
+	if err != nil {
+		return err
+	}
+
+	certPem := &pem.Block{
+		Type:  pemCert,
+		Bytes: cert,
+	}
+
+	err = pem.Encode(certFile, certPem)
+	if err != nil {
+		return err
+	}
+
+	err = certFile.Close()
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // GenIntermCA generates an intermediate certificate authority
-func (m *X509Manager) GenIntermCA(settings config.SettingsCA, claim config.Claim) error {
+func (m *X509Manager) GenIntermCA(config ConfigCA, claim Claim) error {
 	return nil
 }
 
 // GenServerCert generates a Server certificate
-func (m *X509Manager) GenServerCert(settings config.Settings, claim config.Claim) error {
+func (m *X509Manager) GenServerCert(config Config, claim Claim) error {
 	return nil
 }
 
 // GenClientCert generates a client certificate
-func (m *X509Manager) GenClientCert(settings config.Settings, claim config.Claim) error {
+func (m *X509Manager) GenClientCert(config Config, claim Claim) error {
 	return nil
 }
