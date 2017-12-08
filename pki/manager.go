@@ -12,9 +12,11 @@ import (
 	"crypto/x509/pkix"
 	"encoding/gob"
 	"encoding/pem"
+	"errors"
 	"math/big"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 )
 
@@ -27,10 +29,10 @@ const (
 type (
 	// Manager provides methods for managing certificates
 	Manager interface {
-		GenRootCA(ConfigCA, Claim) error
-		GenIntermCA(ConfigCA, Claim) error
-		GenServerCert(Config, Claim) error
-		GenClientCert(Config, Claim) error
+		GenRootCA(string, ConfigCA, Claim) error
+		GenIntermCSR(string, ConfigCA, Claim) error
+		GenServerCSR(string, Config, Claim) error
+		GenClientCSR(string, Config, Claim) error
 	}
 
 	// X509Manager provides methods for managing x509 certificates
@@ -38,8 +40,22 @@ type (
 )
 
 // NewX509Manager creates a new X509Manager
-func NewX509Manager() *X509Manager {
+func NewX509Manager() Manager {
 	return &X509Manager{}
+}
+
+func validateName(name string) error {
+	if name == "" {
+		return errors.New("Name is not set")
+	}
+
+	pattern := "./*/" + name + ".*"
+	files, _ := filepath.Glob(pattern) // Glob ignores file system errors
+	if len(files) > 0 {
+		return errors.New(name + " already exists")
+	}
+
+	return nil
 }
 
 // genKeys generates a new public-private key pair
@@ -53,7 +69,8 @@ func genKeys(length int) (*rsa.PublicKey, *rsa.PrivateKey, error) {
 	return public, private, nil
 }
 
-func getPrivatePem(private *rsa.PrivateKey, password string) (keyPem *pem.Block, err error) {
+func writePrivateKey(private *rsa.PrivateKey, password, path string) (err error) {
+	var keyPem *pem.Block
 	keyData := x509.MarshalPKCS1PrivateKey(private)
 
 	// Encrypt private key if a password set
@@ -65,15 +82,58 @@ func getPrivatePem(private *rsa.PrivateKey, password string) (keyPem *pem.Block,
 	} else {
 		keyPem, err = x509.EncryptPEMBlock(rand.Reader, pemKey, keyData, []byte(password), x509.PEMCipherAES256)
 		if err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return keyPem, nil
+	keyFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		return err
+	}
+
+	err = pem.Encode(keyFile, keyPem)
+	if err != nil {
+		return err
+	}
+
+	err = keyFile.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func writePemFile(pemType string, pemData []byte, path string) error {
+	pemBlock := &pem.Block{
+		Type:  pemType,
+		Bytes: pemData,
+	}
+
+	pemFile, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	err = pem.Encode(pemFile, pemBlock)
+	if err != nil {
+		return err
+	}
+
+	err = pemFile.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // GenRootCA generates root certificate authority
-func (m *X509Manager) GenRootCA(config ConfigCA, claim Claim) error {
+func (m *X509Manager) GenRootCA(name string, config ConfigCA, claim Claim) error {
+	if err := validateName(name); err != nil {
+		return err
+	}
+
 	config.Serial++
 	length := config.Length
 	startTime := time.Now()
@@ -136,47 +196,15 @@ func (m *X509Manager) GenRootCA(config ConfigCA, claim Claim) error {
 	}
 
 	/* Write certificate key file */
-
-	keyFilePath := path.Join(DirRoot, "root"+extCAKey) //TODO
-	keyFile, err := os.OpenFile(keyFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-
-	keyPem, err := getPrivatePem(privateKey, config.Password)
-	if err != nil {
-		return err
-	}
-
-	err = pem.Encode(keyFile, keyPem)
-	if err != nil {
-		return err
-	}
-
-	err = keyFile.Close()
+	keyFilePath := path.Join(DirRoot, name+extCAKey)
+	err = writePrivateKey(privateKey, config.Password, keyFilePath)
 	if err != nil {
 		return err
 	}
 
 	/* Write certificate file */
-
-	certFilePath := path.Join(DirRoot, "root"+extCACert) // TODO
-	certFile, err := os.Create(certFilePath)
-	if err != nil {
-		return err
-	}
-
-	certPem := &pem.Block{
-		Type:  pemCert,
-		Bytes: cert,
-	}
-
-	err = pem.Encode(certFile, certPem)
-	if err != nil {
-		return err
-	}
-
-	err = certFile.Close()
+	certFilePath := path.Join(DirRoot, name+extCACert)
+	err = writePemFile(pemCert, cert, certFilePath)
 	if err != nil {
 		return err
 	}
@@ -184,17 +212,73 @@ func (m *X509Manager) GenRootCA(config ConfigCA, claim Claim) error {
 	return nil
 }
 
-// GenIntermCA generates an intermediate certificate authority
-func (m *X509Manager) GenIntermCA(config ConfigCA, claim Claim) error {
+// GenIntermCSR generates an certificate signing request for an intermediate certificate authority
+func (m *X509Manager) GenIntermCSR(name string, config ConfigCA, claim Claim) error {
+	if err := validateName(name); err != nil {
+		return err
+	}
+
+	config.Serial++
+	length := config.Length
+	// TODO startTime := time.Now()
+	// TODO endTime := startTime.AddDate(0, 0, config.Days)
+
+	// Generate a new public-private key pair
+	_, privateKey, err := genKeys(length) // TODO
+	if err != nil {
+		return err
+	}
+
+	// Declare certificate request
+	intermCSR := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName:         claim.CommonName,
+			Country:            claim.Country,
+			Province:           claim.Province,
+			Locality:           claim.Locality,
+			Organization:       claim.Organization,
+			OrganizationalUnit: claim.OrganizationalUnit,
+			StreetAddress:      claim.StreetAddress,
+			PostalCode:         claim.PostalCode,
+		},
+
+		// DNSNames:    []string{},
+		// IPAddresses: []net.IP{},
+		EmailAddresses: claim.EmailAddress,
+
+		// Extensions:      []pkix.Extension{},
+		// ExtraExtensions: []pkix.Extension{},
+	}
+
+	// Create the certificate request
+	csr, err := x509.CreateCertificateRequest(rand.Reader, intermCSR, privateKey)
+	if err != nil {
+		return err
+	}
+
+	/* Write certificate key file */
+	keyFilePath := path.Join(DirInterm, name+extCAKey)
+	err = writePrivateKey(privateKey, config.Password, keyFilePath)
+	if err != nil {
+		return err
+	}
+
+	/* Write certificate request file */
+	csrFilePath := path.Join(DirCSR, name+extCACSR)
+	err = writePemFile(pemCSR, csr, csrFilePath)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-// GenServerCert generates a Server certificate
-func (m *X509Manager) GenServerCert(config Config, claim Claim) error {
+// GenServerCSR generates a certificate signing request for a server certificate
+func (m *X509Manager) GenServerCSR(name string, config Config, claim Claim) error {
 	return nil
 }
 
-// GenClientCert generates a client certificate
-func (m *X509Manager) GenClientCert(config Config, claim Claim) error {
+// GenClientCSR generates a certificate signing request for a client certificate
+func (m *X509Manager) GenClientCSR(name string, config Config, claim Claim) error {
 	return nil
 }

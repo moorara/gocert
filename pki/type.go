@@ -3,6 +3,7 @@ package pki
 import (
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	yaml "gopkg.in/yaml.v2"
@@ -24,6 +25,12 @@ const (
 	defaultClientCertSerial = int64(10000)
 	defaultClientCertLength = 2048
 	defaultClientCertDays   = 10 + 30
+
+	defaultRootPolicyMatch    = ""
+	defaultRootPolicySupplied = "CommonName"
+
+	defaultIntermPolicyMatch    = ""
+	defaultIntermPolicySupplied = "CommonName"
 )
 
 type (
@@ -50,10 +57,12 @@ type (
 
 	// Spec represents the type for specs
 	Spec struct {
-		Root   Claim `toml:"root"`
-		Interm Claim `toml:"intermediate"`
-		Server Claim `toml:"server"`
-		Client Claim `toml:"client"`
+		Root         Claim  `toml:"root"`
+		Interm       Claim  `toml:"intermediate"`
+		Server       Claim  `toml:"server"`
+		Client       Claim  `toml:"client"`
+		RootPolicy   Policy `toml:"root_policy"`
+		IntermPolicy Policy `toml:"intermediate_policy"`
 	}
 
 	// Claim represents the subtype for an identity claim
@@ -67,6 +76,12 @@ type (
 		StreetAddress      []string `toml:"street_address"`
 		PostalCode         []string `toml:"postal_code"`
 		EmailAddress       []string `toml:"email_address"`
+	}
+
+	// Policy represents the subtype for a policy
+	Policy struct {
+		Match    []string `toml:"match"`
+		Supplied []string `toml:"supplied"`
 	}
 )
 
@@ -138,6 +153,14 @@ func NewSpec() *Spec {
 		Interm: Claim{},
 		Server: Claim{},
 		Client: Claim{},
+		RootPolicy: Policy{
+			Match:    strings.Split(defaultRootPolicyMatch, ","),
+			Supplied: strings.Split(defaultRootPolicySupplied, ","),
+		},
+		IntermPolicy: Policy{
+			Match:    strings.Split(defaultIntermPolicyMatch, ","),
+			Supplied: strings.Split(defaultIntermPolicySupplied, ","),
+		},
 	}
 }
 

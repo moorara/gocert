@@ -30,7 +30,7 @@ type example struct {
 	Inner        inner
 }
 
-func TestAskForData(t *testing.T) {
+func TestAskForStruct(t *testing.T) {
 	tests := []struct {
 		tagKey          string
 		ignoreOmitted   bool
@@ -161,7 +161,7 @@ func TestAskForData(t *testing.T) {
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
-		askForData(&test.example, test.tagKey, test.ignoreOmitted, mockUI)
+		askForStruct(&test.example, test.tagKey, test.ignoreOmitted, mockUI)
 
 		assert.Equal(t, test.expectedExample, test.example)
 	}

@@ -17,52 +17,6 @@ func TestNewRootNewCommand(t *testing.T) {
 	assert.Equal(t, pki.NewX509Manager(), cmd.pki)
 }
 
-func TestRootNewCommandError(t *testing.T) {
-	tests := []struct {
-		state        *pki.State
-		spec         *pki.Spec
-		args         []string
-		expectedExit int
-	}{
-		{
-			nil,
-			nil,
-			[]string{"-invalid"},
-			ErrorInvalidFlag,
-		},
-		{
-			nil,
-			&pki.Spec{},
-			[]string{},
-			ErrorReadState,
-		},
-		{
-			pki.NewState(),
-			nil,
-			[]string{},
-			ErrorReadSpec,
-		},
-	}
-
-	for _, test := range tests {
-		cleanup, err := mockWorkspace(test.state, test.spec)
-		assert.NoError(t, err)
-
-		cmd := &RootNewCommand{
-			ui:  cli.NewMockUi(),
-			pki: &mockedManager{},
-		}
-		exit := cmd.Run(test.args)
-
-		assert.Equal(t, rootSynopsis, cmd.Synopsis())
-		assert.Equal(t, rootHelp, cmd.Help())
-		assert.Equal(t, test.expectedExit, exit)
-
-		err = cleanup()
-		assert.NoError(t, err)
-	}
-}
-
 func TestRootNewCommand(t *testing.T) {
 	tests := []struct {
 		state          *pki.State
@@ -119,6 +73,52 @@ func TestRootNewCommand(t *testing.T) {
 			pki: &mockedManager{
 				GenRootCAError: test.GenRootCAError,
 			},
+		}
+		exit := cmd.Run(test.args)
+
+		assert.Equal(t, rootSynopsis, cmd.Synopsis())
+		assert.Equal(t, rootHelp, cmd.Help())
+		assert.Equal(t, test.expectedExit, exit)
+
+		err = cleanup()
+		assert.NoError(t, err)
+	}
+}
+
+func TestRootNewCommandError(t *testing.T) {
+	tests := []struct {
+		state        *pki.State
+		spec         *pki.Spec
+		args         []string
+		expectedExit int
+	}{
+		{
+			nil,
+			nil,
+			[]string{"-invalid"},
+			ErrorInvalidFlag,
+		},
+		{
+			nil,
+			&pki.Spec{},
+			[]string{},
+			ErrorReadState,
+		},
+		{
+			pki.NewState(),
+			nil,
+			[]string{},
+			ErrorReadSpec,
+		},
+	}
+
+	for _, test := range tests {
+		cleanup, err := mockWorkspace(test.state, test.spec)
+		assert.NoError(t, err)
+
+		cmd := &RootNewCommand{
+			ui:  cli.NewMockUi(),
+			pki: &mockedManager{},
 		}
 		exit := cmd.Run(test.args)
 

@@ -2,14 +2,16 @@ package cli
 
 import (
 	"flag"
+	"fmt"
 
 	"github.com/mitchellh/cli"
 	"github.com/moorara/gocert/pki"
 )
 
 const (
-	intermediateEnterConfig = "\nConfigurations for intermediate certificate authority ..."
-	intermediateEnterClaim  = "\nSpecifications for intermediate certificate authority ..."
+	intermEnterName   = "\nNAME FOR INTERMEDIATE CERTIFICATE AUTHORITY ..."
+	intermEnterConfig = "\nCONFIGURATIONS FOR INTERMEDIATE CERTIFICATE AUTHORITY ..."
+	intermEnterClaim  = "\nSPECIFICATIONS FOR INTERMEDIATE CERTIFICATE AUTHORITY ..."
 
 	intermNewSynopsis = ""
 	intermNewHelp     = ``
@@ -43,7 +45,7 @@ func (c *IntermNewCommand) Help() string {
 func (c *IntermNewCommand) Run(args []string) int {
 	var fReq string
 
-	flags := flag.NewFlagSet("interm", flag.ContinueOnError)
+	flags := flag.NewFlagSet("intermediate new", flag.ContinueOnError)
 	flags.Usage = func() {}
 	flags.StringVar(&fReq, "req", "", "")
 	err := flags.Parse(args)
@@ -51,23 +53,33 @@ func (c *IntermNewCommand) Run(args []string) int {
 		return ErrorInvalidFlag
 	}
 
-	state, spec, status := LoadWorkspace(c.ui)
+	state, spec, status := loadWorkspace(c.ui)
 	if status != 0 {
 		return status
 	}
 
-	c.ui.Output(intermediateEnterConfig)
-	AskForConfigCA(&state.Interm, c.ui)
+	if fReq == "" {
+		c.ui.Output(intermEnterName)
+		fReq, err = c.ui.Ask(fmt.Sprintf(askTemplate, "Name", "string"))
+		if err != nil {
+			return ErrorNoName
+		}
+	}
 
-	c.ui.Output(intermediateEnterClaim)
-	AskForClaim(&spec.Interm, c.ui)
+	c.ui.Output(intermEnterConfig)
+	askForConfigCA(&state.Interm, c.ui)
 
-	err = c.pki.GenIntermCA(state.Interm, spec.Interm)
+	c.ui.Output(intermEnterClaim)
+	askForClaim(&spec.Interm, c.ui)
+
+	c.ui.Output("")
+
+	// TODO: deal with fReq, req name, and existing files!
+	err = c.pki.GenIntermCSR(fReq, state.Interm, spec.Interm)
 	if err != nil {
 		c.ui.Error("Failed to generate intermediate ca. Error: " + err.Error())
 		return ErrorIntermCA
 	}
 
-	c.ui.Output("")
 	return 0
 }

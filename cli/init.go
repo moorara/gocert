@@ -59,7 +59,7 @@ func (c *InitCommand) Run(args []string) int {
 	}
 
 	// Write default spec file
-	spec := AskForNewSpec(c.ui)
+	spec := askForNewSpec(c.ui)
 	err = pki.SaveSpec(spec, pki.FileSpec)
 	if err != nil {
 		return ErrorWriteSpec

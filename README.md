@@ -12,8 +12,8 @@ cd certs
 gocert init
 gocert root new
 
-gocert intermediate new -req=interm
-gocert root sign -req=interm
+gocert intermediate new -req=ops
+gocert root sign -req=ops
 
 gocert server new -req=mongo
 gocert client new -req=webapp

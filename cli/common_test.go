@@ -12,35 +12,35 @@ import (
 )
 
 type mockedManager struct {
-	GenRootCAError     error
-	GenIntermCAError   error
-	GenServerCertError error
-	GenClientCertError error
+	GenRootCAError    error
+	GenIntermCSRError error
+	GenServerCSRError error
+	GenClientCSRError error
 
-	GenRootCACalled     bool
-	GenIntermCACalled   bool
-	GenServerCertCalled bool
-	GenClientCertCalled bool
+	GenRootCACalled    bool
+	GenIntermCSRCalled bool
+	GenServerCSRCalled bool
+	GenClientCSRCalled bool
 }
 
-func (m *mockedManager) GenRootCA(pki.ConfigCA, pki.Claim) error {
+func (m *mockedManager) GenRootCA(string, pki.ConfigCA, pki.Claim) error {
 	m.GenRootCACalled = true
 	return m.GenRootCAError
 }
 
-func (m *mockedManager) GenIntermCA(pki.ConfigCA, pki.Claim) error {
-	m.GenIntermCACalled = true
-	return m.GenIntermCAError
+func (m *mockedManager) GenIntermCSR(string, pki.ConfigCA, pki.Claim) error {
+	m.GenIntermCSRCalled = true
+	return m.GenIntermCSRError
 }
 
-func (m *mockedManager) GenServerCert(pki.Config, pki.Claim) error {
-	m.GenServerCertCalled = true
-	return m.GenServerCertError
+func (m *mockedManager) GenServerCSR(string, pki.Config, pki.Claim) error {
+	m.GenServerCSRCalled = true
+	return m.GenServerCSRError
 }
 
-func (m *mockedManager) GenClientCert(pki.Config, pki.Claim) error {
-	m.GenClientCertCalled = true
-	return m.GenClientCertError
+func (m *mockedManager) GenClientCSR(string, pki.Config, pki.Claim) error {
+	m.GenClientCSRCalled = true
+	return m.GenClientCSRError
 }
 
 func mockWorkspace(state *pki.State, spec *pki.Spec) (func() error, error) {
@@ -182,7 +182,13 @@ func TestLoadWorkspace(t *testing.T) {
 				locality = [ "London" ]
 				organization = [ "Moorara" ]
 				email_address = [ "moorara@example.com" ]
-      `,
+			[root_policy]
+				match = ["Country", "Organization"]
+				supplied = ["CommonName"]
+			[intermediate_policy]
+				match = ["Organization"]
+				supplied = ["CommonName"]
+			`,
 			0,
 			&pki.State{
 				Root: pki.ConfigCA{
@@ -208,7 +214,8 @@ func TestLoadWorkspace(t *testing.T) {
 					Serial: int64(10000),
 					Length: 2048,
 					Days:   40,
-				}},
+				},
+			},
 			&pki.Spec{
 				Root: pki.Claim{
 					Country:      []string{"CA", "US"},
@@ -235,7 +242,16 @@ func TestLoadWorkspace(t *testing.T) {
 					Locality:     []string{"London"},
 					Organization: []string{"Moorara"},
 					EmailAddress: []string{"moorara@example.com"},
-				}},
+				},
+				RootPolicy: pki.Policy{
+					Match:    []string{"Country", "Organization"},
+					Supplied: []string{"CommonName"},
+				},
+				IntermPolicy: pki.Policy{
+					Match:    []string{"Organization"},
+					Supplied: []string{"CommonName"},
+				},
+			},
 		},
 	}
 
@@ -247,7 +263,7 @@ func TestLoadWorkspace(t *testing.T) {
 		assert.NoError(t, err)
 
 		mockUI := cli.NewMockUi()
-		state, spec, status := LoadWorkspace(mockUI)
+		state, spec, status := loadWorkspace(mockUI)
 
 		assert.Equal(t, test.expectedStatus, status)
 		if test.expectedStatus == 0 {
@@ -296,6 +312,10 @@ func TestSaveWorkspace(t *testing.T) {
 			[server]
 
 			[client]
+
+			[root_policy]
+
+			[intermediate_policy]
 			`,
 		},
 		{
@@ -349,6 +369,14 @@ func TestSaveWorkspace(t *testing.T) {
 					Locality:     []string{"London"},
 					Organization: []string{"Moorara"},
 				},
+				RootPolicy: pki.Policy{
+					Match:    []string{"Country", "Organization"},
+					Supplied: []string{"CommonName"},
+				},
+				IntermPolicy: pki.Policy{
+					Match:    []string{"Organization"},
+					Supplied: []string{"CommonName"},
+				},
 			},
 			0,
 			`root:
@@ -390,13 +418,21 @@ func TestSaveWorkspace(t *testing.T) {
 				country = ["UK"]
 				locality = ["London"]
 				organization = ["Moorara"]
+
+			[root_policy]
+				match = ["Country", "Organization"]
+				supplied = ["CommonName"]
+
+			[intermediate_policy]
+				match = ["Organization"]
+				supplied = ["CommonName"]
 			`,
 		},
 	}
 
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
-		status := SaveWorkspace(test.state, test.spec, mockUI)
+		status := saveWorkspace(test.state, test.spec, mockUI)
 
 		assert.Equal(t, test.expectedStatus, status)
 		if test.expectedStatus == 0 {
@@ -477,7 +513,7 @@ func TestAskForNewState(t *testing.T) {
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
-		state := AskForNewState(mockUI)
+		state := askForNewState(mockUI)
 
 		assert.Equal(t, test.expectedState, *state)
 	}
@@ -490,12 +526,7 @@ func TestAskForNewSpec(t *testing.T) {
 	}{
 		{
 			``,
-			pki.Spec{
-				Root:   pki.Claim{},
-				Interm: pki.Claim{},
-				Server: pki.Claim{},
-				Client: pki.Claim{},
-			},
+			pki.Spec{},
 		},
 		{
 			`CA
@@ -551,6 +582,14 @@ func TestAskForNewSpec(t *testing.T) {
 
 
 			Ottawa
+
+
+
+
+			Country,Organization
+      CommonName
+      Organization
+      CommonName
 			`,
 			pki.Spec{
 				Root: pki.Claim{
@@ -577,6 +616,14 @@ func TestAskForNewSpec(t *testing.T) {
 					Locality:     []string{"Ottawa"},
 					Organization: []string{"Milad"},
 				},
+				RootPolicy: pki.Policy{
+					Match:    []string{"Country", "Organization"},
+					Supplied: []string{"CommonName"},
+				},
+				IntermPolicy: pki.Policy{
+					Match:    []string{"Organization"},
+					Supplied: []string{"CommonName"},
+				},
 			},
 		},
 	}
@@ -584,7 +631,7 @@ func TestAskForNewSpec(t *testing.T) {
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
-		spec := AskForNewSpec(mockUI)
+		spec := askForNewSpec(mockUI)
 
 		assert.Equal(t, test.expectedSpec, *spec)
 	}
@@ -619,7 +666,7 @@ func TestAskForConfig(t *testing.T) {
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
-		AskForConfig(&test.config, mockUI)
+		askForConfig(&test.config, mockUI)
 
 		assert.Equal(t, test.expectedConfig, test.config)
 	}
@@ -658,7 +705,7 @@ func TestAskForConfigCA(t *testing.T) {
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
-		AskForConfigCA(&test.configCA, mockUI)
+		askForConfigCA(&test.configCA, mockUI)
 
 		assert.Equal(t, test.expectedConfigCA, test.configCA)
 	}
@@ -697,7 +744,7 @@ func TestAskForClaim(t *testing.T) {
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
-		AskForClaim(&test.claim, mockUI)
+		askForClaim(&test.claim, mockUI)
 
 		assert.Equal(t, test.expectedClaim, test.claim)
 	}

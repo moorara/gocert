@@ -18,6 +18,8 @@ const (
 	askTemplate = "%s (%s):"
 )
 
+type askFunc func(query string) (string, error)
+
 func secretOK(pass string, minLen int) bool {
 	if len(pass) < minLen {
 		return false
@@ -26,7 +28,7 @@ func secretOK(pass string, minLen int) bool {
 	return true
 }
 
-func getAskSecret(tag string, ui cli.Ui) func(query string) (string, error) {
+func getAskSecret(tag string, ui cli.Ui) askFunc {
 	tagOpts := strings.Split(tag, ",")
 	obligation := tagOpts[0]
 
@@ -115,7 +117,7 @@ func toFloat64Slice(list string) []float64 {
 	return float64Slice
 }
 
-func askForDataV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
+func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 	// v: reflect.Value --> v.Kind()
 	t := v.Type() // reflect.Type --> t.Kind(), t.Name()
 
@@ -141,10 +143,8 @@ func askForDataV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) 
 		secretTag := tField.Tag.Get(tagSecret)
 		ask := getAskSecret(secretTag, ui)
 
-		// fmt.Printf("--> dealing with %+v\n", name)
-
 		if kind == reflect.Struct {
-			askForDataV(vField, tagKey, ignoreOmitted, ui)
+			askForStructV(vField, tagKey, ignoreOmitted, ui)
 		} else if kind == reflect.Bool && vField.Bool() == false {
 			str, err := ask(fmt.Sprintf(askTemplate, name, "true|false"))
 			if err == nil {
@@ -227,8 +227,8 @@ func askForDataV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) 
 	}
 }
 
-func askForData(target interface{}, tagKey string, ignoreOmitted bool, ui cli.Ui) {
+func askForStruct(target interface{}, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 	// Get into top-level struct
 	v := reflect.ValueOf(target).Elem()
-	askForDataV(v, tagKey, ignoreOmitted, ui)
+	askForStructV(v, tagKey, ignoreOmitted, ui)
 }

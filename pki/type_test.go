@@ -10,49 +10,40 @@ import (
 )
 
 func TestNewState(t *testing.T) {
-	st := NewState()
+	state := NewState()
 
-	assert.Equal(t, st.Root.Serial, defaultRootCASerial)
-	assert.Equal(t, st.Root.Length, defaultRootCALength)
-	assert.Equal(t, st.Root.Days, defaultRootCADays)
+	assert.Equal(t, defaultRootCASerial, state.Root.Serial)
+	assert.Equal(t, defaultRootCALength, state.Root.Length)
+	assert.Equal(t, defaultRootCADays, state.Root.Days)
 
-	assert.Equal(t, st.Interm.Serial, defaultIntermCASerial)
-	assert.Equal(t, st.Interm.Length, defaultIntermCALength)
-	assert.Equal(t, st.Interm.Days, defaultIntermCADays)
+	assert.Equal(t, defaultIntermCASerial, state.Interm.Serial)
+	assert.Equal(t, defaultIntermCALength, state.Interm.Length)
+	assert.Equal(t, defaultIntermCADays, state.Interm.Days)
 
-	assert.Equal(t, st.Server.Serial, defaultServerCertSerial)
-	assert.Equal(t, st.Server.Length, defaultServerCertLength)
-	assert.Equal(t, st.Server.Days, defaultServerCertDays)
+	assert.Equal(t, defaultServerCertSerial, state.Server.Serial)
+	assert.Equal(t, defaultServerCertLength, state.Server.Length)
+	assert.Equal(t, defaultServerCertDays, state.Server.Days)
 
-	assert.Equal(t, st.Client.Serial, defaultClientCertSerial)
-	assert.Equal(t, st.Client.Length, defaultClientCertLength)
-	assert.Equal(t, st.Client.Days, defaultClientCertDays)
+	assert.Equal(t, defaultClientCertSerial, state.Client.Serial)
+	assert.Equal(t, defaultClientCertLength, state.Client.Length)
+	assert.Equal(t, defaultClientCertDays, state.Client.Days)
 }
 
 func TestLoadState(t *testing.T) {
 	tests := []struct {
-		yaml           string
-		expectError    bool
-		expectedRoot   ConfigCA
-		expectedInterm ConfigCA
-		expectedServer Config
-		expectedClient Config
+		yaml          string
+		expectError   bool
+		expectedState *State
 	}{
-		{
-			``,
-			false,
-			ConfigCA{},
-			ConfigCA{},
-			Config{},
-			Config{},
-		},
 		{
 			`invalid yaml`,
 			true,
-			ConfigCA{},
-			ConfigCA{},
-			Config{},
-			Config{},
+			&State{},
+		},
+		{
+			``,
+			false,
+			&State{},
 		},
 		{
 			`
@@ -66,22 +57,22 @@ func TestLoadState(t *testing.T) {
 				days: 3650
 			`,
 			false,
-			ConfigCA{
-				Config: Config{
-					Serial: int64(10),
-					Length: 4096,
-					Days:   7300,
+			&State{
+				Root: ConfigCA{
+					Config: Config{
+						Serial: int64(10),
+						Length: 4096,
+						Days:   7300,
+					},
+				},
+				Interm: ConfigCA{
+					Config: Config{
+						Serial: int64(100),
+						Length: 4096,
+						Days:   3650,
+					},
 				},
 			},
-			ConfigCA{
-				Config: Config{
-					Serial: int64(100),
-					Length: 4096,
-					Days:   3650,
-				},
-			},
-			Config{},
-			Config{},
 		},
 		{
 			`
@@ -103,29 +94,31 @@ func TestLoadState(t *testing.T) {
 				days: 40
 			`,
 			false,
-			ConfigCA{
-				Config: Config{
-					Serial: int64(10),
-					Length: 4096,
-					Days:   7300,
+			&State{
+				Root: ConfigCA{
+					Config: Config{
+						Serial: int64(10),
+						Length: 4096,
+						Days:   7300,
+					},
 				},
-			},
-			ConfigCA{
-				Config: Config{
-					Serial: int64(100),
-					Length: 4096,
-					Days:   3650,
+				Interm: ConfigCA{
+					Config: Config{
+						Serial: int64(100),
+						Length: 4096,
+						Days:   3650,
+					},
 				},
-			},
-			Config{
-				Serial: int64(1000),
-				Length: 2048,
-				Days:   375,
-			},
-			Config{
-				Serial: int64(10000),
-				Length: 2048,
-				Days:   40,
+				Server: Config{
+					Serial: int64(1000),
+					Length: 2048,
+					Days:   375,
+				},
+				Client: Config{
+					Serial: int64(10000),
+					Length: 2048,
+					Days:   40,
+				},
 			},
 		},
 	}
@@ -136,18 +129,14 @@ func TestLoadState(t *testing.T) {
 		defer delete()
 		assert.NoError(t, err)
 
-		spec, err := LoadState(file)
+		state, err := LoadState(file)
 
 		if test.expectError {
 			assert.Error(t, err)
-			assert.Nil(t, spec)
+			assert.Nil(t, state)
 		} else {
 			assert.NoError(t, err)
-			assert.NotNil(t, spec)
-			assert.Equal(t, test.expectedRoot, spec.Root)
-			assert.Equal(t, test.expectedInterm, spec.Interm)
-			assert.Equal(t, test.expectedServer, spec.Server)
-			assert.Equal(t, test.expectedClient, spec.Client)
+			assert.Equal(t, test.expectedState, state)
 		}
 	}
 }
@@ -164,12 +153,7 @@ func TestSaveState(t *testing.T) {
 		expectedYAML string
 	}{
 		{
-			&State{
-				Root:   ConfigCA{},
-				Interm: ConfigCA{},
-				Server: Config{},
-				Client: Config{},
-			},
+			&State{},
 			`root:
 				serial: 0
 				length: 0
@@ -200,11 +184,10 @@ func TestSaveState(t *testing.T) {
 				Interm: ConfigCA{
 					Config: Config{
 						Serial: 100,
-						Length: 4096, Days: 3650,
+						Length: 4096,
+						Days:   3650,
 					},
 				},
-				Server: Config{},
-				Client: Config{},
 			},
 			`root:
 				serial: 10
@@ -282,8 +265,8 @@ func TestSaveState(t *testing.T) {
 		data, err := ioutil.ReadFile(file)
 		assert.NoError(t, err)
 
-		yaml := strings.Replace(test.expectedYAML, "\t\t\t\t", "  ", -1)
-		yaml = strings.Replace(yaml, "\t\t\t", "", -1)
+		yaml := strings.Replace(test.expectedYAML, "\t\t\t", "", -1)
+		yaml = strings.Replace(yaml, "\t", "  ", -1)
 		assert.Equal(t, yaml, string(data))
 	}
 }
@@ -295,45 +278,44 @@ func TestSaveStateError(t *testing.T) {
 
 func TestNewSpec(t *testing.T) {
 	spec := NewSpec()
-	rootClaim := Claim{}
-	intermClaim := Claim{}
-	serverClaim := Claim{}
-	clientClaim := Claim{}
 
-	assert.Equal(t, spec.Root, rootClaim)
-	assert.Equal(t, spec.Interm, intermClaim)
-	assert.Equal(t, spec.Server, serverClaim)
-	assert.Equal(t, spec.Client, clientClaim)
+	expectedClaim := Claim{}
+	expectedRootPolicy := Policy{
+		Match:    strings.Split(defaultRootPolicyMatch, ","),
+		Supplied: strings.Split(defaultRootPolicySupplied, ","),
+	}
+	expectedIntermPolicy := Policy{
+		Match:    strings.Split(defaultIntermPolicyMatch, ","),
+		Supplied: strings.Split(defaultIntermPolicySupplied, ","),
+	}
+
+	assert.Equal(t, expectedClaim, spec.Root)
+	assert.Equal(t, expectedClaim, spec.Interm)
+	assert.Equal(t, expectedClaim, spec.Server)
+	assert.Equal(t, expectedClaim, spec.Client)
+
+	assert.Equal(t, expectedRootPolicy, spec.RootPolicy)
+	assert.Equal(t, expectedIntermPolicy, spec.IntermPolicy)
 }
 
 func TestLoadSpec(t *testing.T) {
 	tests := []struct {
-		toml           string
-		expectError    bool
-		expectedRoot   Claim
-		expectedInterm Claim
-		expectedServer Claim
-		expectedClient Claim
+		toml         string
+		expectError  bool
+		expectedSpec *Spec
 	}{
-		{
-			``,
-			false,
-			Claim{},
-			Claim{},
-			Claim{},
-			Claim{},
-		},
 		{
 			`invalid toml`,
 			true,
-			Claim{},
-			Claim{},
-			Claim{},
-			Claim{},
+			&Spec{},
 		},
 		{
-			`
-      [root]
+			``,
+			false,
+			&Spec{},
+		},
+		{
+			`[root]
 				locality = [ "Ottawa" ]
 				organization = [ "Moorara" ]
 			[server]
@@ -342,17 +324,19 @@ func TestLoadSpec(t *testing.T) {
 				email_address = [ "moorara@example.com" ]
 			`,
 			false,
-			Claim{
-				Locality:     []string{"Ottawa"},
-				Organization: []string{"Moorara"},
+			&Spec{
+				Root: Claim{
+					Locality:     []string{"Ottawa"},
+					Organization: []string{"Moorara"},
+				},
+				Interm: Claim{},
+				Server: Claim{
+					Country:      []string{"US"},
+					Organization: []string{"AWS"},
+					EmailAddress: []string{"moorara@example.com"},
+				},
+				Client: Claim{},
 			},
-			Claim{},
-			Claim{
-				Country:      []string{"US"},
-				Organization: []string{"AWS"},
-				EmailAddress: []string{"moorara@example.com"},
-			},
-			Claim{},
 		},
 		{
 			`
@@ -378,33 +362,49 @@ func TestLoadSpec(t *testing.T) {
 				locality = [ "London" ]
 				organization = [ "Moorara" ]
 				email_address = [ "moorara@example.com" ]
-      `,
+			[root_policy]
+				match = ["Country", "Organization"]
+				supplied = ["CommonName"]
+			[intermediate_policy]
+				match = ["Organization"]
+				supplied = ["CommonName"]
+			`,
 			false,
-			Claim{
-				Country:      []string{"CA", "US"},
-				Province:     []string{"Ontario", "Massachusetts"},
-				Locality:     []string{"Ottawa", "Boston"},
-				Organization: []string{"Moorara"},
-			},
-			Claim{
-				Country:      []string{"CA"},
-				Province:     []string{"Ontario"},
-				Locality:     []string{"Ottawa"},
-				Organization: []string{"Moorara"},
-				EmailAddress: []string{"moorara@example.com"},
-			},
-			Claim{
-				Country:      []string{"US"},
-				Province:     []string{"Virginia"},
-				Locality:     []string{"Richmond"},
-				Organization: []string{"Moorara"},
-				EmailAddress: []string{"moorara@example.com"},
-			},
-			Claim{
-				Country:      []string{"UK"},
-				Locality:     []string{"London"},
-				Organization: []string{"Moorara"},
-				EmailAddress: []string{"moorara@example.com"},
+			&Spec{
+				Root: Claim{
+					Country:      []string{"CA", "US"},
+					Province:     []string{"Ontario", "Massachusetts"},
+					Locality:     []string{"Ottawa", "Boston"},
+					Organization: []string{"Moorara"},
+				},
+				Interm: Claim{
+					Country:      []string{"CA"},
+					Province:     []string{"Ontario"},
+					Locality:     []string{"Ottawa"},
+					Organization: []string{"Moorara"},
+					EmailAddress: []string{"moorara@example.com"},
+				},
+				Server: Claim{
+					Country:      []string{"US"},
+					Province:     []string{"Virginia"},
+					Locality:     []string{"Richmond"},
+					Organization: []string{"Moorara"},
+					EmailAddress: []string{"moorara@example.com"},
+				},
+				Client: Claim{
+					Country:      []string{"UK"},
+					Locality:     []string{"London"},
+					Organization: []string{"Moorara"},
+					EmailAddress: []string{"moorara@example.com"},
+				},
+				RootPolicy: Policy{
+					Match:    []string{"Country", "Organization"},
+					Supplied: []string{"CommonName"},
+				},
+				IntermPolicy: Policy{
+					Match:    []string{"Organization"},
+					Supplied: []string{"CommonName"},
+				},
 			},
 		},
 	}
@@ -421,11 +421,7 @@ func TestLoadSpec(t *testing.T) {
 			assert.Nil(t, spec)
 		} else {
 			assert.NoError(t, err)
-			assert.NotNil(t, spec)
-			assert.Equal(t, test.expectedRoot, spec.Root)
-			assert.Equal(t, test.expectedInterm, spec.Interm)
-			assert.Equal(t, test.expectedServer, spec.Server)
-			assert.Equal(t, test.expectedClient, spec.Client)
+			assert.Equal(t, test.expectedSpec, spec)
 		}
 	}
 }
@@ -436,12 +432,7 @@ func TestSaveSpec(t *testing.T) {
 		expectedTOML string
 	}{
 		{
-			&Spec{
-				Root:   Claim{},
-				Interm: Claim{},
-				Server: Claim{},
-				Client: Claim{},
-			},
+			&Spec{},
 			`[root]
 
 			[intermediate]
@@ -449,6 +440,10 @@ func TestSaveSpec(t *testing.T) {
 			[server]
 
 			[client]
+
+			[root_policy]
+
+			[intermediate_policy]
 			`,
 		},
 		{
@@ -462,6 +457,10 @@ func TestSaveSpec(t *testing.T) {
 					Country:      []string{"US"},
 					Organization: []string{"AWS"}},
 				Client: Claim{},
+				RootPolicy: Policy{
+					Match:    []string{"Organization"},
+					Supplied: []string{"CommonName"},
+				},
 			},
 			`[root]
 				locality = ["Ottawa"]
@@ -474,6 +473,12 @@ func TestSaveSpec(t *testing.T) {
 				organization = ["AWS"]
 
 			[client]
+
+			[root_policy]
+				match = ["Organization"]
+				supplied = ["CommonName"]
+
+			[intermediate_policy]
 			`,
 		},
 		{
@@ -501,6 +506,14 @@ func TestSaveSpec(t *testing.T) {
 					Locality:     []string{"London"},
 					Organization: []string{"Moorara"},
 				},
+				RootPolicy: Policy{
+					Match:    []string{"Country", "Organization"},
+					Supplied: []string{"CommonName"},
+				},
+				IntermPolicy: Policy{
+					Match:    []string{"Organization"},
+					Supplied: []string{"CommonName"},
+				},
 			},
 			`[root]
 				country = ["CA", "US"]
@@ -524,6 +537,14 @@ func TestSaveSpec(t *testing.T) {
 				country = ["UK"]
 				locality = ["London"]
 				organization = ["Moorara"]
+
+			[root_policy]
+				match = ["Country", "Organization"]
+				supplied = ["CommonName"]
+
+			[intermediate_policy]
+				match = ["Organization"]
+				supplied = ["CommonName"]
 			`,
 		},
 	}
@@ -539,8 +560,8 @@ func TestSaveSpec(t *testing.T) {
 		data, err := ioutil.ReadFile(file)
 		assert.NoError(t, err)
 
-		toml := strings.Replace(test.expectedTOML, "\t\t\t\t", "  ", -1)
-		toml = strings.Replace(toml, "\t\t\t", "", -1)
+		toml := strings.Replace(test.expectedTOML, "\t\t\t", "", -1)
+		toml = strings.Replace(toml, "\t", "  ", -1)
 		assert.Equal(t, toml, string(data))
 	}
 }

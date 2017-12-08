@@ -47,6 +47,10 @@ func TestInitCommand(t *testing.T) {
 			[server]
 
 			[client]
+
+			[root_policy]
+
+			[intermediate_policy]
 			`,
 		},
 	}
@@ -66,15 +70,15 @@ func TestInitCommand(t *testing.T) {
 		// Verify state file
 		stateData, err := ioutil.ReadFile(pki.FileState)
 		assert.NoError(t, err)
-		stateYAML := strings.Replace(test.expectedState, "\t\t\t\t", "  ", -1)
-		stateYAML = strings.Replace(stateYAML, "\t\t\t", "", -1)
+		stateYAML := strings.Replace(test.expectedState, "\t\t\t", "", -1)
+		stateYAML = strings.Replace(stateYAML, "\t", "  ", -1)
 		assert.Equal(t, stateYAML, string(stateData))
 
 		// Verify spec file
 		specData, err := ioutil.ReadFile(pki.FileSpec)
 		assert.NoError(t, err)
-		specTOML := strings.Replace(test.expectedSpec, "\t\t\t\t", "  ", -1)
-		specTOML = strings.Replace(specTOML, "\t\t\t", "", -1)
+		specTOML := strings.Replace(test.expectedSpec, "\t\t\t", "", -1)
+		specTOML = strings.Replace(specTOML, "\t", "  ", -1)
 		assert.Equal(t, specTOML, string(specData))
 
 		util.DeleteAll(

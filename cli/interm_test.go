@@ -17,65 +17,19 @@ func TestNewIntermNewCommand(t *testing.T) {
 	assert.Equal(t, pki.NewX509Manager(), cmd.pki)
 }
 
-func TestIntermNewCommandError(t *testing.T) {
-	tests := []struct {
-		state        *pki.State
-		spec         *pki.Spec
-		args         []string
-		expectedExit int
-	}{
-		{
-			nil,
-			nil,
-			[]string{"-invalid"},
-			ErrorInvalidFlag,
-		},
-		{
-			nil,
-			&pki.Spec{},
-			[]string{"-req=interm"},
-			ErrorReadState,
-		},
-		{
-			pki.NewState(),
-			nil,
-			[]string{"-req=interm"},
-			ErrorReadSpec,
-		},
-	}
-
-	for _, test := range tests {
-		cleanup, err := mockWorkspace(test.state, test.spec)
-		assert.NoError(t, err)
-
-		cmd := &IntermNewCommand{
-			ui:  cli.NewMockUi(),
-			pki: &mockedManager{},
-		}
-		exit := cmd.Run(test.args)
-
-		assert.Equal(t, intermNewSynopsis, cmd.Synopsis())
-		assert.Equal(t, intermNewHelp, cmd.Help())
-		assert.Equal(t, test.expectedExit, exit)
-
-		err = cleanup()
-		assert.NoError(t, err)
-	}
-}
-
 func TestIntermNewCommand(t *testing.T) {
 	tests := []struct {
-		state            *pki.State
-		spec             *pki.Spec
-		args             []string
-		input            string
-		GenIntermCAError error
-		expectedExit     int
+		state             *pki.State
+		spec              *pki.Spec
+		args              []string
+		input             string
+		GenIntermCSRError error
+		expectedExit      int
 	}{
 		{
 			&pki.State{},
 			&pki.Spec{},
-			[]string{"-req=interm"},
+			[]string{"-req=it"},
 			``,
 			errors.New("error"),
 			ErrorIntermCA,
@@ -83,7 +37,7 @@ func TestIntermNewCommand(t *testing.T) {
 		{
 			pki.NewState(),
 			&pki.Spec{},
-			[]string{"-req=interm"},
+			[]string{"-req=ops"},
 			``,
 			nil,
 			0,
@@ -97,7 +51,7 @@ func TestIntermNewCommand(t *testing.T) {
 					Organization: []string{"Milad"},
 				},
 			},
-			[]string{"-req", "interm"},
+			[]string{"-req", "ops"},
 			`secret
 			IntermediateCA
 			Ottawa,Toronto
@@ -118,8 +72,68 @@ func TestIntermNewCommand(t *testing.T) {
 		cmd := &IntermNewCommand{
 			ui: mockUI,
 			pki: &mockedManager{
-				GenIntermCAError: test.GenIntermCAError,
+				GenIntermCSRError: test.GenIntermCSRError,
 			},
+		}
+		exit := cmd.Run(test.args)
+
+		assert.Equal(t, intermNewSynopsis, cmd.Synopsis())
+		assert.Equal(t, intermNewHelp, cmd.Help())
+		assert.Equal(t, test.expectedExit, exit)
+
+		err = cleanup()
+		assert.NoError(t, err)
+	}
+}
+
+func TestIntermNewCommandError(t *testing.T) {
+	tests := []struct {
+		state        *pki.State
+		spec         *pki.Spec
+		args         []string
+		input        string
+		expectedExit int
+	}{
+		{
+			nil,
+			nil,
+			[]string{"-invalid"},
+			``,
+			ErrorInvalidFlag,
+		},
+		{
+			nil,
+			&pki.Spec{},
+			[]string{},
+			``,
+			ErrorReadState,
+		},
+		{
+			pki.NewState(),
+			nil,
+			[]string{},
+			``,
+			ErrorReadSpec,
+		},
+		{
+			pki.NewState(),
+			pki.NewSpec(),
+			[]string{},
+			``,
+			ErrorNoName,
+		},
+	}
+
+	for _, test := range tests {
+		cleanup, err := mockWorkspace(test.state, test.spec)
+		assert.NoError(t, err)
+
+		mockUI := cli.NewMockUi()
+		mockUI.InputReader = strings.NewReader(test.input)
+
+		cmd := &IntermNewCommand{
+			ui:  mockUI,
+			pki: &mockedManager{},
 		}
 		exit := cmd.Run(test.args)
 
