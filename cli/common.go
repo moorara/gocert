@@ -84,11 +84,11 @@ func saveWorkspace(state *pki.State, spec *pki.Spec, ui cli.Ui) int {
 }
 
 func askForNewState(ui cli.Ui) *pki.State {
-	root := pki.ConfigCA{}
+	root := pki.Config{}
 	ui.Output(textRootEnterConfig)
 	askForStruct(&root, "yaml", true, ui)
 
-	interm := pki.ConfigCA{}
+	interm := pki.Config{}
 	ui.Output(textIntermEnterConfig)
 	askForStruct(&interm, "yaml", true, ui)
 
@@ -150,10 +150,6 @@ func askForNewSpec(ui cli.Ui) *pki.Spec {
 
 func askForConfig(config *pki.Config, ui cli.Ui) {
 	askForStruct(config, "yaml", false, ui)
-}
-
-func askForConfigCA(configCA *pki.ConfigCA, ui cli.Ui) {
-	askForStruct(configCA, "yaml", false, ui)
 }
 
 func askForClaim(claim *pki.Claim, ui cli.Ui) {

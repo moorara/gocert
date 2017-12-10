@@ -17,8 +17,10 @@ const (
 	// ErrorNoName is returned when no name is provided
 	ErrorNoName = 22
 
+	// ErrorMetadata is returned when an invalid metadata is set
+	ErrorMetadata = 31
 	// ErrorRootCA is returned when generating root ca failed
-	ErrorRootCA = 31
-	// ErrorIntermCA is returned when generating intermediate ca failed
-	ErrorIntermCA = 32
+	ErrorRootCA = 32
+	// ErrorCSR is returned when generating csr failed
+	ErrorCSR = 33
 )

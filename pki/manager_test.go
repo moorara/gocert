@@ -2,86 +2,50 @@ package pki
 
 import (
 	"io/ioutil"
-	"log"
-	"os"
 	"testing"
 
 	"github.com/moorara/go-box/util"
 	"github.com/stretchr/testify/assert"
 )
 
-func mockWorkspace(state *State, spec *Spec) (func(), error) {
-	items := make([]string, 0)
-	deleteFunc := func() {
-		for _, item := range items {
-			err := os.RemoveAll(item)
-			if err != nil {
-				log.Printf("Failed to delete %v.", item)
-			}
-		}
-	}
-
-	// Mock sub-directories
-	_, err := util.MkDirs("", DirRoot, DirInterm, DirServer, DirClient, DirCSR)
-	items = append(items, DirRoot, DirInterm, DirServer, DirClient, DirCSR)
-	if err != nil {
-		return deleteFunc, err
-	}
-
-	// Write state file
-	err = SaveState(state, FileState)
-	items = append(items, FileState)
-	if err != nil {
-		return deleteFunc, err
-	}
-
-	// Write spec file
-	err = SaveSpec(spec, FileSpec)
-	items = append(items, FileSpec)
-	if err != nil {
-		return deleteFunc, err
-	}
-
-	return deleteFunc, nil
-}
-
-func TestGenRootCA(t *testing.T) {
+func TestGenCert(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      ConfigCA
+		config      Config
 		claim       Claim
+		md          Metadata
 		expectError bool
 	}{
 		{
 			"root",
-			ConfigCA{},
+			Config{},
 			Claim{},
+			Metadata{},
 			true,
 		},
 		{
 			"root",
-			ConfigCA{
-				Config: Config{
-					Serial: int64(10),
-					Length: 1024,
-					Days:   30,
-				},
+			Config{
+				Serial: int64(10),
+				Length: 1024,
+				Days:   30,
 			},
 			Claim{
 				CommonName:   "Root CA",
 				Country:      []string{"CA"},
 				Organization: []string{"Moorara"},
 			},
+			Metadata{
+				CertType: CertTypeRoot,
+			},
 			false,
 		},
 		{
 			"root",
-			ConfigCA{
-				Config: Config{
-					Serial: int64(10),
-					Length: 1024,
-					Days:   30,
-				},
+			Config{
+				Serial:   int64(10),
+				Length:   1024,
+				Days:     30,
 				Password: "secret",
 			},
 			Claim{
@@ -92,6 +56,9 @@ func TestGenRootCA(t *testing.T) {
 				Organization: []string{"Moorara"},
 				EmailAddress: []string{"moorara@example.com"},
 			},
+			Metadata{
+				CertType: CertTypeRoot,
+			},
 			false,
 		},
 	}
@@ -99,36 +66,37 @@ func TestGenRootCA(t *testing.T) {
 	for _, test := range tests {
 		state := &State{Root: test.config}
 		spec := &Spec{Root: test.claim}
-		cleanup, err := mockWorkspace(state, spec)
+		err := NewWorkspace(state, spec)
 		assert.NoError(t, err)
 
 		manager := NewX509Manager()
-		err = manager.GenRootCA(test.name, test.config, test.claim)
+		err = manager.GenCert(test.name, test.config, test.claim, test.md)
 
 		if test.expectError {
 			assert.Error(t, err)
 		} else {
 			assert.NoError(t, err)
+			// TODO: verify
 		}
 
-		cleanup()
+		CleanupWorkspace()
 	}
 }
 
-func TestGenRootCAError(t *testing.T) {
+func TestGenCertError(t *testing.T) {
 	state := NewState()
 	spec := NewSpec()
-	cleanup, err := mockWorkspace(state, spec)
+	err := NewWorkspace(state, spec)
 	assert.NoError(t, err)
-	defer cleanup()
+	defer CleanupWorkspace()
 
-	t.Run("No Name", func(t *testing.T) {
+	t.Run("NoName", func(t *testing.T) {
 		manager := NewX509Manager()
-		err := manager.GenRootCA("", ConfigCA{}, Claim{})
+		err := manager.GenCert("", Config{}, Claim{}, Metadata{})
 		assert.Error(t, err)
 	})
 
-	t.Run("Existing Name", func(t *testing.T) {
+	t.Run("ExistingName", func(t *testing.T) {
 		certFile := DirRoot + "/root" + extCACert
 		keyFile := DirRoot + "/root" + extCAKey
 		err := ioutil.WriteFile(certFile, nil, 0644)
@@ -137,7 +105,7 @@ func TestGenRootCAError(t *testing.T) {
 		assert.NoError(t, err)
 
 		manager := NewX509Manager()
-		err = manager.GenRootCA("root", ConfigCA{}, Claim{})
+		err = manager.GenCert("root", Config{}, Claim{}, Metadata{})
 		assert.Error(t, err)
 
 		err = util.DeleteAll("", certFile, keyFile)
@@ -145,27 +113,27 @@ func TestGenRootCAError(t *testing.T) {
 	})
 }
 
-func TestGenIntermCSR(t *testing.T) {
+func TestGenCSR(t *testing.T) {
 	tests := []struct {
 		name        string
-		config      ConfigCA
+		config      Config
 		claim       Claim
+		md          Metadata
 		expectError bool
 	}{
 		{
 			"interm",
-			ConfigCA{},
+			Config{},
 			Claim{},
+			Metadata{},
 			true,
 		},
 		{
 			"it",
-			ConfigCA{
-				Config: Config{
-					Serial: 100,
-					Length: 1024,
-					Days:   7,
-				},
+			Config{
+				Serial: 100,
+				Length: 1024,
+				Days:   7,
 			},
 			Claim{
 				CommonName:         "IT CA",
@@ -173,16 +141,17 @@ func TestGenIntermCSR(t *testing.T) {
 				Organization:       []string{"Moorara"},
 				OrganizationalUnit: []string{"IT"},
 			},
+			Metadata{
+				CertType: CertTypeInterm,
+			},
 			false,
 		},
 		{
 			"ops",
-			ConfigCA{
-				Config: Config{
-					Serial: 100,
-					Length: 1024,
-					Days:   7,
-				},
+			Config{
+				Serial:   100,
+				Length:   1024,
+				Days:     7,
 				Password: "secret",
 			},
 			Claim{
@@ -194,6 +163,9 @@ func TestGenIntermCSR(t *testing.T) {
 				OrganizationalUnit: []string{"Ops"},
 				EmailAddress:       []string{"moorara@example.com"},
 			},
+			Metadata{
+				CertType: CertTypeInterm,
+			},
 			false,
 		},
 	}
@@ -201,36 +173,37 @@ func TestGenIntermCSR(t *testing.T) {
 	for _, test := range tests {
 		state := &State{Interm: test.config}
 		spec := &Spec{Interm: test.claim}
-		cleanup, err := mockWorkspace(state, spec)
+		err := NewWorkspace(state, spec)
 		assert.NoError(t, err)
 
 		manager := NewX509Manager()
-		err = manager.GenIntermCSR(test.name, test.config, test.claim)
+		err = manager.GenCSR(test.name, test.config, test.claim, test.md)
 
 		if test.expectError {
 			assert.Error(t, err)
 		} else {
 			assert.NoError(t, err)
+			// TODO: verify
 		}
 
-		cleanup()
+		CleanupWorkspace()
 	}
 }
 
-func TestGenIntermCSRError(t *testing.T) {
+func TestGenCSRError(t *testing.T) {
 	state := NewState()
 	spec := NewSpec()
-	cleanup, err := mockWorkspace(state, spec)
+	err := NewWorkspace(state, spec)
 	assert.NoError(t, err)
-	defer cleanup()
+	defer CleanupWorkspace()
 
-	t.Run("No Name", func(t *testing.T) {
+	t.Run("NoName", func(t *testing.T) {
 		manager := NewX509Manager()
-		err = manager.GenIntermCSR("", ConfigCA{}, Claim{})
+		err = manager.GenCSR("", Config{}, Claim{}, Metadata{})
 		assert.Error(t, err)
 	})
 
-	t.Run("Existing Name", func(t *testing.T) {
+	t.Run("ExistingName", func(t *testing.T) {
 		csrFile := DirInterm + "/interm" + extCACSR
 		certFile := DirInterm + "/interm" + extCACert
 		keyFile := DirInterm + "/interm" + extCAKey
@@ -242,7 +215,7 @@ func TestGenIntermCSRError(t *testing.T) {
 		assert.NoError(t, err)
 
 		manager := NewX509Manager()
-		err = manager.GenIntermCSR("interm", ConfigCA{}, Claim{})
+		err = manager.GenCSR("interm", Config{}, Claim{}, Metadata{})
 		assert.Error(t, err)
 
 		err = util.DeleteAll("", csrFile, certFile, keyFile)

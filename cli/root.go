@@ -55,15 +55,17 @@ func (c *RootNewCommand) Run(args []string) int {
 		return status
 	}
 
+	md := pki.Metadata{CertType: pki.CertTypeRoot}
+
 	c.ui.Output(rootEnterConfig)
-	askForConfigCA(&state.Root, c.ui)
+	askForConfig(&state.Root, c.ui)
 
 	c.ui.Output(rootEnterClaim)
 	askForClaim(&spec.Root, c.ui)
 
 	c.ui.Output("")
 
-	err = c.pki.GenRootCA(rootName, state.Root, spec.Root)
+	err = c.pki.GenCert(rootName, state.Root, spec.Root, md)
 	if err != nil {
 		c.ui.Error("Failed to generate root ca. Error: " + err.Error())
 		return ErrorRootCA

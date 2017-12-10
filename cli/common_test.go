@@ -12,69 +12,28 @@ import (
 )
 
 type mockedManager struct {
-	GenRootCAError    error
-	GenIntermCSRError error
-	GenServerCSRError error
-	GenClientCSRError error
+	GenCertError error
+	GenCSRError  error
+	SignCSRError error
 
-	GenRootCACalled    bool
-	GenIntermCSRCalled bool
-	GenServerCSRCalled bool
-	GenClientCSRCalled bool
+	GenCertCalled bool
+	GenCSRCalled  bool
+	SignCSRCalled bool
 }
 
-func (m *mockedManager) GenRootCA(string, pki.ConfigCA, pki.Claim) error {
-	m.GenRootCACalled = true
-	return m.GenRootCAError
+func (m *mockedManager) GenCert(string, pki.Config, pki.Claim, pki.Metadata) error {
+	m.GenCertCalled = true
+	return m.GenCertError
 }
 
-func (m *mockedManager) GenIntermCSR(string, pki.ConfigCA, pki.Claim) error {
-	m.GenIntermCSRCalled = true
-	return m.GenIntermCSRError
+func (m *mockedManager) GenCSR(string, pki.Config, pki.Claim, pki.Metadata) error {
+	m.GenCSRCalled = true
+	return m.GenCSRError
 }
 
-func (m *mockedManager) GenServerCSR(string, pki.Config, pki.Claim) error {
-	m.GenServerCSRCalled = true
-	return m.GenServerCSRError
-}
-
-func (m *mockedManager) GenClientCSR(string, pki.Config, pki.Claim) error {
-	m.GenClientCSRCalled = true
-	return m.GenClientCSRError
-}
-
-func mockWorkspace(state *pki.State, spec *pki.Spec) (func() error, error) {
-	items := make([]string, 0)
-	deleteFunc := func() error {
-		return util.DeleteAll("", items...)
-	}
-
-	// Mock sub-directories
-	_, err := util.MkDirs("", pki.DirRoot, pki.DirInterm, pki.DirServer, pki.DirClient, pki.DirCSR)
-	items = append(items, pki.DirRoot, pki.DirInterm, pki.DirServer, pki.DirClient, pki.DirCSR)
-	if err != nil {
-		return deleteFunc, err
-	}
-
-	// Mock state file
-	if state != nil {
-		err := pki.SaveState(state, pki.FileState)
-		if err != nil {
-			return deleteFunc, err
-		}
-		items = append(items, pki.FileState)
-	}
-
-	// Mock spec file
-	if spec != nil {
-		err := pki.SaveSpec(spec, pki.FileSpec)
-		if err != nil {
-			return deleteFunc, err
-		}
-		items = append(items, pki.FileSpec)
-	}
-
-	return deleteFunc, nil
+func (m *mockedManager) SignCSR(string, string, pki.Policy, pki.Metadata) error {
+	m.SignCSRCalled = true
+	return m.SignCSRError
 }
 
 func TestNewColoredUi(t *testing.T) {
@@ -191,19 +150,15 @@ func TestLoadWorkspace(t *testing.T) {
 			`,
 			0,
 			&pki.State{
-				Root: pki.ConfigCA{
-					Config: pki.Config{
-						Serial: int64(10),
-						Length: 4096,
-						Days:   7300,
-					},
+				Root: pki.Config{
+					Serial: int64(10),
+					Length: 4096,
+					Days:   7300,
 				},
-				Interm: pki.ConfigCA{
-					Config: pki.Config{
-						Serial: int64(100),
-						Length: 4096,
-						Days:   3650,
-					},
+				Interm: pki.Config{
+					Serial: int64(100),
+					Length: 4096,
+					Days:   3650,
 				},
 				Server: pki.Config{
 					Serial: int64(1000),
@@ -320,19 +275,15 @@ func TestSaveWorkspace(t *testing.T) {
 		},
 		{
 			&pki.State{
-				Root: pki.ConfigCA{
-					Config: pki.Config{
-						Serial: 10,
-						Length: 4096,
-						Days:   7300,
-					},
+				Root: pki.Config{
+					Serial: 10,
+					Length: 4096,
+					Days:   7300,
 				},
-				Interm: pki.ConfigCA{
-					Config: pki.Config{
-						Serial: 100,
-						Length: 4096,
-						Days:   3650,
-					},
+				Interm: pki.Config{
+					Serial: 100,
+					Length: 4096,
+					Days:   3650,
 				},
 				Server: pki.Config{
 					Serial: 1000,
@@ -462,8 +413,8 @@ func TestAskForNewState(t *testing.T) {
 		{
 			``,
 			pki.State{
-				Root:   pki.ConfigCA{},
-				Interm: pki.ConfigCA{},
+				Root:   pki.Config{},
+				Interm: pki.Config{},
 				Server: pki.Config{},
 				Client: pki.Config{},
 			},
@@ -483,19 +434,15 @@ func TestAskForNewState(t *testing.T) {
 			40
 			`,
 			pki.State{
-				Root: pki.ConfigCA{
-					Config: pki.Config{
-						Serial: int64(10),
-						Length: 4096,
-						Days:   7300,
-					},
+				Root: pki.Config{
+					Serial: int64(10),
+					Length: 4096,
+					Days:   7300,
 				},
-				Interm: pki.ConfigCA{
-					Config: pki.Config{
-						Serial: int64(100),
-						Length: 4096,
-						Days:   3650,
-					},
+				Interm: pki.Config{
+					Serial: int64(100),
+					Length: 4096,
+					Days:   3650,
 				},
 				Server: pki.Config{
 					Serial: int64(1000),
@@ -674,29 +621,27 @@ func TestAskForConfig(t *testing.T) {
 
 func TestAskForConfigCA(t *testing.T) {
 	tests := []struct {
-		configCA         pki.ConfigCA
+		config           pki.Config
 		input            string
-		expectedConfigCA pki.ConfigCA
+		expectedConfigCA pki.Config
 	}{
 		{
-			pki.ConfigCA{},
+			pki.Config{},
 			``,
-			pki.ConfigCA{},
+			pki.Config{},
 		},
 		{
-			pki.ConfigCA{},
+			pki.Config{},
 			`100
 			4096
 			3650
 			secret
 			secret
 			`,
-			pki.ConfigCA{
-				Config: pki.Config{
-					Serial: int64(100),
-					Length: 4096,
-					Days:   3650,
-				},
+			pki.Config{
+				Serial:   int64(100),
+				Length:   4096,
+				Days:     3650,
 				Password: "secret",
 			},
 		},
@@ -705,9 +650,9 @@ func TestAskForConfigCA(t *testing.T) {
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
-		askForConfigCA(&test.configCA, mockUI)
+		askForConfig(&test.config, mockUI)
 
-		assert.Equal(t, test.expectedConfigCA, test.configCA)
+		assert.Equal(t, test.expectedConfigCA, test.config)
 	}
 }
 

@@ -1,12 +1,7 @@
 package pki
 
 import (
-	"io/ioutil"
-	"os"
 	"strings"
-
-	"github.com/BurntSushi/toml"
-	yaml "gopkg.in/yaml.v2"
 )
 
 const (
@@ -36,22 +31,17 @@ const (
 type (
 	// State represents the type for state
 	State struct {
-		Root   ConfigCA `yaml:"root"`
-		Interm ConfigCA `yaml:"intermediate"`
-		Server Config   `yaml:"server"`
-		Client Config   `yaml:"client"`
+		Root   Config `yaml:"root"`
+		Interm Config `yaml:"intermediate"`
+		Server Config `yaml:"server"`
+		Client Config `yaml:"client"`
 	}
 
 	// Config represents the subtype for configurations
 	Config struct {
-		Serial int64 `yaml:"serial"`
-		Length int   `yaml:"length"`
-		Days   int   `yaml:"days"`
-	}
-
-	// ConfigCA represents the subtype for certificatea authority configurations
-	ConfigCA struct {
-		Config   `yaml:",inline"`
+		Serial   int64  `yaml:"serial"`
+		Length   int    `yaml:"length"`
+		Days     int    `yaml:"days"`
 		Password string `yaml:"-" secret:"required,6"`
 	}
 
@@ -83,24 +73,25 @@ type (
 		Match    []string `toml:"match"`
 		Supplied []string `toml:"supplied"`
 	}
+
+	// Metadata represents the type for metadata about a certificate
+	Metadata struct {
+		CertType int
+	}
 )
 
 // NewState creates a new state
 func NewState() *State {
 	return &State{
-		Root: ConfigCA{
-			Config: Config{
-				Serial: defaultRootCASerial,
-				Length: defaultRootCALength,
-				Days:   defaultRootCADays,
-			},
+		Root: Config{
+			Serial: defaultRootCASerial,
+			Length: defaultRootCALength,
+			Days:   defaultRootCADays,
 		},
-		Interm: ConfigCA{
-			Config: Config{
-				Serial: defaultIntermCASerial,
-				Length: defaultIntermCALength,
-				Days:   defaultIntermCADays,
-			},
+		Interm: Config{
+			Serial: defaultIntermCASerial,
+			Length: defaultIntermCALength,
+			Days:   defaultIntermCADays,
 		},
 		Server: Config{
 			Serial: defaultServerCertSerial,
@@ -113,37 +104,6 @@ func NewState() *State {
 			Days:   defaultClientCertDays,
 		},
 	}
-}
-
-// LoadState reads and parses state from a YAML file
-func LoadState(file string) (*State, error) {
-	data, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
-	}
-
-	state := new(State)
-	err = yaml.Unmarshal(data, state)
-	if err != nil {
-		return nil, err
-	}
-
-	return state, nil
-}
-
-// SaveState writes state to a YAML file
-func SaveState(state *State, file string) error {
-	data, err := yaml.Marshal(state)
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(file, data, 0644)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // NewSpec creates a new spec
@@ -164,33 +124,18 @@ func NewSpec() *Spec {
 	}
 }
 
-// LoadSpec reads and parses spec from a TOML file
-func LoadSpec(file string) (*Spec, error) {
-	spec := new(Spec)
-	_, err := toml.DecodeFile(file, spec)
-	if err != nil {
-		return nil, err
+// Dir returns the directory corresponding to cert type
+func (md Metadata) Dir() string {
+	switch md.CertType {
+	case CertTypeRoot:
+		return DirRoot
+	case CertTypeInterm:
+		return DirInterm
+	case CertTypeServer:
+		return DirServer
+	case CertTypeClient:
+		return DirClient
+	default:
+		return ""
 	}
-
-	return spec, nil
-}
-
-// SaveSpec writes spec to a TOML file
-func SaveSpec(spec *Spec, file string) error {
-	f, err := os.Create(file)
-	if err != nil {
-		return err
-	}
-
-	err = toml.NewEncoder(f).Encode(spec)
-	if err != nil {
-		return err
-	}
-
-	err = f.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }

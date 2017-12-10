@@ -19,12 +19,12 @@ func TestNewRootNewCommand(t *testing.T) {
 
 func TestRootNewCommand(t *testing.T) {
 	tests := []struct {
-		state          *pki.State
-		spec           *pki.Spec
-		args           []string
-		input          string
-		GenRootCAError error
-		expectedExit   int
+		state        *pki.State
+		spec         *pki.Spec
+		args         []string
+		input        string
+		GenCertError error
+		expectedExit int
 	}{
 		{
 			&pki.State{},
@@ -62,7 +62,7 @@ func TestRootNewCommand(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		cleanup, err := mockWorkspace(test.state, test.spec)
+		err := pki.NewWorkspace(test.state, test.spec)
 		assert.NoError(t, err)
 
 		mockUI := cli.NewMockUi()
@@ -71,7 +71,7 @@ func TestRootNewCommand(t *testing.T) {
 		cmd := &RootNewCommand{
 			ui: mockUI,
 			pki: &mockedManager{
-				GenRootCAError: test.GenRootCAError,
+				GenCertError: test.GenCertError,
 			},
 		}
 		exit := cmd.Run(test.args)
@@ -80,7 +80,7 @@ func TestRootNewCommand(t *testing.T) {
 		assert.Equal(t, rootHelp, cmd.Help())
 		assert.Equal(t, test.expectedExit, exit)
 
-		err = cleanup()
+		err = pki.CleanupWorkspace()
 		assert.NoError(t, err)
 	}
 }
@@ -113,7 +113,7 @@ func TestRootNewCommandError(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		cleanup, err := mockWorkspace(test.state, test.spec)
+		err := pki.NewWorkspace(test.state, test.spec)
 		assert.NoError(t, err)
 
 		cmd := &RootNewCommand{
@@ -126,7 +126,7 @@ func TestRootNewCommandError(t *testing.T) {
 		assert.Equal(t, rootHelp, cmd.Help())
 		assert.Equal(t, test.expectedExit, exit)
 
-		err = cleanup()
+		err = pki.CleanupWorkspace()
 		assert.NoError(t, err)
 	}
 }

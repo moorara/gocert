@@ -12,12 +12,12 @@ cd certs
 gocert init
 gocert root new
 
-gocert intermediate new -req=ops
-gocert root sign -req=ops
+gocert intermediate new -name=ops
+gocert root sign -name=ops
 
-gocert server new -req=mongo
-gocert client new -req=webapp
-gocert intermediate sign -req=mongo,webapp
+gocert server new -name=mongo
+gocert client new -name=webapp
+gocert intermediate sign -name=mongo,webapp
 ```
 
 ## Certificates Explained

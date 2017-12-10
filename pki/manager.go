@@ -29,22 +29,21 @@ const (
 type (
 	// Manager provides methods for managing certificates
 	Manager interface {
-		GenRootCA(string, ConfigCA, Claim) error
-		GenIntermCSR(string, ConfigCA, Claim) error
-		GenServerCSR(string, Config, Claim) error
-		GenClientCSR(string, Config, Claim) error
+		GenCert(string, Config, Claim, Metadata) error
+		GenCSR(string, Config, Claim, Metadata) error
+		SignCSR(string, string, Policy, Metadata) error
 	}
 
-	// X509Manager provides methods for managing x509 certificates
-	X509Manager struct{}
+	// x509Manager provides methods for managing x509 certificates
+	x509Manager struct{}
 )
 
 // NewX509Manager creates a new X509Manager
 func NewX509Manager() Manager {
-	return &X509Manager{}
+	return &x509Manager{}
 }
 
-func validateName(name string) error {
+func checkName(name string) error {
 	if name == "" {
 		return errors.New("Name is not set")
 	}
@@ -58,8 +57,8 @@ func validateName(name string) error {
 	return nil
 }
 
-// genKeys generates a new public-private key pair
-func genKeys(length int) (*rsa.PublicKey, *rsa.PrivateKey, error) {
+// genKeyPair generates a new public-private key pair
+func genKeyPair(length int) (*rsa.PublicKey, *rsa.PrivateKey, error) {
 	private, err := rsa.GenerateKey(rand.Reader, length)
 	if err != nil {
 		return nil, nil, err
@@ -128,9 +127,9 @@ func writePemFile(pemType string, pemData []byte, path string) error {
 	return nil
 }
 
-// GenRootCA generates root certificate authority
-func (m *X509Manager) GenRootCA(name string, config ConfigCA, claim Claim) error {
-	if err := validateName(name); err != nil {
+// GenCert generates a new certificate
+func (m *x509Manager) GenCert(name string, config Config, claim Claim, md Metadata) error {
+	if err := checkName(name); err != nil {
 		return err
 	}
 
@@ -140,7 +139,7 @@ func (m *X509Manager) GenRootCA(name string, config ConfigCA, claim Claim) error
 	endTime := startTime.AddDate(0, 0, config.Days)
 
 	// Generate a new public-private key pair
-	publicKey, privateKey, err := genKeys(length)
+	publicKey, privateKey, err := genKeyPair(length)
 	if err != nil {
 		return err
 	}
@@ -212,9 +211,9 @@ func (m *X509Manager) GenRootCA(name string, config ConfigCA, claim Claim) error
 	return nil
 }
 
-// GenIntermCSR generates an certificate signing request for an intermediate certificate authority
-func (m *X509Manager) GenIntermCSR(name string, config ConfigCA, claim Claim) error {
-	if err := validateName(name); err != nil {
+// GenCSR generates a certificate signing request
+func (m *x509Manager) GenCSR(name string, config Config, claim Claim, md Metadata) error {
+	if err := checkName(name); err != nil {
 		return err
 	}
 
@@ -224,7 +223,7 @@ func (m *X509Manager) GenIntermCSR(name string, config ConfigCA, claim Claim) er
 	// TODO endTime := startTime.AddDate(0, 0, config.Days)
 
 	// Generate a new public-private key pair
-	_, privateKey, err := genKeys(length) // TODO
+	_, privateKey, err := genKeyPair(length) // TODO
 	if err != nil {
 		return err
 	}
@@ -257,7 +256,7 @@ func (m *X509Manager) GenIntermCSR(name string, config ConfigCA, claim Claim) er
 	}
 
 	/* Write certificate key file */
-	keyFilePath := path.Join(DirInterm, name+extCAKey)
+	keyFilePath := path.Join(md.Dir(), name+extCAKey)
 	err = writePrivateKey(privateKey, config.Password, keyFilePath)
 	if err != nil {
 		return err
@@ -273,12 +272,7 @@ func (m *X509Manager) GenIntermCSR(name string, config ConfigCA, claim Claim) er
 	return nil
 }
 
-// GenServerCSR generates a certificate signing request for a server certificate
-func (m *X509Manager) GenServerCSR(name string, config Config, claim Claim) error {
-	return nil
-}
-
-// GenClientCSR generates a certificate signing request for a client certificate
-func (m *X509Manager) GenClientCSR(name string, config Config, claim Claim) error {
+// SignCSR signs a certificate signing request using a certificate authority
+func (m *x509Manager) SignCSR(nameCA, nameCSR string, policy Policy, md Metadata) error {
 	return nil
 }

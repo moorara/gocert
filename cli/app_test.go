@@ -23,6 +23,8 @@ var (
 	helpMockInit      = "help text for mocked init command"
 	helpMockRootNew   = "help text for mocked root new command"
 	helpMockIntermNew = "help text for mocked intermediate new command"
+	helpMockServerNew = "help text for mocked server new command"
+	helpMockClientNew = "help text for mocked client new command"
 )
 
 func newMockApp(name, version string) *App {
@@ -32,6 +34,8 @@ func newMockApp(name, version string) *App {
 		init:      &cli.MockCommand{RunResult: 0, HelpText: helpMockInit},
 		rootNew:   &cli.MockCommand{RunResult: 0, HelpText: helpMockRootNew},
 		intermNew: &cli.MockCommand{RunResult: 0, HelpText: helpMockIntermNew},
+		serverNew: &cli.MockCommand{RunResult: 0, HelpText: helpMockServerNew},
+		clientNew: &cli.MockCommand{RunResult: 0, HelpText: helpMockClientNew},
 	}
 }
 
@@ -65,27 +69,39 @@ func TestAppRun(t *testing.T) {
 		{"cli", "0.1.1", []string{}, 127, helpRegexes},
 		{"cli", "0.1.2", []string{"invalid"}, 127, helpRegexes},
 
-		{"cli", "0.1.3", []string{"-version"}, 0, []string{"0.1.3"}},
-		{"cli", "0.1.4", []string{"--version"}, 0, []string{"0.1.4"}},
+		{"cli", "0.2.1", []string{"-version"}, 0, []string{"0.2.1"}},
+		{"cli", "0.2.2", []string{"--version"}, 0, []string{"0.2.2"}},
 
-		{"cli", "0.1.5", []string{"-help"}, 0, helpRegexes},
-		{"cli", "0.1.6", []string{"--help"}, 0, helpRegexes},
+		{"cli", "0.3.1", []string{"-help"}, 0, helpRegexes},
+		{"cli", "0.3.2", []string{"--help"}, 0, helpRegexes},
 
-		{"cli", "0.1.7", []string{"init"}, 0, []string{}},
-		{"cli", "0.1.8", []string{"init", "-help"}, 0, []string{helpMockInit}},
-		{"cli", "0.1.9", []string{"init", "--help"}, 0, []string{helpMockInit}},
+		{"cli", "0.4.1", []string{"init"}, 0, []string{}},
+		{"cli", "0.4.2", []string{"init", "-help"}, 0, []string{helpMockInit}},
+		{"cli", "0.4.3", []string{"init", "--help"}, 0, []string{helpMockInit}},
 
-		{"cli", "0.1.10", []string{"root"}, 1, helpSubRegexes},
-		{"cli", "0.1.11", []string{"root", "-help"}, 0, helpSubRegexes},
-		{"cli", "0.1.12", []string{"root", "--help"}, 0, helpSubRegexes},
-		{"cli", "0.1.11", []string{"root", "new", "-help"}, 0, []string{helpMockRootNew}},
-		{"cli", "0.1.12", []string{"root", "new", "--help"}, 0, []string{helpMockRootNew}},
+		{"cli", "0.5.1", []string{"root"}, 1, helpSubRegexes},
+		{"cli", "0.5.2", []string{"root", "-help"}, 0, helpSubRegexes},
+		{"cli", "0.5.3", []string{"root", "--help"}, 0, helpSubRegexes},
+		{"cli", "0.5.4", []string{"root", "new", "-help"}, 0, []string{helpMockRootNew}},
+		{"cli", "0.5.5", []string{"root", "new", "--help"}, 0, []string{helpMockRootNew}},
 
-		{"cli", "0.1.13", []string{"intermediate"}, 1, helpSubRegexes},
-		{"cli", "0.1.14", []string{"intermediate", "-help"}, 0, helpSubRegexes},
-		{"cli", "0.1.15", []string{"intermediate", "--help"}, 0, helpSubRegexes},
-		{"cli", "0.1.14", []string{"intermediate", "new", "-help"}, 0, []string{helpMockIntermNew}},
-		{"cli", "0.1.15", []string{"intermediate", "new", "--help"}, 0, []string{helpMockIntermNew}},
+		{"cli", "0.6.1", []string{"intermediate"}, 1, helpSubRegexes},
+		{"cli", "0.6.2", []string{"intermediate", "-help"}, 0, helpSubRegexes},
+		{"cli", "0.6.3", []string{"intermediate", "--help"}, 0, helpSubRegexes},
+		{"cli", "0.6.4", []string{"intermediate", "new", "-help"}, 0, []string{helpMockIntermNew}},
+		{"cli", "0.6.5", []string{"intermediate", "new", "--help"}, 0, []string{helpMockIntermNew}},
+
+		{"cli", "0.7.1", []string{"server"}, 1, helpSubRegexes},
+		{"cli", "0.7.2", []string{"server", "-help"}, 0, helpSubRegexes},
+		{"cli", "0.7.3", []string{"server", "--help"}, 0, helpSubRegexes},
+		{"cli", "0.7.4", []string{"server", "new", "-help"}, 0, []string{helpMockServerNew}},
+		{"cli", "0.7.5", []string{"server", "new", "--help"}, 0, []string{helpMockServerNew}},
+
+		{"cli", "0.8.1", []string{"client"}, 1, helpSubRegexes},
+		{"cli", "0.8.2", []string{"client", "-help"}, 0, helpSubRegexes},
+		{"cli", "0.8.3", []string{"client", "--help"}, 0, helpSubRegexes},
+		{"cli", "0.8.4", []string{"client", "new", "-help"}, 0, []string{helpMockClientNew}},
+		{"cli", "0.8.5", []string{"client", "new", "--help"}, 0, []string{helpMockClientNew}},
 	}
 
 	for _, test := range tests {

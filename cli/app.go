@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/mitchellh/cli"
+	"github.com/moorara/gocert/pki"
 )
 
 // App represents a cli app
@@ -13,6 +14,8 @@ type App struct {
 	init      cli.Command
 	rootNew   cli.Command
 	intermNew cli.Command
+	serverNew cli.Command
+	clientNew cli.Command
 }
 
 // NewApp creates a new cli app
@@ -22,7 +25,9 @@ func NewApp(name, version string) *App {
 		version:   version,
 		init:      NewInitCommand(),
 		rootNew:   NewRootNewCommand(),
-		intermNew: NewIntermNewCommand(),
+		intermNew: NewReqCommand(pki.Metadata{CertType: pki.CertTypeInterm}),
+		serverNew: NewReqCommand(pki.Metadata{CertType: pki.CertTypeServer}),
+		clientNew: NewReqCommand(pki.Metadata{CertType: pki.CertTypeClient}),
 	}
 }
 
@@ -40,6 +45,12 @@ func (a *App) Run(args []string) int {
 		},
 		"intermediate new": func() (cli.Command, error) {
 			return a.intermNew, nil
+		},
+		"server new": func() (cli.Command, error) {
+			return a.serverNew, nil
+		},
+		"client new": func() (cli.Command, error) {
+			return a.clientNew, nil
 		},
 	}
 
