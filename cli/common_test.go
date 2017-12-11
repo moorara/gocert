@@ -21,17 +21,17 @@ type mockedManager struct {
 	SignCSRCalled bool
 }
 
-func (m *mockedManager) GenCert(string, pki.Config, pki.Claim, pki.Metadata) error {
+func (m *mockedManager) GenCert(pki.Config, pki.Claim, pki.Metadata) error {
 	m.GenCertCalled = true
 	return m.GenCertError
 }
 
-func (m *mockedManager) GenCSR(string, pki.Config, pki.Claim, pki.Metadata) error {
+func (m *mockedManager) GenCSR(pki.Config, pki.Claim, pki.Metadata) error {
 	m.GenCSRCalled = true
 	return m.GenCSRError
 }
 
-func (m *mockedManager) SignCSR(string, string, pki.Policy, pki.Metadata) error {
+func (m *mockedManager) SignCSR(pki.Config, pki.Metadata, pki.Config, pki.Metadata, pki.TrustFunc) error {
 	m.SignCSRCalled = true
 	return m.SignCSRError
 }

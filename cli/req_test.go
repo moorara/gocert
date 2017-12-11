@@ -12,19 +12,24 @@ import (
 
 func TestNewReqCommand(t *testing.T) {
 	tests := []struct {
-		md pki.Metadata
+		md               pki.Metadata
+		expectedSynopsis string
 	}{
 		{
 			pki.Metadata{CertType: pki.CertTypeRoot},
+			"Creates a new root certificate authority.",
 		},
 		{
 			pki.Metadata{CertType: pki.CertTypeInterm},
+			"Creates a new certificate signing request.",
 		},
 		{
 			pki.Metadata{CertType: pki.CertTypeServer},
+			"Creates a new certificate signing request.",
 		},
 		{
 			pki.Metadata{CertType: pki.CertTypeClient},
+			"Creates a new certificate signing request.",
 		},
 	}
 
@@ -34,41 +39,66 @@ func TestNewReqCommand(t *testing.T) {
 		assert.Equal(t, newColoredUI(), cmd.ui)
 		assert.Equal(t, pki.NewX509Manager(), cmd.pki)
 		assert.Equal(t, test.md, cmd.md)
+
+		assert.Equal(t, test.expectedSynopsis, cmd.Synopsis())
+		assert.NotEmpty(t, cmd.Help())
 	}
 }
 
 func TestReqCommand(t *testing.T) {
 	tests := []struct {
-		state        *pki.State
-		spec         *pki.Spec
-		md           pki.Metadata
-		args         []string
-		input        string
-		expectedExit int
+		state *pki.State
+		spec  *pki.Spec
+		md    pki.Metadata
+		args  []string
+		input string
 	}{
+		{
+			pki.NewState(),
+			pki.NewSpec(),
+			pki.Metadata{CertType: pki.CertTypeRoot},
+			[]string{},
+			`RootCA
+			`,
+		},
 		{
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeInterm},
 			[]string{"-name=ops"},
-			``,
-			0,
+			`OpsCA
+			`,
 		},
 		{
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeServer},
-			[]string{"-name=ops"},
-			``,
-			0,
+			[]string{"-name", "webapp"},
+			`WebApp
+			`,
 		},
 		{
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeClient},
-			[]string{"-name=ops"},
-			``,
-			0,
+			[]string{},
+			`myservice
+			MyService
+			`,
+		},
+		{
+			pki.NewState(),
+			&pki.Spec{
+				Interm: pki.Claim{
+					Country:      []string{"CA"},
+					Province:     []string{"Ontario"},
+					Organization: []string{"Milad"},
+				},
+			},
+			pki.Metadata{CertType: pki.CertTypeRoot},
+			[]string{},
+			`RootCA
+			`,
 		},
 		{
 			pki.NewState(),
@@ -80,12 +110,11 @@ func TestReqCommand(t *testing.T) {
 				},
 			},
 			pki.Metadata{CertType: pki.CertTypeInterm},
-			[]string{"-name", "ops"},
+			[]string{"-name=ops"},
 			`IntermediateCA
-			Ottawa,Toronto
+			Ottawa
 			R&D
 			`,
-			0,
 		},
 		{
 			pki.NewState(),
@@ -98,10 +127,9 @@ func TestReqCommand(t *testing.T) {
 				},
 			},
 			pki.Metadata{CertType: pki.CertTypeServer},
-			[]string{"-name", "ops"},
+			[]string{"-name", "webapp"},
 			`WebApp
 			`,
-			0,
 		},
 		{
 			pki.NewState(),
@@ -114,10 +142,10 @@ func TestReqCommand(t *testing.T) {
 				},
 			},
 			pki.Metadata{CertType: pki.CertTypeClient},
-			[]string{"-name", "ops"},
-			`Service
+			[]string{},
+			`myservice
+			MyService
 			`,
-			0,
 		},
 	}
 
@@ -133,11 +161,9 @@ func TestReqCommand(t *testing.T) {
 			pki: &mockedManager{},
 			md:  test.md,
 		}
-		exit := cmd.Run(test.args)
 
-		assert.Equal(t, reqSynopsis, cmd.Synopsis())
-		assert.Equal(t, reqHelp, cmd.Help())
-		assert.Equal(t, test.expectedExit, exit)
+		exit := cmd.Run(test.args)
+		assert.Zero(t, exit)
 
 		err = pki.CleanupWorkspace()
 		assert.NoError(t, err)
@@ -151,6 +177,7 @@ func TestReqCommandError(t *testing.T) {
 		md           pki.Metadata
 		args         []string
 		input        string
+		GenCertError error
 		GenCSRError  error
 		expectedExit int
 	}{
@@ -158,17 +185,9 @@ func TestReqCommandError(t *testing.T) {
 			nil,
 			nil,
 			pki.Metadata{},
-			[]string{"-invalid"},
-			``,
-			nil,
-			ErrorInvalidFlag,
-		},
-		{
-			nil,
-			&pki.Spec{},
-			pki.Metadata{},
 			[]string{},
 			``,
+			nil,
 			nil,
 			ErrorReadState,
 		},
@@ -179,6 +198,7 @@ func TestReqCommandError(t *testing.T) {
 			[]string{},
 			``,
 			nil,
+			nil,
 			ErrorReadSpec,
 		},
 		{
@@ -188,16 +208,18 @@ func TestReqCommandError(t *testing.T) {
 			[]string{},
 			``,
 			nil,
-			ErrorMetadata,
+			nil,
+			ErrorInvalidMetadata,
 		},
 		{
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeRoot},
-			[]string{},
+			[]string{"-invalid"},
 			``,
 			nil,
-			ErrorMetadata,
+			nil,
+			ErrorInvalidFlag,
 		},
 		{
 			pki.NewState(),
@@ -206,7 +228,8 @@ func TestReqCommandError(t *testing.T) {
 			[]string{},
 			``,
 			nil,
-			ErrorNoName,
+			nil,
+			ErrorInvalidName,
 		},
 		{
 			pki.NewState(),
@@ -215,7 +238,8 @@ func TestReqCommandError(t *testing.T) {
 			[]string{},
 			``,
 			nil,
-			ErrorNoName,
+			nil,
+			ErrorInvalidName,
 		},
 		{
 			pki.NewState(),
@@ -224,7 +248,18 @@ func TestReqCommandError(t *testing.T) {
 			[]string{},
 			``,
 			nil,
-			ErrorNoName,
+			nil,
+			ErrorInvalidName,
+		},
+		{
+			pki.NewState(),
+			pki.NewSpec(),
+			pki.Metadata{CertType: pki.CertTypeRoot},
+			[]string{},
+			``,
+			errors.New("error"),
+			errors.New("error"),
+			ErrorCert,
 		},
 		{
 			pki.NewState(),
@@ -233,15 +268,27 @@ func TestReqCommandError(t *testing.T) {
 			[]string{"-name=ops"},
 			``,
 			errors.New("error"),
+			errors.New("error"),
 			ErrorCSR,
 		},
 		{
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeServer},
-			[]string{""},
-			`ops
-      `,
+			[]string{"-name", "webapp"},
+			``,
+			errors.New("error"),
+			errors.New("error"),
+			ErrorCSR,
+		},
+		{
+			pki.NewState(),
+			pki.NewSpec(),
+			pki.Metadata{CertType: pki.CertTypeClient},
+			[]string{"-name=ops"},
+			`myservice
+			`,
+			errors.New("error"),
 			errors.New("error"),
 			ErrorCSR,
 		},
@@ -257,14 +304,13 @@ func TestReqCommandError(t *testing.T) {
 		cmd := &ReqCommand{
 			ui: mockUI,
 			pki: &mockedManager{
-				GenCSRError: test.GenCSRError,
+				GenCertError: test.GenCertError,
+				GenCSRError:  test.GenCSRError,
 			},
 			md: test.md,
 		}
-		exit := cmd.Run(test.args)
 
-		assert.Equal(t, reqSynopsis, cmd.Synopsis())
-		assert.Equal(t, reqHelp, cmd.Help())
+		exit := cmd.Run(test.args)
 		assert.Equal(t, test.expectedExit, exit)
 
 		err = pki.CleanupWorkspace()

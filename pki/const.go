@@ -27,11 +27,4 @@ const (
 	FileState = "state.yaml"
 	// FileSpec is the name of spec file
 	FileSpec = "spec.toml"
-
-	extKey    = ".key"
-	extCert   = ".cert"
-	extCSR    = ".csr"
-	extCAKey  = ".ca.key"
-	extCACert = ".ca.cert"
-	extCACSR  = ".ca.csr"
 )

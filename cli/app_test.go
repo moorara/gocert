@@ -20,22 +20,24 @@ var (
 		`Subcommands:`,
 	}
 
-	helpMockInit      = "help text for mocked init command"
-	helpMockRootNew   = "help text for mocked root new command"
-	helpMockIntermNew = "help text for mocked intermediate new command"
-	helpMockServerNew = "help text for mocked server new command"
-	helpMockClientNew = "help text for mocked client new command"
+	helpMockInit   = "help text for mocked init command"
+	helpMockRoot   = "help text for mocked root command"
+	helpMockInterm = "help text for mocked intermediate command"
+	helpMockServer = "help text for mocked server command"
+	helpMockClient = "help text for mocked client command"
+	helpMockSign   = "help text for mocked sign command"
 )
 
 func newMockApp(name, version string) *App {
 	return &App{
-		name:      name,
-		version:   version,
-		init:      &cli.MockCommand{RunResult: 0, HelpText: helpMockInit},
-		rootNew:   &cli.MockCommand{RunResult: 0, HelpText: helpMockRootNew},
-		intermNew: &cli.MockCommand{RunResult: 0, HelpText: helpMockIntermNew},
-		serverNew: &cli.MockCommand{RunResult: 0, HelpText: helpMockServerNew},
-		clientNew: &cli.MockCommand{RunResult: 0, HelpText: helpMockClientNew},
+		name:    name,
+		version: version,
+		init:    &cli.MockCommand{RunResult: 0, HelpText: helpMockInit},
+		root:    &cli.MockCommand{RunResult: 0, HelpText: helpMockRoot},
+		interm:  &cli.MockCommand{RunResult: 0, HelpText: helpMockInterm},
+		server:  &cli.MockCommand{RunResult: 0, HelpText: helpMockServer},
+		client:  &cli.MockCommand{RunResult: 0, HelpText: helpMockClient},
+		sign:    &cli.MockCommand{RunResult: 0, HelpText: helpMockSign},
 	}
 }
 
@@ -54,8 +56,11 @@ func TestNewApp(t *testing.T) {
 		assert.NotNil(t, app.name)
 		assert.NotNil(t, app.version)
 		assert.NotNil(t, app.init)
-		assert.NotNil(t, app.rootNew)
-		assert.NotNil(t, app.intermNew)
+		assert.NotNil(t, app.root)
+		assert.NotNil(t, app.interm)
+		assert.NotNil(t, app.server)
+		assert.NotNil(t, app.client)
+		assert.NotNil(t, app.sign)
 	}
 }
 
@@ -79,29 +84,25 @@ func TestAppRun(t *testing.T) {
 		{"cli", "0.4.2", []string{"init", "-help"}, 0, []string{helpMockInit}},
 		{"cli", "0.4.3", []string{"init", "--help"}, 0, []string{helpMockInit}},
 
-		{"cli", "0.5.1", []string{"root"}, 1, helpSubRegexes},
-		{"cli", "0.5.2", []string{"root", "-help"}, 0, helpSubRegexes},
-		{"cli", "0.5.3", []string{"root", "--help"}, 0, helpSubRegexes},
-		{"cli", "0.5.4", []string{"root", "new", "-help"}, 0, []string{helpMockRootNew}},
-		{"cli", "0.5.5", []string{"root", "new", "--help"}, 0, []string{helpMockRootNew}},
+		{"cli", "0.5.1", []string{"root"}, 0, nil},
+		{"cli", "0.5.2", []string{"root", "-help"}, 0, []string{helpMockRoot}},
+		{"cli", "0.5.3", []string{"root", "--help"}, 0, []string{helpMockRoot}},
 
-		{"cli", "0.6.1", []string{"intermediate"}, 1, helpSubRegexes},
-		{"cli", "0.6.2", []string{"intermediate", "-help"}, 0, helpSubRegexes},
-		{"cli", "0.6.3", []string{"intermediate", "--help"}, 0, helpSubRegexes},
-		{"cli", "0.6.4", []string{"intermediate", "new", "-help"}, 0, []string{helpMockIntermNew}},
-		{"cli", "0.6.5", []string{"intermediate", "new", "--help"}, 0, []string{helpMockIntermNew}},
+		{"cli", "0.6.1", []string{"intermediate"}, 0, nil},
+		{"cli", "0.6.2", []string{"intermediate", "-help"}, 0, []string{helpMockInterm}},
+		{"cli", "0.6.3", []string{"intermediate", "--help"}, 0, []string{helpMockInterm}},
 
-		{"cli", "0.7.1", []string{"server"}, 1, helpSubRegexes},
-		{"cli", "0.7.2", []string{"server", "-help"}, 0, helpSubRegexes},
-		{"cli", "0.7.3", []string{"server", "--help"}, 0, helpSubRegexes},
-		{"cli", "0.7.4", []string{"server", "new", "-help"}, 0, []string{helpMockServerNew}},
-		{"cli", "0.7.5", []string{"server", "new", "--help"}, 0, []string{helpMockServerNew}},
+		{"cli", "0.7.1", []string{"server"}, 0, nil},
+		{"cli", "0.7.2", []string{"server", "-help"}, 0, []string{helpMockServer}},
+		{"cli", "0.7.3", []string{"server", "--help"}, 0, []string{helpMockServer}},
 
-		{"cli", "0.8.1", []string{"client"}, 1, helpSubRegexes},
-		{"cli", "0.8.2", []string{"client", "-help"}, 0, helpSubRegexes},
-		{"cli", "0.8.3", []string{"client", "--help"}, 0, helpSubRegexes},
-		{"cli", "0.8.4", []string{"client", "new", "-help"}, 0, []string{helpMockClientNew}},
-		{"cli", "0.8.5", []string{"client", "new", "--help"}, 0, []string{helpMockClientNew}},
+		{"cli", "0.8.1", []string{"client"}, 0, nil},
+		{"cli", "0.8.2", []string{"client", "-help"}, 0, []string{helpMockClient}},
+		{"cli", "0.8.3", []string{"client", "--help"}, 0, []string{helpMockClient}},
+
+		{"cli", "0.8.1", []string{"sign"}, 0, nil},
+		{"cli", "0.8.2", []string{"sign", "-help"}, 0, []string{helpMockSign}},
+		{"cli", "0.8.3", []string{"sign", "--help"}, 0, []string{helpMockSign}},
 	}
 
 	for _, test := range tests {

@@ -9,25 +9,27 @@ import (
 
 // App represents a cli app
 type App struct {
-	name      string
-	version   string
-	init      cli.Command
-	rootNew   cli.Command
-	intermNew cli.Command
-	serverNew cli.Command
-	clientNew cli.Command
+	name    string
+	version string
+	init    cli.Command
+	root    cli.Command
+	interm  cli.Command
+	server  cli.Command
+	client  cli.Command
+	sign    cli.Command
 }
 
 // NewApp creates a new cli app
 func NewApp(name, version string) *App {
 	return &App{
-		name:      name,
-		version:   version,
-		init:      NewInitCommand(),
-		rootNew:   NewRootNewCommand(),
-		intermNew: NewReqCommand(pki.Metadata{CertType: pki.CertTypeInterm}),
-		serverNew: NewReqCommand(pki.Metadata{CertType: pki.CertTypeServer}),
-		clientNew: NewReqCommand(pki.Metadata{CertType: pki.CertTypeClient}),
+		name:    name,
+		version: version,
+		init:    NewInitCommand(),
+		root:    NewReqCommand(pki.Metadata{CertType: pki.CertTypeRoot}),
+		interm:  NewReqCommand(pki.Metadata{CertType: pki.CertTypeInterm}),
+		server:  NewReqCommand(pki.Metadata{CertType: pki.CertTypeServer}),
+		client:  NewReqCommand(pki.Metadata{CertType: pki.CertTypeClient}),
+		sign:    NewSignCommand(),
 	}
 }
 
@@ -40,17 +42,20 @@ func (a *App) Run(args []string) int {
 		"init": func() (cli.Command, error) {
 			return a.init, nil
 		},
-		"root new": func() (cli.Command, error) {
-			return a.rootNew, nil
+		"root": func() (cli.Command, error) {
+			return a.root, nil
 		},
-		"intermediate new": func() (cli.Command, error) {
-			return a.intermNew, nil
+		"intermediate": func() (cli.Command, error) {
+			return a.interm, nil
 		},
-		"server new": func() (cli.Command, error) {
-			return a.serverNew, nil
+		"server": func() (cli.Command, error) {
+			return a.server, nil
 		},
-		"client new": func() (cli.Command, error) {
-			return a.clientNew, nil
+		"client": func() (cli.Command, error) {
+			return a.client, nil
+		},
+		"sign": func() (cli.Command, error) {
+			return a.sign, nil
 		},
 	}
 

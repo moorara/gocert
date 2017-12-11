@@ -6,32 +6,22 @@ package pki
 
 import (
 	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha1"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"encoding/gob"
-	"encoding/pem"
 	"errors"
+	"log"
 	"math/big"
-	"os"
-	"path"
 	"path/filepath"
 	"time"
-)
-
-const (
-	pemKey  = "RSA PRIVATE KEY"
-	pemCert = "CERTIFICATE"
-	pemCSR  = "CERTIFICATE REQUEST"
 )
 
 type (
 	// Manager provides methods for managing certificates
 	Manager interface {
-		GenCert(string, Config, Claim, Metadata) error
-		GenCSR(string, Config, Claim, Metadata) error
-		SignCSR(string, string, Policy, Metadata) error
+		GenCert(Config, Claim, Metadata) error
+		GenCSR(Config, Claim, Metadata) error
+		SignCSR(Config, Metadata, Config, Metadata, TrustFunc) error
+		VerifyCert(Metadata, Metadata) error
 	}
 
 	// x509Manager provides methods for managing x509 certificates
@@ -57,79 +47,9 @@ func checkName(name string) error {
 	return nil
 }
 
-// genKeyPair generates a new public-private key pair
-func genKeyPair(length int) (*rsa.PublicKey, *rsa.PrivateKey, error) {
-	private, err := rsa.GenerateKey(rand.Reader, length)
-	if err != nil {
-		return nil, nil, err
-	}
-	public := &private.PublicKey
-
-	return public, private, nil
-}
-
-func writePrivateKey(private *rsa.PrivateKey, password, path string) (err error) {
-	var keyPem *pem.Block
-	keyData := x509.MarshalPKCS1PrivateKey(private)
-
-	// Encrypt private key if a password set
-	if password == "" {
-		keyPem = &pem.Block{
-			Type:  pemKey,
-			Bytes: keyData,
-		}
-	} else {
-		keyPem, err = x509.EncryptPEMBlock(rand.Reader, pemKey, keyData, []byte(password), x509.PEMCipherAES256)
-		if err != nil {
-			return err
-		}
-	}
-
-	keyFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-	if err != nil {
-		return err
-	}
-
-	err = pem.Encode(keyFile, keyPem)
-	if err != nil {
-		return err
-	}
-
-	err = keyFile.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func writePemFile(pemType string, pemData []byte, path string) error {
-	pemBlock := &pem.Block{
-		Type:  pemType,
-		Bytes: pemData,
-	}
-
-	pemFile, err := os.Create(path)
-	if err != nil {
-		return err
-	}
-
-	err = pem.Encode(pemFile, pemBlock)
-	if err != nil {
-		return err
-	}
-
-	err = pemFile.Close()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GenCert generates a new certificate
-func (m *x509Manager) GenCert(name string, config Config, claim Claim, md Metadata) error {
-	if err := checkName(name); err != nil {
+func (m *x509Manager) GenCert(config Config, claim Claim, md Metadata) error {
+	if err := checkName(md.Name); err != nil {
 		return err
 	}
 
@@ -144,17 +64,13 @@ func (m *x509Manager) GenCert(name string, config Config, claim Claim, md Metada
 		return err
 	}
 
-	// Read public key to compute Subject Key Identifier
-	hash := sha1.New()
-	pubKeyEncoder := gob.NewEncoder(hash)
-	err = pubKeyEncoder.Encode(publicKey)
+	subjectKeyID, err := computeSubjectKeyID(publicKey)
 	if err != nil {
 		return err
 	}
-	subjectKeyID := hash.Sum(nil)
 
-	// Declare certificate
-	rootCA := &x509.Certificate{
+	// Declare certificate template
+	cert := &x509.Certificate{
 		SerialNumber: big.NewInt(config.Serial),
 
 		NotBefore: startTime,
@@ -182,28 +98,30 @@ func (m *x509Manager) GenCert(name string, config Config, claim Claim, md Metada
 		AuthorityKeyId: subjectKeyID,
 
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		ExtKeyUsage: []x509.ExtKeyUsage{},
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageOCSPSigning},
 
 		// Extensions:      []pkix.Extension{},
 		// ExtraExtensions: []pkix.Extension{},
+
+		// Authority Information Access
+		// OCSPServer:            []string{},
+		// IssuingCertificateURL: []string{},
 	}
 
 	// Create the certificate
-	cert, err := x509.CreateCertificate(rand.Reader, rootCA, rootCA, publicKey, privateKey)
+	certData, err := x509.CreateCertificate(rand.Reader, cert, cert, publicKey, privateKey)
 	if err != nil {
 		return err
 	}
 
-	/* Write certificate key file */
-	keyFilePath := path.Join(DirRoot, name+extCAKey)
-	err = writePrivateKey(privateKey, config.Password, keyFilePath)
+	// Write certificate key file
+	err = writePrivateKey(privateKey, config.Password, md.KeyPath())
 	if err != nil {
 		return err
 	}
 
-	/* Write certificate file */
-	certFilePath := path.Join(DirRoot, name+extCACert)
-	err = writePemFile(pemCert, cert, certFilePath)
+	// Write certificate file
+	err = writePemFile(pemCert, certData, md.CertPath())
 	if err != nil {
 		return err
 	}
@@ -212,18 +130,15 @@ func (m *x509Manager) GenCert(name string, config Config, claim Claim, md Metada
 }
 
 // GenCSR generates a certificate signing request
-func (m *x509Manager) GenCSR(name string, config Config, claim Claim, md Metadata) error {
-	if err := checkName(name); err != nil {
+func (m *x509Manager) GenCSR(config Config, claim Claim, md Metadata) error {
+	if err := checkName(md.Name); err != nil {
 		return err
 	}
 
-	config.Serial++
 	length := config.Length
-	// TODO startTime := time.Now()
-	// TODO endTime := startTime.AddDate(0, 0, config.Days)
 
 	// Generate a new public-private key pair
-	_, privateKey, err := genKeyPair(length) // TODO
+	_, privateKey, err := genKeyPair(length)
 	if err != nil {
 		return err
 	}
@@ -256,15 +171,13 @@ func (m *x509Manager) GenCSR(name string, config Config, claim Claim, md Metadat
 	}
 
 	/* Write certificate key file */
-	keyFilePath := path.Join(md.Dir(), name+extCAKey)
-	err = writePrivateKey(privateKey, config.Password, keyFilePath)
+	err = writePrivateKey(privateKey, config.Password, md.KeyPath())
 	if err != nil {
 		return err
 	}
 
 	/* Write certificate request file */
-	csrFilePath := path.Join(DirCSR, name+extCACSR)
-	err = writePemFile(pemCSR, csr, csrFilePath)
+	err = writePemFile(pemCSR, csr, md.CSRPath())
 	if err != nil {
 		return err
 	}
@@ -273,6 +186,122 @@ func (m *x509Manager) GenCSR(name string, config Config, claim Claim, md Metadat
 }
 
 // SignCSR signs a certificate signing request using a certificate authority
-func (m *x509Manager) SignCSR(nameCA, nameCSR string, policy Policy, md Metadata) error {
+func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, mdCSR Metadata, trust TrustFunc) error {
+	keyCA, err := readPrivateKey(configCA.Password, mdCA.KeyPath())
+	if err != nil {
+		return err
+	}
+
+	certCA, err := readCertificate(mdCA.CertPath())
+	if err != nil {
+		return err
+	}
+
+	csr, err := readCertificateRequest(mdCSR.CSRPath())
+	if err != nil {
+		return err
+	}
+
+	// Check if the certificate authority can trust and sign the certificate request
+	if !trust(certCA, csr) {
+		return errors.New("CSR does not satisfy CA trust policy")
+	}
+
+	subjectKeyID, err := computeSubjectKeyID(csr.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	configCSR.Serial++
+	startTime := time.Now()
+	endTime := startTime.AddDate(0, 0, configCSR.Days)
+
+	// Declare certificate template
+	cert := &x509.Certificate{
+		Signature:          csr.Signature,
+		SignatureAlgorithm: csr.SignatureAlgorithm,
+
+		PublicKey:          csr.PublicKey,
+		PublicKeyAlgorithm: csr.PublicKeyAlgorithm,
+
+		SerialNumber: big.NewInt(configCSR.Serial),
+
+		NotBefore: startTime,
+		NotAfter:  endTime,
+
+		Issuer:  certCA.Subject,
+		Subject: csr.Subject,
+
+		// DNSNames:    csr.DNSNames,
+		// IPAddresses: csr.IPAddresses,
+		EmailAddresses: csr.EmailAddresses,
+
+		SubjectKeyId:   subjectKeyID,
+		AuthorityKeyId: certCA.SubjectKeyId,
+
+		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		ExtKeyUsage: []x509.ExtKeyUsage{},
+
+		// Extensions:      []pkix.Extension{},
+		// ExtraExtensions: []pkix.Extension{},
+	}
+
+	switch mdCSR.CertType {
+	case CertTypeInterm:
+		cert.BasicConstraintsValid = true
+		cert.IsCA = true
+		cert.KeyUsage = x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign
+		cert.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageOCSPSigning}
+		// cert.OCSPServer = []string{}
+		// cert.IssuingCertificateURL = []string{}
+	case CertTypeServer:
+		cert.BasicConstraintsValid = false
+		cert.IsCA = false
+		cert.KeyUsage = x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment | x509.KeyUsageKeyEncipherment | x509.KeyUsageDataEncipherment
+		cert.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
+	case CertTypeClient:
+		cert.BasicConstraintsValid = false
+		cert.IsCA = false
+		cert.KeyUsage = x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment | x509.KeyUsageKeyEncipherment | x509.KeyUsageDataEncipherment
+		cert.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
+	}
+
+	// Create the certificate
+	certData, err := x509.CreateCertificate(rand.Reader, cert, certCA, csr.PublicKey, keyCA)
+	if err != nil {
+		return err
+	}
+
+	// Write certificate file
+	err = writePemFile(pemCert, certData, mdCSR.CertPath())
+	if err != nil {
+		return err
+	}
+
+	// Write certificate chain
+	if mdCSR.CertType == CertTypeInterm {
+		err = writeCertificateChain(mdCSR, mdCA)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// VerifyCert
+func (m *x509Manager) VerifyCert(md, mdCA Metadata) error {
+	cert, err := readCertificate(md.CertPath())
+	if err != nil {
+		return err
+	}
+
+	chain, err := readCertificateChain(mdCA.ChainPath())
+	if err != nil {
+		return err
+	}
+
+	log.Printf("====> %+v %v \n", cert, chain)
+
 	return nil
 }

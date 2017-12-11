@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"path"
 	"strings"
 	"testing"
 
@@ -49,36 +50,274 @@ func TestNewSpec(t *testing.T) {
 	assert.Equal(t, expectedIntermPolicy, spec.IntermPolicy)
 }
 
-func TestMetadataDir(t *testing.T) {
+func TestState(t *testing.T) {
 	tests := []struct {
-		md          Metadata
-		expectedDir string
+		state            State
+		certType         int
+		expectedConfig   Config
+		expectedConfigOK bool
 	}{
 		{
-			Metadata{CertType: 0},
-			"",
+			*NewState(),
+			-1,
+			Config{},
+			false,
 		},
 		{
-			Metadata{CertType: CertTypeRoot},
-			DirRoot,
+			*NewState(),
+			CertTypeRoot,
+			Config{
+				Serial: defaultRootCASerial,
+				Length: defaultRootCALength,
+				Days:   defaultRootCADays,
+			},
+			true,
 		},
 		{
-			Metadata{CertType: CertTypeInterm},
-			DirInterm,
+			*NewState(),
+			CertTypeInterm,
+			Config{
+				Serial: defaultIntermCASerial,
+				Length: defaultIntermCALength,
+				Days:   defaultIntermCADays,
+			},
+			true,
 		},
 		{
-			Metadata{CertType: CertTypeServer},
-			DirServer,
+			*NewState(),
+			CertTypeServer,
+			Config{
+				Serial: defaultServerCertSerial,
+				Length: defaultServerCertLength,
+				Days:   defaultServerCertDays,
+			},
+			true,
 		},
 		{
-			Metadata{CertType: CertTypeClient},
-			DirClient,
+			*NewState(),
+			CertTypeClient,
+			Config{
+				Serial: defaultClientCertSerial,
+				Length: defaultClientCertLength,
+				Days:   defaultClientCertDays,
+			},
+			true,
 		},
 	}
 
 	for _, test := range tests {
-		dir := test.md.Dir()
+		config, ok := test.state.ConfigFor(test.certType)
 
-		assert.Equal(t, test.expectedDir, dir)
+		assert.Equal(t, test.expectedConfigOK, ok)
+		assert.Equal(t, test.expectedConfig, config)
+	}
+}
+
+func TestSpec(t *testing.T) {
+	spec := Spec{
+		Root: Claim{
+			Country:      []string{"CA"},
+			Province:     []string{"Ontario"},
+			Locality:     []string{"Ottawa"},
+			Organization: []string{"Milad"},
+		},
+		Interm: Claim{
+			Country:            []string{"CA"},
+			Province:           []string{"Ontario"},
+			Locality:           []string{"Ottawa"},
+			Organization:       []string{"Milad"},
+			OrganizationalUnit: []string{"SRE"},
+		},
+		Server: Claim{
+			Country:            []string{"CA"},
+			Province:           []string{"Ontario"},
+			Locality:           []string{"Ottawa"},
+			Organization:       []string{"Milad"},
+			OrganizationalUnit: []string{"R&D"},
+		},
+		Client: Claim{
+			Country:            []string{"CA"},
+			Province:           []string{"Ontario"},
+			Locality:           []string{"Ottawa"},
+			Organization:       []string{"Milad"},
+			OrganizationalUnit: []string{"QE"},
+		},
+		RootPolicy: Policy{
+			Match:    []string{"Organization"},
+			Supplied: []string{"CommonName"},
+		},
+		IntermPolicy: Policy{
+			Match:    []string{"Country", "Organization"},
+			Supplied: []string{"CommonName", "EmailAddress"},
+		},
+	}
+
+	tests := []struct {
+		spec             Spec
+		certType         int
+		expectedClaim    Claim
+		expectedClaimOK  bool
+		expectedPolicy   Policy
+		expectedPolicyOK bool
+	}{
+		{
+			spec,
+			-1,
+			Claim{},
+			false,
+			Policy{},
+			false,
+		},
+		{
+			spec,
+			CertTypeRoot,
+			Claim{
+				Country:      []string{"CA"},
+				Province:     []string{"Ontario"},
+				Locality:     []string{"Ottawa"},
+				Organization: []string{"Milad"},
+			},
+			true,
+			Policy{
+				Match:    []string{"Organization"},
+				Supplied: []string{"CommonName"},
+			},
+			true,
+		},
+		{
+			spec,
+			CertTypeInterm,
+			Claim{
+				Country:            []string{"CA"},
+				Province:           []string{"Ontario"},
+				Locality:           []string{"Ottawa"},
+				Organization:       []string{"Milad"},
+				OrganizationalUnit: []string{"SRE"},
+			},
+			true,
+			Policy{
+				Match:    []string{"Country", "Organization"},
+				Supplied: []string{"CommonName", "EmailAddress"},
+			},
+			true,
+		},
+		{
+			spec,
+			CertTypeServer,
+			Claim{
+				Country:            []string{"CA"},
+				Province:           []string{"Ontario"},
+				Locality:           []string{"Ottawa"},
+				Organization:       []string{"Milad"},
+				OrganizationalUnit: []string{"R&D"},
+			},
+			true,
+			Policy{},
+			false,
+		},
+		{
+			spec,
+			CertTypeClient,
+			Claim{
+				Country:            []string{"CA"},
+				Province:           []string{"Ontario"},
+				Locality:           []string{"Ottawa"},
+				Organization:       []string{"Milad"},
+				OrganizationalUnit: []string{"QE"},
+			},
+			true,
+			Policy{},
+			false,
+		},
+	}
+
+	for _, test := range tests {
+		claim, ok := test.spec.ClaimFor(test.certType)
+		assert.Equal(t, test.expectedClaimOK, ok)
+		assert.Equal(t, test.expectedClaim, claim)
+
+		policy, ok := test.spec.PolicyFor(test.certType)
+		assert.Equal(t, test.expectedPolicyOK, ok)
+		assert.Equal(t, test.expectedPolicy, policy)
+	}
+}
+
+func TestMetadata(t *testing.T) {
+	tests := []struct {
+		md                Metadata
+		expectedTitle     string
+		expectedCertPath  string
+		expectedKeyPath   string
+		expectedCSRPath   string
+		expectedChainPath string
+	}{
+		{
+			Metadata{},
+			"",
+			"",
+			"",
+			"",
+			"",
+		},
+		{
+			Metadata{Name: "root"},
+			"",
+			"",
+			"",
+			"",
+			"",
+		},
+		{
+			Metadata{
+				Name:     "root",
+				CertType: CertTypeRoot,
+			},
+			titleRoot,
+			path.Join(DirRoot, "root"+extCACert),
+			path.Join(DirRoot, "root"+extCAKey),
+			"",
+			path.Join(DirRoot, "root"+extCACert),
+		},
+		{
+			Metadata{
+				Name:     "ops",
+				CertType: CertTypeInterm,
+			},
+			titleInterm,
+			path.Join(DirInterm, "ops"+extCACert),
+			path.Join(DirInterm, "ops"+extCAKey),
+			path.Join(DirCSR, "ops"+extCACSR),
+			path.Join(DirInterm, "ops"+extCAChain),
+		},
+		{
+			Metadata{
+				Name:     "webapp",
+				CertType: CertTypeServer,
+			},
+			titleServer,
+			path.Join(DirServer, "webapp"+extCert),
+			path.Join(DirServer, "webapp"+extKey),
+			path.Join(DirCSR, "webapp"+extCSR),
+			"",
+		},
+		{
+			Metadata{
+				Name:     "service",
+				CertType: CertTypeClient,
+			},
+			titleClient,
+			path.Join(DirClient, "service"+extCert),
+			path.Join(DirClient, "service"+extKey),
+			path.Join(DirCSR, "service"+extCSR),
+			"",
+		},
+	}
+
+	for _, test := range tests {
+		assert.Equal(t, test.expectedTitle, test.md.Title())
+		assert.Equal(t, test.expectedCertPath, test.md.CertPath())
+		assert.Equal(t, test.expectedKeyPath, test.md.KeyPath())
+		assert.Equal(t, test.expectedCSRPath, test.md.CSRPath())
+		assert.Equal(t, test.expectedChainPath, test.md.ChainPath())
 	}
 }

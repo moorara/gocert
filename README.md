@@ -10,14 +10,14 @@ mkdir certs
 cd certs
 
 gocert init
-gocert root new
+gocert root
 
-gocert intermediate new -name=ops
-gocert root sign -name=ops
+gocert intermediate -name=ops
+gocert sign -ca=root -name=ops
 
-gocert server new -name=mongo
-gocert client new -name=webapp
-gocert intermediate sign -name=mongo,webapp
+gocert server -name=webapp
+gocert client -name=myservice
+gocert sign -ca=ops -name=webapp,myservice
 ```
 
 ## Certificates Explained

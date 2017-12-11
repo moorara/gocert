@@ -6,10 +6,15 @@ import (
 	"testing"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/go-box/util"
 	"github.com/moorara/gocert/pki"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestNewInitCommand(t *testing.T) {
+	cmd := NewInitCommand()
+
+	assert.Equal(t, newColoredUI(), cmd.ui)
+}
 
 func TestInitCommand(t *testing.T) {
 	tests := []struct {
@@ -53,14 +58,100 @@ func TestInitCommand(t *testing.T) {
 			[intermediate_policy]
 			`,
 		},
+		{
+			[]string{},
+			`CA
+			Ontario
+			Ottawa
+			Milad
+
+
+
+
+
+
+
+
+			Ops
+
+
+
+			R&D
+
+
+
+			SRE
+
+
+
+			Organization
+			CommonName,OrganizationalUnit
+			Organization
+			CommonName
+			`,
+			0,
+			`root:
+				serial: 10
+				length: 4096
+				days: 7300
+			intermediate:
+				serial: 100
+				length: 4096
+				days: 3650
+			server:
+				serial: 1000
+				length: 2048
+				days: 375
+			client:
+				serial: 10000
+				length: 2048
+				days: 40
+			`,
+			`[root]
+				country = ["CA"]
+				province = ["Ontario"]
+				locality = ["Ottawa"]
+				organization = ["Milad"]
+
+			[intermediate]
+				country = ["CA"]
+				province = ["Ontario"]
+				locality = ["Ottawa"]
+				organization = ["Milad"]
+				organizational_unit = ["Ops"]
+
+			[server]
+				country = ["CA"]
+				province = ["Ontario"]
+				locality = ["Ottawa"]
+				organization = ["Milad"]
+				organizational_unit = ["R&D"]
+
+			[client]
+				country = ["CA"]
+				province = ["Ontario"]
+				locality = ["Ottawa"]
+				organization = ["Milad"]
+				organizational_unit = ["SRE"]
+
+			[root_policy]
+				match = ["Organization"]
+				supplied = ["CommonName", "OrganizationalUnit"]
+
+			[intermediate_policy]
+				match = ["Organization"]
+				supplied = ["CommonName"]
+			`,
+		},
 	}
 
 	for _, test := range tests {
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
 
-		cmd := NewInitCommand()
-		cmd.ui = mockUI
+		cmd := &InitCommand{
+			ui: mockUI,
+		}
 		exit := cmd.Run(test.args)
 
 		assert.Equal(t, initSynopsis, cmd.Synopsis())
@@ -81,15 +172,7 @@ func TestInitCommand(t *testing.T) {
 		specTOML = strings.Replace(specTOML, "\t", "  ", -1)
 		assert.Equal(t, specTOML, string(specData))
 
-		util.DeleteAll(
-			"",
-			pki.DirRoot,
-			pki.DirInterm,
-			pki.DirServer,
-			pki.DirClient,
-			pki.DirCSR,
-			pki.FileState,
-			pki.FileSpec,
-		)
+		err = pki.CleanupWorkspace()
+		assert.NoError(t, err)
 	}
 }

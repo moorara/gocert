@@ -1,10 +1,19 @@
 package pki
 
 import (
+	"path"
 	"strings"
 )
 
 const (
+	extKey     = ".key"
+	extCert    = ".cert"
+	extCSR     = ".csr"
+	extCAKey   = ".ca.key"
+	extCACert  = ".ca.cert"
+	extCACSR   = ".ca.csr"
+	extCAChain = ".ca.chain"
+
 	defaultRootCASerial = int64(10)
 	defaultRootCALength = 4096
 	defaultRootCADays   = 20 * 365
@@ -26,6 +35,11 @@ const (
 
 	defaultIntermPolicyMatch    = ""
 	defaultIntermPolicySupplied = "CommonName"
+
+	titleRoot   = "Root Certificate Authority"
+	titleInterm = "Intermediate Certificate Authority"
+	titleServer = "Server Certificate Authority"
+	titleClient = "Client Certificate Authority"
 )
 
 type (
@@ -76,6 +90,7 @@ type (
 
 	// Metadata represents the type for metadata about a certificate
 	Metadata struct {
+		Name     string
 		CertType int
 	}
 )
@@ -124,17 +139,135 @@ func NewSpec() *Spec {
 	}
 }
 
-// Dir returns the directory corresponding to cert type
-func (md Metadata) Dir() string {
+// ConfigFor returns config for a certificate type
+func (s *State) ConfigFor(certType int) (Config, bool) {
+	switch certType {
+	case CertTypeRoot:
+		return s.Root, true
+	case CertTypeInterm:
+		return s.Interm, true
+	case CertTypeServer:
+		return s.Server, true
+	case CertTypeClient:
+		return s.Client, true
+	default:
+		return Config{}, false
+	}
+}
+
+// ClaimFor returns claim for a certificate type
+func (s *Spec) ClaimFor(certType int) (Claim, bool) {
+	switch certType {
+	case CertTypeRoot:
+		return s.Root, true
+	case CertTypeInterm:
+		return s.Interm, true
+	case CertTypeServer:
+		return s.Server, true
+	case CertTypeClient:
+		return s.Client, true
+	default:
+		return Claim{}, false
+	}
+}
+
+// PolicyFor returns policy for a certificate type
+func (s *Spec) PolicyFor(certType int) (Policy, bool) {
+	switch certType {
+	case CertTypeRoot:
+		return s.RootPolicy, true
+	case CertTypeInterm:
+		return s.IntermPolicy, true
+	default:
+		return Policy{}, false
+	}
+}
+
+// Title returns a descriptive title
+func (md Metadata) Title() string {
 	switch md.CertType {
 	case CertTypeRoot:
-		return DirRoot
+		return titleRoot
 	case CertTypeInterm:
-		return DirInterm
+		return titleInterm
 	case CertTypeServer:
-		return DirServer
+		return titleServer
 	case CertTypeClient:
-		return DirClient
+		return titleClient
+	default:
+		return ""
+	}
+}
+
+// KeyPath returns key file path
+func (md Metadata) KeyPath() string {
+	if md.Name == "" {
+		return ""
+	}
+
+	switch md.CertType {
+	case CertTypeRoot:
+		return path.Join(DirRoot, md.Name+extCAKey)
+	case CertTypeInterm:
+		return path.Join(DirInterm, md.Name+extCAKey)
+	case CertTypeServer:
+		return path.Join(DirServer, md.Name+extKey)
+	case CertTypeClient:
+		return path.Join(DirClient, md.Name+extKey)
+	default:
+		return ""
+	}
+}
+
+// CertPath returns cert file path
+func (md Metadata) CertPath() string {
+	if md.Name == "" {
+		return ""
+	}
+
+	switch md.CertType {
+	case CertTypeRoot:
+		return path.Join(DirRoot, md.Name+extCACert)
+	case CertTypeInterm:
+		return path.Join(DirInterm, md.Name+extCACert)
+	case CertTypeServer:
+		return path.Join(DirServer, md.Name+extCert)
+	case CertTypeClient:
+		return path.Join(DirClient, md.Name+extCert)
+	default:
+		return ""
+	}
+}
+
+// CSRPath returns certificate signing request file path
+func (md Metadata) CSRPath() string {
+	if md.Name == "" {
+		return ""
+	}
+
+	switch md.CertType {
+	case CertTypeInterm:
+		return path.Join(DirCSR, md.Name+extCACSR)
+	case CertTypeServer:
+		return path.Join(DirCSR, md.Name+extCSR)
+	case CertTypeClient:
+		return path.Join(DirCSR, md.Name+extCSR)
+	default:
+		return ""
+	}
+}
+
+// ChainPath returns certificate chain file path
+func (md Metadata) ChainPath() string {
+	if md.Name == "" {
+		return ""
+	}
+
+	switch md.CertType {
+	case CertTypeRoot:
+		return path.Join(DirRoot, md.Name+extCACert)
+	case CertTypeInterm:
+		return path.Join(DirInterm, md.Name+extCAChain)
 	default:
 		return ""
 	}

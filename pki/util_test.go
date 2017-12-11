@@ -1,655 +1,468 @@
 package pki
 
 import (
-	"io/ioutil"
-	"strings"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"math/big"
+	"path"
 	"testing"
 
 	"github.com/moorara/go-box/util"
 	"github.com/stretchr/testify/assert"
 )
 
-type (
-	stateLoadTest struct {
-		yaml          string
-		expectError   bool
-		expectedState *State
-	}
-
-	stateSaveTest struct {
-		state        *State
-		expectedYAML string
-	}
-
-	specLoadTest struct {
-		toml         string
-		expectError  bool
-		expectedSpec *Spec
-	}
-
-	specSaveTest struct {
-		spec         *Spec
-		expectedTOML string
-	}
+const (
+	testKeyLen = 1024
 )
 
-var (
-	loadTests = []struct {
-		state stateLoadTest
-		spec  specLoadTest
-	}{
-		{
-			stateLoadTest{
-				`invalid yaml`,
-				true,
-				&State{},
-			},
-			specLoadTest{
-				`invalid toml`,
-				true,
-				&Spec{},
-			},
-		},
-		{
-			stateLoadTest{
-				``,
-				false,
-				&State{},
-			},
-			specLoadTest{
-				``,
-				false,
-				&Spec{},
-			},
-		},
-		{
-			stateLoadTest{
-				`
-				root:
-					serial: 10
-					length: 4096
-					days: 7300
-				intermediate:
-					serial: 100
-					length: 4096
-					days: 3650
-				`,
-				false,
-				&State{
-					Root: Config{
-						Serial: int64(10),
-						Length: 4096,
-						Days:   7300,
-					},
-					Interm: Config{
-						Serial: int64(100),
-						Length: 4096,
-						Days:   3650,
-					},
-				},
-			},
-			specLoadTest{
-				`[root]
-						locality = [ "Ottawa" ]
-						organization = [ "Moorara" ]
-					[server]
-						country = [ "US" ]
-						organization = [ "AWS" ]
-						email_address = [ "moorara@example.com" ]
-					`,
-				false,
-				&Spec{
-					Root: Claim{
-						Locality:     []string{"Ottawa"},
-						Organization: []string{"Moorara"},
-					},
-					Interm: Claim{},
-					Server: Claim{
-						Country:      []string{"US"},
-						Organization: []string{"AWS"},
-						EmailAddress: []string{"moorara@example.com"},
-					},
-					Client: Claim{},
-				},
-			},
-		},
-		{
-			stateLoadTest{
-				`
-				root:
-					serial: 10
-					length: 4096
-					days: 7300
-				intermediate:
-					serial: 100
-					length: 4096
-					days: 3650
-				server:
-					serial: 1000
-					length: 2048
-					days: 375
-				client:
-					serial: 10000
-					length: 2048
-					days: 40
-				`,
-				false,
-				&State{
-					Root: Config{
-						Serial: int64(10),
-						Length: 4096,
-						Days:   7300,
-					},
-					Interm: Config{
-						Serial: int64(100),
-						Length: 4096,
-						Days:   3650,
-					},
-					Server: Config{
-						Serial: int64(1000),
-						Length: 2048,
-						Days:   375,
-					},
-					Client: Config{
-						Serial: int64(10000),
-						Length: 2048,
-						Days:   40,
-					},
-				},
-			},
-			specLoadTest{
-				`
-					[root]
-						country = [ "CA", "US" ]
-						province = [ "Ontario", "Massachusetts" ]
-						locality = [ "Ottawa", "Boston" ]
-						organization = [ "Moorara" ]
-					[intermediate]
-						country = [ "CA" ]
-						province = [ "Ontario" ]
-						locality = [ "Ottawa" ]
-						organization = [ "Moorara" ]
-						email_address = [ "moorara@example.com" ]
-					[server]
-						country = [ "US" ]
-						province = [ "Virginia" ]
-						locality = [ "Richmond" ]
-						organization = [ "Moorara" ]
-						email_address = [ "moorara@example.com" ]
-					[client]
-						country = [ "UK" ]
-						locality = [ "London" ]
-						organization = [ "Moorara" ]
-						email_address = [ "moorara@example.com" ]
-					[root_policy]
-						match = ["Country", "Organization"]
-						supplied = ["CommonName"]
-					[intermediate_policy]
-						match = ["Organization"]
-						supplied = ["CommonName"]
-					`,
-				false,
-				&Spec{
-					Root: Claim{
-						Country:      []string{"CA", "US"},
-						Province:     []string{"Ontario", "Massachusetts"},
-						Locality:     []string{"Ottawa", "Boston"},
-						Organization: []string{"Moorara"},
-					},
-					Interm: Claim{
-						Country:      []string{"CA"},
-						Province:     []string{"Ontario"},
-						Locality:     []string{"Ottawa"},
-						Organization: []string{"Moorara"},
-						EmailAddress: []string{"moorara@example.com"},
-					},
-					Server: Claim{
-						Country:      []string{"US"},
-						Province:     []string{"Virginia"},
-						Locality:     []string{"Richmond"},
-						Organization: []string{"Moorara"},
-						EmailAddress: []string{"moorara@example.com"},
-					},
-					Client: Claim{
-						Country:      []string{"UK"},
-						Locality:     []string{"London"},
-						Organization: []string{"Moorara"},
-						EmailAddress: []string{"moorara@example.com"},
-					},
-					RootPolicy: Policy{
-						Match:    []string{"Country", "Organization"},
-						Supplied: []string{"CommonName"},
-					},
-					IntermPolicy: Policy{
-						Match:    []string{"Organization"},
-						Supplied: []string{"CommonName"},
-					},
-				},
-			},
-		},
-	}
-
-	saveTests = []struct {
-		state stateSaveTest
-		spec  specSaveTest
-	}{
-		{
-			stateSaveTest{
-				nil,
-				``,
-			},
-			specSaveTest{
-				nil,
-				``,
-			},
-		},
-		{
-			stateSaveTest{
-				&State{},
-				`root:
-					serial: 0
-					length: 0
-					days: 0
-				intermediate:
-					serial: 0
-					length: 0
-					days: 0
-				server:
-					serial: 0
-					length: 0
-					days: 0
-				client:
-					serial: 0
-					length: 0
-					days: 0
-				`,
-			},
-			specSaveTest{
-				&Spec{},
-				`[root]
-
-				[intermediate]
-
-				[server]
-
-				[client]
-
-				[root_policy]
-
-				[intermediate_policy]
-				`,
-			},
-		},
-		{
-			stateSaveTest{
-				&State{
-					Root: Config{
-						Serial: 10,
-						Length: 4096,
-						Days:   7300,
-					},
-					Interm: Config{
-						Serial: 100,
-						Length: 4096,
-						Days:   3650,
-					},
-				},
-				`root:
-					serial: 10
-					length: 4096
-					days: 7300
-				intermediate:
-					serial: 100
-					length: 4096
-					days: 3650
-				server:
-					serial: 0
-					length: 0
-					days: 0
-				client:
-					serial: 0
-					length: 0
-					days: 0
-				`,
-			},
-			specSaveTest{
-				&Spec{
-					Root: Claim{
-						Locality:     []string{"Ottawa"},
-						Organization: []string{"Moorara"},
-					},
-					Interm: Claim{},
-					Server: Claim{
-						Country:      []string{"US"},
-						Organization: []string{"AWS"}},
-					Client: Claim{},
-					RootPolicy: Policy{
-						Match:    []string{"Organization"},
-						Supplied: []string{"CommonName"},
-					},
-				},
-				`[root]
-					locality = ["Ottawa"]
-					organization = ["Moorara"]
-
-				[intermediate]
-
-				[server]
-					country = ["US"]
-					organization = ["AWS"]
-
-				[client]
-
-				[root_policy]
-					match = ["Organization"]
-					supplied = ["CommonName"]
-
-				[intermediate_policy]
-				`,
-			},
-		},
-		{
-			stateSaveTest{
-				&State{
-					Root: Config{
-						Serial: 10,
-						Length: 4096,
-						Days:   7300,
-					},
-					Interm: Config{
-						Serial: 100,
-						Length: 4096,
-						Days:   3650,
-					},
-					Server: Config{
-						Serial: 1000,
-						Length: 2048,
-						Days:   375,
-					},
-					Client: Config{
-						Serial: 10000,
-						Length: 2048,
-						Days:   40,
-					},
-				},
-				`root:
-					serial: 10
-					length: 4096
-					days: 7300
-				intermediate:
-					serial: 100
-					length: 4096
-					days: 3650
-				server:
-					serial: 1000
-					length: 2048
-					days: 375
-				client:
-					serial: 10000
-					length: 2048
-					days: 40
-				`,
-			},
-			specSaveTest{
-				&Spec{
-					Root: Claim{
-						Country:      []string{"CA", "US"},
-						Province:     []string{"Ontario", "Massachusetts"},
-						Locality:     []string{"Ottawa", "Boston"},
-						Organization: []string{"Moorara"},
-					},
-					Interm: Claim{
-						Country:      []string{"CA"},
-						Province:     []string{"Ontario"},
-						Locality:     []string{"Ottawa"},
-						Organization: []string{"Moorara"},
-					},
-					Server: Claim{
-						Country:      []string{"US"},
-						Province:     []string{"Virginia"},
-						Locality:     []string{"Richmond"},
-						Organization: []string{"Moorara"},
-					},
-					Client: Claim{
-						Country:      []string{"UK"},
-						Locality:     []string{"London"},
-						Organization: []string{"Moorara"},
-					},
-					RootPolicy: Policy{
-						Match:    []string{"Country", "Organization"},
-						Supplied: []string{"CommonName"},
-					},
-					IntermPolicy: Policy{
-						Match:    []string{"Organization"},
-						Supplied: []string{"CommonName"},
-					},
-				},
-				`[root]
-					country = ["CA", "US"]
-					province = ["Ontario", "Massachusetts"]
-					locality = ["Ottawa", "Boston"]
-					organization = ["Moorara"]
-
-				[intermediate]
-					country = ["CA"]
-					province = ["Ontario"]
-					locality = ["Ottawa"]
-					organization = ["Moorara"]
-
-				[server]
-					country = ["US"]
-					province = ["Virginia"]
-					locality = ["Richmond"]
-					organization = ["Moorara"]
-
-				[client]
-					country = ["UK"]
-					locality = ["London"]
-					organization = ["Moorara"]
-
-				[root_policy]
-					match = ["Country", "Organization"]
-					supplied = ["CommonName"]
-
-				[intermediate_policy]
-					match = ["Organization"]
-					supplied = ["CommonName"]
-				`,
-			},
-		},
-	}
-)
-
-func verifyStateFile(t *testing.T, stateFile, expectedYAML string) {
-	if expectedYAML == "" {
-		return
-	}
-
-	stateData, err := ioutil.ReadFile(stateFile)
+func setupWorkspace(t *testing.T) {
+	err := NewWorkspace(NewState(), NewSpec())
 	assert.NoError(t, err)
 
-	expectedYAML = strings.Replace(expectedYAML, "\t\t\t\t", "", -1)
-	expectedYAML = strings.Replace(expectedYAML, "\t", "  ", -1)
-
-	assert.Equal(t, expectedYAML, string(stateData))
-}
-
-func verifySpecFile(t *testing.T, specFile, expectedTOML string) {
-	if expectedTOML == "" {
-		return
+	// Mock root CA
+	pub, priv, err := genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+	rootCA := &x509.Certificate{
+		SerialNumber: big.NewInt(10),
+		Subject: pkix.Name{
+			CommonName: "Root CA",
+		},
 	}
-
-	specData, err := ioutil.ReadFile(specFile)
+	pemData, err := x509.CreateCertificate(rand.Reader, rootCA, rootCA, pub, priv)
+	assert.NoError(t, err)
+	err = writePemFile(pemCert, pemData, path.Join(DirRoot, "root.ca.cert"))
 	assert.NoError(t, err)
 
-	expectedTOML = strings.Replace(expectedTOML, "\t\t\t\t", "", -1)
-	expectedTOML = strings.Replace(expectedTOML, "\t", "  ", -1)
-
-	assert.Equal(t, expectedTOML, string(specData))
-}
-
-func TestLoadState(t *testing.T) {
-	for _, test := range loadTests {
-		yaml := strings.Replace(test.state.yaml, "\t", "  ", -1)
-		file, delete, err := util.WriteTempFile(yaml)
-		defer delete()
-		assert.NoError(t, err)
-
-		state, err := LoadState(file)
-
-		if test.state.expectError {
-			assert.Error(t, err)
-			assert.Nil(t, state)
-		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, test.state.expectedState, state)
-		}
+	// Mock an intermediate CA
+	pub, priv, err = genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+	opsCA := &x509.Certificate{
+		SerialNumber: big.NewInt(100),
+		Subject: pkix.Name{
+			CommonName: "Ops CA",
+		},
 	}
-}
+	pemData, err = x509.CreateCertificate(rand.Reader, opsCA, rootCA, pub, priv)
+	assert.NoError(t, err)
+	err = writePemFile(pemCert, pemData, path.Join(DirInterm, "ops.ca.cert"))
+	assert.NoError(t, err)
 
-func TestLoadStateError(t *testing.T) {
-	spec, err := LoadState("")
-	assert.Error(t, err)
-	assert.Nil(t, spec)
-}
-
-func TestSaveState(t *testing.T) {
-	for _, test := range saveTests {
-		file, delete, err := util.WriteTempFile("")
-		defer delete()
-		assert.NoError(t, err)
-
-		err = SaveState(test.state.state, file)
-		assert.NoError(t, err)
-
-		verifyStateFile(t, file, test.state.expectedYAML)
+	// Mock another intermediate CA
+	pub, priv, err = genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+	sreCA := &x509.Certificate{
+		SerialNumber: big.NewInt(200),
+		Subject: pkix.Name{
+			CommonName: "SRE CA",
+		},
 	}
-}
+	pemData, err = x509.CreateCertificate(rand.Reader, sreCA, rootCA, pub, priv)
+	assert.NoError(t, err)
+	err = writePemFile(pemCert, pemData, path.Join(DirInterm, "sre.ca.cert"))
+	assert.NoError(t, err)
 
-func TestLoadSpec(t *testing.T) {
-	for _, test := range loadTests {
-		file, delete, err := util.WriteTempFile(test.spec.toml)
-		defer delete()
-		assert.NoError(t, err)
-
-		spec, err := LoadSpec(file)
-
-		if test.spec.expectError {
-			assert.Error(t, err)
-			assert.Nil(t, spec)
-		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, test.spec.expectedSpec, spec)
-		}
+	// Mock more intermediate CA
+	pub, priv, err = genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+	rdCA := &x509.Certificate{
+		SerialNumber: big.NewInt(300),
+		Subject: pkix.Name{
+			CommonName: "R&D CA",
+		},
 	}
+	pemData, err = x509.CreateCertificate(rand.Reader, rdCA, sreCA, pub, priv)
+	assert.NoError(t, err)
+	err = writePemFile(pemCert, pemData, path.Join(DirInterm, "rd.ca.cert"))
+	assert.NoError(t, err)
 }
 
-func TestSaveSpec(t *testing.T) {
-	for _, test := range saveTests {
-		file, delete, err := util.WriteTempFile("")
-		defer delete()
-		assert.NoError(t, err)
-
-		err = SaveSpec(test.spec.spec, file)
-		assert.NoError(t, err)
-
-		verifySpecFile(t, file, test.spec.expectedTOML)
+func TestGenKeyPair(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
 	}
-}
 
-func TestNewWorkspace(t *testing.T) {
-	for _, test := range saveTests {
-		err := NewWorkspace(test.state.state, test.spec.spec)
-		assert.NoError(t, err)
-
-		verifyStateFile(t, FileState, test.state.expectedYAML)
-		verifySpecFile(t, FileSpec, test.spec.expectedTOML)
-
-		err = CleanupWorkspace()
-		assert.NoError(t, err)
-	}
-}
-
-func TestLoadWorkspace(t *testing.T) {
-	for _, test := range loadTests {
-		yaml := strings.Replace(test.state.yaml, "\t", "  ", -1)
-		err := ioutil.WriteFile(FileState, []byte(yaml), 0644)
-		assert.NoError(t, err)
-		err = ioutil.WriteFile(FileSpec, []byte(test.spec.toml), 0644)
-		assert.NoError(t, err)
-
-		state, spec, err := LoadWorkspace()
-
-		if test.state.expectError || test.spec.expectError {
-			assert.Error(t, err)
-		} else {
-			assert.NoError(t, err)
-			assert.Equal(t, test.state.expectedState, state)
-			assert.Equal(t, test.spec.expectedSpec, spec)
-		}
-
-		err = CleanupWorkspace()
-		assert.NoError(t, err)
-	}
-}
-
-func TestSaveWorkspace(t *testing.T) {
-	for _, test := range saveTests {
-		err := SaveWorkspace(test.state.state, test.spec.spec)
-		assert.NoError(t, err)
-
-		verifyStateFile(t, FileState, test.state.expectedYAML)
-		verifySpecFile(t, FileSpec, test.spec.expectedTOML)
-
-		err = CleanupWorkspace()
-		assert.NoError(t, err)
-	}
-}
-
-func TestCleanupWorkspace(t *testing.T) {
 	tests := []struct {
-		files []string
+		length      int
+		expectError bool
 	}{
-		{},
-		{
-			[]string{
-				DirRoot + "/root.ca.key",
-				DirRoot + "/root.ca.cert",
-			},
-		},
-		{
-			[]string{
-				DirRoot + "/root.ca.key",
-				DirRoot + "/root.ca.cert",
-				DirInterm + "/interm.ca.key",
-				DirInterm + "/interm.ca.cert",
-				DirServer + "/webapp.ca.key",
-				DirServer + "/webapp.ca.cert",
-				DirClient + "/service.ca.key",
-				DirClient + "/service.ca.cert",
-				DirCSR + "/interm.ca.csr",
-				DirCSR + "/webapp.ca.csr",
-				DirCSR + "/service.ca.csr",
-			},
-		},
+		{0, true},
+		{1024, false},
+		{2048, false},
+		{4096, false},
 	}
 
 	for _, test := range tests {
-		// Mock directorys and files
-		_, err := util.MkDirs("", DirRoot, DirInterm, DirServer, DirClient, DirCSR)
-		assert.NoError(t, err)
-		err = ioutil.WriteFile(FileState, nil, 0644)
-		assert.NoError(t, err)
-		err = ioutil.WriteFile(FileSpec, nil, 0644)
-		assert.NoError(t, err)
+		pub, priv, err := genKeyPair(test.length)
 
-		// Mock artifacts
-		for _, file := range test.files {
-			err = ioutil.WriteFile(file, nil, 0644)
+		if test.expectError {
+			assert.Error(t, err)
+			assert.Nil(t, pub)
+			assert.Nil(t, priv)
+		} else {
 			assert.NoError(t, err)
+			assert.NotNil(t, pub)
+			assert.NotNil(t, priv)
 		}
-
-		err = CleanupWorkspace()
-		assert.NoError(t, err)
 	}
+}
+
+func TestComputeSubjectKeyID(t *testing.T) {
+	pub, _, err := genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+
+	tests := []struct {
+		pubKey      interface{}
+		expectError bool
+	}{
+		{nil, true},
+		{pub, false},
+	}
+
+	for _, test := range tests {
+		id, err := computeSubjectKeyID(test.pubKey)
+
+		if test.expectError {
+			assert.Error(t, err)
+			assert.Nil(t, id)
+		} else {
+			assert.NoError(t, err)
+			assert.NotNil(t, id)
+		}
+	}
+}
+
+func TestWriteReadPrivateKey(t *testing.T) {
+	_, priv, err := genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+
+	tests := []*struct {
+		privKey    *rsa.PrivateKey
+		writePW    string
+		readPW     string
+		setPath    bool
+		path       string
+		writeError bool
+		readError  bool
+	}{
+		{
+			priv,
+			"", "",
+			false, "",
+			true, true,
+		},
+		{
+			priv,
+			"", "",
+			true, "",
+			false, false,
+		},
+		{
+			priv,
+			"secret", "secret",
+			true, "",
+			false, false,
+		},
+		{
+			priv,
+			"secret", "",
+			true, "",
+			false, true,
+		},
+		{
+			priv,
+			"secret", "different",
+			true, "",
+			false, true,
+		},
+	}
+
+	// Prepare temporary files
+	for _, test := range tests {
+		if test.setPath {
+			path, cleanup, err := util.WriteTempFile("")
+			defer cleanup()
+			assert.NoError(t, err)
+			test.path = path
+		}
+	}
+
+	t.Run("TestWritePrivateKey", func(t *testing.T) {
+		for _, test := range tests {
+			err := writePrivateKey(test.privKey, test.writePW, test.path)
+
+			if test.writeError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		}
+	})
+
+	t.Run("TestReadPrivateKey", func(t *testing.T) {
+		for _, test := range tests {
+			privKey, err := readPrivateKey(test.readPW, test.path)
+
+			if test.readError {
+				assert.Error(t, err)
+				assert.Nil(t, privKey)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.privKey, privKey)
+			}
+		}
+	})
+}
+
+func TestWritePemFileReadCertificate(t *testing.T) {
+	pub, priv, err := genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+
+	cert := &x509.Certificate{
+		SerialNumber: big.NewInt(0),
+		Subject: pkix.Name{
+			CommonName: "Test Cert",
+		},
+	}
+	certData, err := x509.CreateCertificate(rand.Reader, cert, cert, pub, priv)
+	assert.NoError(t, err)
+
+	tests := []*struct {
+		pemType    string
+		certData   []byte
+		setPath    bool
+		path       string
+		writeError bool
+		readError  bool
+	}{
+		{
+			"", nil,
+			false, "",
+			true, true,
+		},
+		{
+			pemCert, certData,
+			true, "",
+			false, false,
+		},
+		{
+			pemCert, certData[1:],
+			true, "",
+			false, true,
+		},
+	}
+
+	// Prepare temporary files
+	for _, test := range tests {
+		if test.setPath {
+			path, cleanup, err := util.WriteTempFile("")
+			defer cleanup()
+			assert.NoError(t, err)
+			test.path = path
+		}
+	}
+
+	t.Run("TestWritePemFile", func(t *testing.T) {
+		for _, test := range tests {
+			err := writePemFile(test.pemType, test.certData, test.path)
+
+			if test.writeError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		}
+	})
+
+	t.Run("TestReadCertificate", func(t *testing.T) {
+		for _, test := range tests {
+			cert, err := readCertificate(test.path)
+
+			if test.readError {
+				assert.Error(t, err)
+				assert.Nil(t, cert)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, cert)
+			}
+		}
+	})
+}
+
+func TestWritePemFileReadCertificateRequest(t *testing.T) {
+	_, priv, err := genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+
+	csr := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName: "Test CSR",
+		},
+	}
+	csrData, err := x509.CreateCertificateRequest(rand.Reader, csr, priv)
+	assert.NoError(t, err)
+
+	tests := []*struct {
+		pemType    string
+		csrData    []byte
+		setPath    bool
+		path       string
+		writeError bool
+		readError  bool
+	}{
+		{
+			"", nil,
+			false, "",
+			true, true,
+		},
+		{
+			pemCert, csrData,
+			true, "",
+			false, false,
+		},
+		{
+			pemCert, csrData[1:],
+			true, "",
+			false, true,
+		},
+	}
+
+	// Prepare temporary files
+	for _, test := range tests {
+		if test.setPath {
+			path, cleanup, err := util.WriteTempFile("")
+			defer cleanup()
+			assert.NoError(t, err)
+			test.path = path
+		}
+	}
+
+	t.Run("TestWritePemFile", func(t *testing.T) {
+		for _, test := range tests {
+			err := writePemFile(test.pemType, test.csrData, test.path)
+
+			if test.writeError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		}
+	})
+
+	t.Run("TestReadCertificateRequest", func(t *testing.T) {
+		for _, test := range tests {
+			csr, err := readCertificateRequest(test.path)
+
+			if test.readError {
+				assert.Error(t, err)
+				assert.Nil(t, csr)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, csr)
+			}
+		}
+	})
+}
+
+func TestWriteReadCertificateChain(t *testing.T) {
+	setupWorkspace(t)
+	defer CleanupWorkspace()
+
+	tests := []struct {
+		title       string
+		md          Metadata
+		mdCA        Metadata
+		expectError bool
+	}{
+		{
+			"InvalidCertTypeRoot",
+			Metadata{CertType: CertTypeRoot},
+			Metadata{},
+			true,
+		},
+		{
+			"InvalidCertTypeServer",
+			Metadata{CertType: CertTypeServer},
+			Metadata{},
+			true,
+		},
+		{
+			"InvalidCertTypeClient",
+			Metadata{CertType: CertTypeClient},
+			Metadata{},
+			true,
+		},
+		{
+			"InvalidCATypeServer",
+			Metadata{CertType: CertTypeInterm},
+			Metadata{CertType: CertTypeServer},
+			true,
+		},
+		{
+			"InvalidCATypeClient",
+			Metadata{CertType: CertTypeInterm},
+			Metadata{CertType: CertTypeClient},
+			true,
+		},
+		{
+			"InvalidCertName",
+			Metadata{CertType: CertTypeInterm},
+			Metadata{CertType: CertTypeRoot},
+			true,
+		},
+		{
+			"CertNotExist",
+			Metadata{Name: "interm", CertType: CertTypeInterm},
+			Metadata{CertType: CertTypeRoot},
+			true,
+		},
+		{
+			"CANotExist",
+			Metadata{Name: "ops", CertType: CertTypeInterm},
+			Metadata{Name: "bad", CertType: CertTypeRoot},
+			true,
+		},
+		{
+			"RootInterm",
+			Metadata{Name: "sre", CertType: CertTypeInterm},
+			Metadata{Name: "root", CertType: CertTypeRoot},
+			false,
+		},
+		{
+			"IntermInterm",
+			Metadata{Name: "rd", CertType: CertTypeInterm},
+			Metadata{Name: "sre", CertType: CertTypeInterm},
+			false,
+		},
+	}
+
+	t.Run("TestWriteCertificateChain", func(t *testing.T) {
+		for _, test := range tests {
+			t.Run(test.title, func(t *testing.T) {
+				err := writeCertificateChain(test.md, test.mdCA)
+
+				if test.expectError {
+					assert.Error(t, err)
+				} else {
+					assert.NoError(t, err)
+				}
+			})
+		}
+	})
+
+	t.Run("TestReadCertificateChain", func(t *testing.T) {
+		for _, test := range tests {
+			t.Run(test.title, func(t *testing.T) {
+				certs, err := readCertificateChain(test.md.ChainPath())
+
+				if test.expectError {
+					assert.Error(t, err)
+					assert.Nil(t, certs)
+				} else {
+					assert.NoError(t, err)
+					assert.NotNil(t, certs)
+				}
+			})
+		}
+	})
 }
