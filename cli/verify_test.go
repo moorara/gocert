@@ -53,6 +53,15 @@ func TestVerifyCommand(t *testing.T) {
 			[]string{"-ca=root", "--name", "interm"},
 			``,
 		},
+		{
+			[]string{"-ca=interm"},
+			`server
+			client`,
+		},
+		{
+			[]string{"-ca=interm", "--name", "server,client"},
+			``,
+		},
 	}
 
 	for _, test := range tests {

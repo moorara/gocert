@@ -88,6 +88,17 @@ func TestSignCommand(t *testing.T) {
 			client
 			`,
 		},
+		{
+			pki.NewState(),
+			pki.NewSpec(),
+			[]pki.Metadata{
+				pki.Metadata{Name: "ops", CertType: pki.CertTypeInterm},
+				pki.Metadata{Name: "server", CertType: pki.CertTypeServer},
+				pki.Metadata{Name: "client", CertType: pki.CertTypeClient},
+			},
+			[]string{"-ca=ops", "-name=server,client"},
+			``,
+		},
 	}
 
 	for _, test := range tests {

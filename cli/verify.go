@@ -3,12 +3,15 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/mitchellh/cli"
 	"github.com/moorara/gocert/pki"
 )
 
 const (
+	verifySuccess       = " ✓ Verified %s"
+	verifyFailure       = " ✗ Failed to verify %s. Error: %s"
 	verifyEnterNameCA   = "\nENTER NAME FOR CERTIFICATE AUTHORITY ..."
 	verifyEnterNameCert = "\nENTER NAME FOR CERTIFICATE ..."
 
@@ -48,46 +51,52 @@ func (c *VerifyCommand) Help() string {
 }
 
 // Run executes the command
-func (c *VerifyCommand) Run(args []string) int {
-	var nameCA, nameCert string
+func (c *VerifyCommand) Run(args []string) (exit int) {
+	var fCA, fName string
 
 	flags := flag.NewFlagSet("verify", flag.ContinueOnError)
 	flags.Usage = func() {}
-	flags.StringVar(&nameCA, "ca", "", "")
-	flags.StringVar(&nameCert, "name", "", "")
+	flags.StringVar(&fCA, "ca", "", "")
+	flags.StringVar(&fName, "name", "", "")
 	err := flags.Parse(args)
 	if err != nil {
 		return ErrorInvalidFlag
 	}
 
-	if nameCA == "" {
+	if fCA == "" {
 		c.ui.Output(verifyEnterNameCA)
-		nameCA, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CA Name", "string"))
+		fCA, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CA Name", "string"))
 		if err != nil {
 			return ErrorInvalidName
 		}
 	}
 
-	if nameCert == "" {
+	if fName == "" {
 		c.ui.Output(verifyEnterNameCert)
-		nameCert, err = c.ui.Ask(fmt.Sprintf(askTemplate, "Cert Name", "string"))
+		fName, err = c.ui.Ask(fmt.Sprintf(askTemplate, "Cert Name", "string list"))
 		if err != nil {
 			return ErrorInvalidName
 		}
 	}
 
 	c.ui.Output("")
-	mdCA := resolveByName(nameCA)
-	mdCert := resolveByName(nameCert)
 
-	err = c.pki.VerifyCert(mdCA, mdCert)
-	if err != nil {
-		c.ui.Error("Failed to verify certificate. Error: " + err.Error())
-		return ErrorVerify
+	mdCA := resolveByName(fCA)
+	certNames := strings.Split(fName, ",")
+
+	for _, certName := range certNames {
+		mdCert := resolveByName(certName)
+
+		err = c.pki.VerifyCert(mdCA, mdCert)
+		if err != nil {
+			c.ui.Error(fmt.Sprintf(verifyFailure, mdCert.Name, err.Error()))
+			exit = ErrorVerify
+		} else {
+			c.ui.Info(fmt.Sprintf(verifySuccess, mdCert.Name))
+		}
 	}
 
-	c.ui.Info(" ✓ OK")
 	c.ui.Output("")
 
-	return 0
+	return exit
 }

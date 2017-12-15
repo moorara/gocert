@@ -3,12 +3,15 @@ package cli
 import (
 	"flag"
 	"fmt"
+	"strings"
 
 	"github.com/mitchellh/cli"
 	"github.com/moorara/gocert/pki"
 )
 
 const (
+	signSuccess        = " ✓ Signed %s"
+	signFailure        = " ✗ Failed to sign %s. Error: %s"
 	signEnterNameCA    = "\nENTER NAME FOR CERTIFICATE AUTHORITY ..."
 	signEnterNameCSR   = "\nENTER NAME FOR CERTIFICATE SIGNING REQUEST ..."
 	signEnterConfigCA  = "\nENTER CONFIGURATIONS FOR CERTIFICATE AUTHORITY ..."
@@ -42,14 +45,8 @@ func NewSignCommand() *SignCommand {
 	}
 }
 
-func (c *SignCommand) resolve(nameCA, nameCSR string) (configCA pki.Config, mdCA pki.Metadata, configCSR pki.Config, mdCSR pki.Metadata, policyCA pki.Policy, status int) {
-	state, spec, status := loadWorkspace(c.ui)
-	if status != 0 {
-		return
-	}
-
+func (c *SignCommand) resolveCA(state *pki.State, spec *pki.Spec, nameCA string) (configCA pki.Config, mdCA pki.Metadata, policyCA pki.Policy, status int) {
 	mdCA = resolveByName(nameCA)
-	mdCSR = resolveByName(nameCSR)
 
 	if mdCA.CertType != pki.CertTypeRoot && mdCA.CertType != pki.CertTypeInterm {
 		c.ui.Error("Certificate authority name is not valid.")
@@ -57,23 +54,24 @@ func (c *SignCommand) resolve(nameCA, nameCSR string) (configCA pki.Config, mdCA
 		return
 	}
 
+	// CertType field is ensured to be valid
+	configCA, _ = state.ConfigFor(mdCA.CertType)
+	policyCA, _ = spec.PolicyFor(mdCA.CertType)
+
+	return
+}
+
+func (c *SignCommand) resolveCSR(state *pki.State, spec *pki.Spec, nameCSR string) (configCSR pki.Config, mdCSR pki.Metadata, status int) {
+	mdCSR = resolveByName(nameCSR)
+
 	if mdCSR.CertType == 0 || mdCSR.CertType == pki.CertTypeRoot {
 		c.ui.Error("Certificate name is not valid.")
 		status = ErrorInvalidCSR
 		return
 	}
 
-	// Root CA only signs intermediate CAs, and intermediate CA cannot sign root CA
-	if mdCA.CertType == pki.CertTypeRoot && mdCSR.CertType != pki.CertTypeInterm {
-		c.ui.Error("Root CA can only sign an intermediate ca.")
-		status = ErrorInvalidCSR
-		return
-	}
-
-	// CertType fields are ensured to be valid
-	configCA, _ = state.ConfigFor(mdCA.CertType)
+	// CertType field is ensured to be valid
 	configCSR, _ = state.ConfigFor(mdCSR.CertType)
-	policyCA, _ = spec.PolicyFor(mdCA.CertType)
 
 	return
 }
@@ -89,40 +87,45 @@ func (c *SignCommand) Help() string {
 }
 
 // Run executes the command
-func (c *SignCommand) Run(args []string) int {
-	var nameCA, nameCSR string
+func (c *SignCommand) Run(args []string) (exit int) {
+	var fCA, fName string
 
 	flags := flag.NewFlagSet("sign", flag.ContinueOnError)
 	flags.Usage = func() {}
-	flags.StringVar(&nameCA, "ca", "", "")
-	flags.StringVar(&nameCSR, "name", "", "")
+	flags.StringVar(&fCA, "ca", "", "")
+	flags.StringVar(&fName, "name", "", "")
 	err := flags.Parse(args)
 	if err != nil {
 		return ErrorInvalidFlag
 	}
 
-	if nameCA == "" {
+	if fCA == "" {
 		c.ui.Output(signEnterNameCA)
-		nameCA, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CA Name", "string"))
+		fCA, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CA Name", "string"))
 		if err != nil {
 			return ErrorInvalidName
 		}
 	}
 
-	if nameCSR == "" {
+	if fName == "" {
 		c.ui.Output(signEnterNameCSR)
-		nameCSR, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CSR Name", "string"))
+		fName, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CSR Name", "string list"))
 		if err != nil {
 			return ErrorInvalidName
 		}
 	}
 
-	if nameCA == nameCSR {
+	if fCA == fName {
 		c.ui.Error("CA name and request name cannot be the same.")
 		return ErrorInvalidName
 	}
 
-	configCA, mdCA, configCSR, mdCSR, policyCA, status := c.resolve(nameCA, nameCSR)
+	state, spec, status := loadWorkspace(c.ui)
+	if status != 0 {
+		return status
+	}
+
+	configCA, mdCA, policyCA, status := c.resolveCA(state, spec, fCA)
 	if status != 0 {
 		return status
 	}
@@ -132,11 +135,30 @@ func (c *SignCommand) Run(args []string) int {
 	c.ui.Output("")
 
 	trustFunc := pki.PolicyTrustFunc(policyCA)
-	err = c.pki.SignCSR(configCA, mdCA, configCSR, mdCSR, trustFunc)
-	if err != nil {
-		c.ui.Error("Failed to sign certificate request. Error: " + err.Error())
-		return ErrorSign
+	csrNames := strings.Split(fName, ",")
+
+	for _, csrName := range csrNames {
+		configCSR, mdCSR, status := c.resolveCSR(state, spec, csrName)
+		if status != 0 {
+			return status
+		}
+
+		// Root CA only signs intermediate CAs, and intermediate CA cannot sign root CA
+		if mdCA.CertType == pki.CertTypeRoot && mdCSR.CertType != pki.CertTypeInterm {
+			c.ui.Error("Root CA can only sign an intermediate ca.")
+			return ErrorInvalidCSR
+		}
+
+		err = c.pki.SignCSR(configCA, mdCA, configCSR, mdCSR, trustFunc)
+		if err != nil {
+			c.ui.Error(fmt.Sprintf(signFailure, mdCSR.Name, err.Error()))
+			exit = ErrorSign
+		} else {
+			c.ui.Info(fmt.Sprintf(signSuccess, mdCSR.Name))
+		}
 	}
 
-	return 0
+	c.ui.Output("")
+
+	return exit
 }

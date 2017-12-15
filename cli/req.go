@@ -12,9 +12,11 @@ import (
 )
 
 const (
-	reqEnterName   = "\nENTER NAME FOR %s ..."
-	reqEnterConfig = "\nENTER CONFIGURATIONS FOR %s ..."
-	reqEnterClaim  = "\nENTER SPECIFICATIONS FOR %s ..."
+	reqMessageRoot  = "\n ✓ Created %s\n"
+	reqMessageOther = "\n ✓ Requested %s\n"
+	reqEnterName    = "\nENTER NAME FOR %s ..."
+	reqEnterConfig  = "\nENTER CONFIGURATIONS FOR %s ..."
+	reqEnterClaim   = "\nENTER SPECIFICATIONS FOR %s ..."
 
 	reqSynopsis = `Creates a new {{if eq .CertType 1}}root certificate authority{{- else}}certificate signing request{{- end}}.`
 	reqHelp     = `
@@ -132,7 +134,6 @@ func (c *ReqCommand) Run(args []string) int {
 	askForConfig(&config, c.ui)
 	c.output(reqEnterClaim)
 	askForClaim(&claim, c.ui)
-	c.ui.Output("")
 
 	if c.md.CertType == pki.CertTypeRoot {
 		err = c.pki.GenCert(config, claim, c.md)
@@ -140,12 +141,14 @@ func (c *ReqCommand) Run(args []string) int {
 			c.ui.Error("Failed to generate root ca. Error: " + err.Error())
 			return ErrorCert
 		}
+		c.ui.Info(fmt.Sprintf(reqMessageRoot, c.md.Name))
 	} else {
 		err = c.pki.GenCSR(config, claim, c.md)
 		if err != nil {
 			c.ui.Error("Failed to generate certificate signing request. Error: " + err.Error())
 			return ErrorCSR
 		}
+		c.ui.Info(fmt.Sprintf(reqMessageOther, c.md.Name))
 	}
 
 	return 0
