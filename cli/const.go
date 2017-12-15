@@ -31,4 +31,6 @@ const (
 	ErrorCSR = 32
 	// ErrorSign is returned when signing a csr fails
 	ErrorSign = 33
+	// ErrorVerify is returned when verifying a cert fails
+	ErrorVerify = 34
 )

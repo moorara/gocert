@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func writeMocks(t *testing.T, mocks []pki.Metadata) {
+func writeSignMocks(t *testing.T, mocks []pki.Metadata) {
 	for _, md := range mocks {
 		err := ioutil.WriteFile(md.KeyPath(), []byte(""), 0644)
 		assert.NoError(t, err)
@@ -94,7 +94,7 @@ func TestSignCommand(t *testing.T) {
 		err := pki.NewWorkspace(test.state, test.spec)
 		assert.NoError(t, err)
 
-		writeMocks(t, test.mocks)
+		writeSignMocks(t, test.mocks)
 
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)
@@ -261,7 +261,7 @@ func TestSignCommandError(t *testing.T) {
 		err := pki.NewWorkspace(test.state, test.spec)
 		assert.NoError(t, err)
 
-		writeMocks(t, test.mocks)
+		writeSignMocks(t, test.mocks)
 
 		mockUI := cli.NewMockUi()
 		mockUI.InputReader = strings.NewReader(test.input)

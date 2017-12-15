@@ -17,6 +17,7 @@ type App struct {
 	server  cli.Command
 	client  cli.Command
 	sign    cli.Command
+	verify  cli.Command
 }
 
 // NewApp creates a new cli app
@@ -30,6 +31,7 @@ func NewApp(name, version string) *App {
 		server:  NewReqCommand(pki.Metadata{CertType: pki.CertTypeServer}),
 		client:  NewReqCommand(pki.Metadata{CertType: pki.CertTypeClient}),
 		sign:    NewSignCommand(),
+		verify:  NewVerifyCommand(),
 	}
 }
 
@@ -56,6 +58,9 @@ func (a *App) Run(args []string) int {
 		},
 		"sign": func() (cli.Command, error) {
 			return a.sign, nil
+		},
+		"verify": func() (cli.Command, error) {
+			return a.verify, nil
 		},
 	}
 

@@ -2,6 +2,8 @@ package cli
 
 import (
 	"io/ioutil"
+	"os"
+	"path"
 	"strings"
 	"testing"
 
@@ -12,13 +14,15 @@ import (
 )
 
 type mockedManager struct {
-	GenCertError error
-	GenCSRError  error
-	SignCSRError error
+	GenCertError    error
+	GenCSRError     error
+	SignCSRError    error
+	VerifyCertError error
 
-	GenCertCalled bool
-	GenCSRCalled  bool
-	SignCSRCalled bool
+	GenCertCalled    bool
+	GenCSRCalled     bool
+	SignCSRCalled    bool
+	VerifyCertCalled bool
 }
 
 func (m *mockedManager) GenCert(pki.Config, pki.Claim, pki.Metadata) error {
@@ -34,6 +38,11 @@ func (m *mockedManager) GenCSR(pki.Config, pki.Claim, pki.Metadata) error {
 func (m *mockedManager) SignCSR(pki.Config, pki.Metadata, pki.Config, pki.Metadata, pki.TrustFunc) error {
 	m.SignCSRCalled = true
 	return m.SignCSRError
+}
+
+func (m *mockedManager) VerifyCert(pki.Metadata, pki.Metadata) error {
+	m.VerifyCertCalled = true
+	return m.VerifyCertError
 }
 
 func TestNewColoredUi(t *testing.T) {
@@ -402,6 +411,58 @@ func TestSaveWorkspace(t *testing.T) {
 
 		err := util.DeleteAll("", pki.FileState, pki.FileSpec)
 		assert.NoError(t, err)
+	}
+}
+
+func TestResolveByName(t *testing.T) {
+	tests := []struct {
+		keyFile          string
+		name             string
+		expectedMetadata pki.Metadata
+	}{
+		{
+			"",
+			"",
+			pki.Metadata{},
+		},
+		{
+			path.Join(pki.DirRoot, "top.ca.key"),
+			"top",
+			pki.Metadata{},
+		},
+		{
+			path.Join(pki.DirRoot, "root.ca.key"),
+			"root",
+			pki.Metadata{Name: "root", CertType: pki.CertTypeRoot},
+		},
+		{
+			path.Join(pki.DirInterm, "interm.ca.key"),
+			"interm",
+			pki.Metadata{Name: "interm", CertType: pki.CertTypeInterm},
+		},
+		{
+			path.Join(pki.DirServer, "server.key"),
+			"server",
+			pki.Metadata{Name: "server", CertType: pki.CertTypeServer},
+		},
+		{
+			path.Join(pki.DirClient, "client.key"),
+			"client",
+			pki.Metadata{Name: "client", CertType: pki.CertTypeClient},
+		},
+	}
+
+	err := pki.NewWorkspace(nil, nil)
+	defer pki.CleanupWorkspace()
+	assert.NoError(t, err)
+
+	for _, test := range tests {
+		ioutil.WriteFile(test.keyFile, []byte("mocked cert"), 0644)
+
+		md := resolveByName(test.name)
+		assert.Equal(t, test.expectedMetadata, md)
+
+		os.Remove(test.keyFile)
 	}
 }
 

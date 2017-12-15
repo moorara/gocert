@@ -9,7 +9,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
-	"log"
 	"math/big"
 	"path/filepath"
 	"time"
@@ -98,14 +97,10 @@ func (m *x509Manager) GenCert(config Config, claim Claim, md Metadata) error {
 		AuthorityKeyId: subjectKeyID,
 
 		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageOCSPSigning},
+		ExtKeyUsage: []x509.ExtKeyUsage{},
 
 		// Extensions:      []pkix.Extension{},
 		// ExtraExtensions: []pkix.Extension{},
-
-		// Authority Information Access
-		// OCSPServer:            []string{},
-		// IssuingCertificateURL: []string{},
 	}
 
 	// Create the certificate
@@ -238,12 +233,6 @@ func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, 
 
 		SubjectKeyId:   subjectKeyID,
 		AuthorityKeyId: certCA.SubjectKeyId,
-
-		KeyUsage:    x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
-		ExtKeyUsage: []x509.ExtKeyUsage{},
-
-		// Extensions:      []pkix.Extension{},
-		// ExtraExtensions: []pkix.Extension{},
 	}
 
 	switch mdCSR.CertType {
@@ -251,19 +240,22 @@ func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, 
 		cert.BasicConstraintsValid = true
 		cert.IsCA = true
 		cert.KeyUsage = x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign | x509.KeyUsageCRLSign
-		cert.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageOCSPSigning}
-		// cert.OCSPServer = []string{}
-		// cert.IssuingCertificateURL = []string{}
+		cert.ExtKeyUsage = []x509.ExtKeyUsage{}
 	case CertTypeServer:
 		cert.BasicConstraintsValid = false
 		cert.IsCA = false
-		cert.KeyUsage = x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment | x509.KeyUsageKeyEncipherment | x509.KeyUsageDataEncipherment
+		cert.KeyUsage = x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageContentCommitment
 		cert.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}
 	case CertTypeClient:
 		cert.BasicConstraintsValid = false
 		cert.IsCA = false
-		cert.KeyUsage = x509.KeyUsageDigitalSignature | x509.KeyUsageContentCommitment | x509.KeyUsageKeyEncipherment | x509.KeyUsageDataEncipherment
-		cert.ExtKeyUsage = []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}
+		cert.KeyUsage = x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment | x509.KeyUsageContentCommitment
+		cert.ExtKeyUsage = []x509.ExtKeyUsage{}
+		/* READ:
+		 * https://go-review.googlesource.com/c/go/+/10806
+		 * https://github.com/golang/go/issues/7423
+		 * https://github.com/golang/go/issues/11087
+		 */
 	}
 
 	// Create the certificate
@@ -289,11 +281,10 @@ func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, 
 	return nil
 }
 
-// VerifyCert
-func (m *x509Manager) VerifyCert(md, mdCA Metadata) error {
-	cert, err := readCertificate(md.CertPath())
-	if err != nil {
-		return err
+// VerifyCert verifies a certificate using a ceritifcate authority
+func (m *x509Manager) VerifyCert(mdCA, md Metadata) error {
+	if mdCA.CertType != CertTypeRoot && mdCA.CertType != CertTypeInterm {
+		return errors.New("Certificate authority is invalid")
 	}
 
 	chain, err := readCertificateChain(mdCA.ChainPath())
@@ -301,7 +292,31 @@ func (m *x509Manager) VerifyCert(md, mdCA Metadata) error {
 		return err
 	}
 
-	log.Printf("====> %+v %v \n", cert, chain)
+	cert, err := readCertificate(md.CertPath())
+	if err != nil {
+		return err
+	}
+
+	roots := x509.NewCertPool()
+	interms := x509.NewCertPool()
+	for i, cert := range chain {
+		if i == len(chain)-1 {
+			roots.AddCert(cert)
+		} else {
+			interms.AddCert(cert)
+		}
+	}
+
+	opts := x509.VerifyOptions{
+		Roots:         roots,
+		Intermediates: interms,
+		DNSName:       "", // TODO
+	}
+
+	_, err = cert.Verify(opts)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

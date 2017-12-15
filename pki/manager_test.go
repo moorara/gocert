@@ -14,32 +14,25 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type Meta struct {
-	Root   Metadata
-	Interm Metadata
-	Server Metadata
-	Client Metadata
-}
-
-func verifyKey(t *testing.T, password, path string) {
+func parseKey(t *testing.T, password, path string) {
 	key, err := readPrivateKey(password, path)
 	assert.NoError(t, err)
 	assert.NotNil(t, key)
 }
 
-func verifyCSR(t *testing.T, path string) {
+func parseCSR(t *testing.T, path string) {
 	csr, er := readCertificateRequest(path)
 	assert.NoError(t, er)
 	assert.NotNil(t, csr)
 }
 
-func verifyCert(t *testing.T, path string) {
+func parseCert(t *testing.T, path string) {
 	cert, err := readCertificate(path)
 	assert.NoError(t, err)
 	assert.NotNil(t, cert)
 }
 
-func verifyChain(t *testing.T, path string) {
+func parseChain(t *testing.T, path string) {
 	certs, err := readCertificateChain(path)
 	assert.NoError(t, err)
 	assert.NotNil(t, certs)
@@ -51,6 +44,7 @@ func mockWorkspaceWithChains(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Mock root CA
+	rootCertFile := path.Join(DirRoot, "root"+extCACert)
 	pub, priv, err := genKeyPair(testKeyLen)
 	assert.NoError(t, err)
 	rootCA := &x509.Certificate{
@@ -61,35 +55,43 @@ func mockWorkspaceWithChains(t *testing.T) {
 	}
 	rootPem, err := x509.CreateCertificate(rand.Reader, rootCA, rootCA, pub, priv)
 	assert.NoError(t, err)
-	err = writePemFile(pemTypeCert, rootPem, path.Join(DirRoot, "root"+extCACert))
+	err = writePemFile(pemTypeCert, rootPem, rootCertFile)
 	assert.NoError(t, err)
 
 	// Mock first-level intermediate CA
+	sreCertFile := path.Join(DirInterm, "sre"+extCACert)
+	sreChainFile := path.Join(DirInterm, "sre"+extCAChain)
 	pub, priv, err = genKeyPair(testKeyLen)
 	assert.NoError(t, err)
 	sreCA := &x509.Certificate{
-		SerialNumber: big.NewInt(200),
+		SerialNumber: big.NewInt(100),
 		Subject: pkix.Name{
 			CommonName: "SRE CA",
 		},
 	}
 	srePem, err := x509.CreateCertificate(rand.Reader, sreCA, rootCA, pub, priv)
 	assert.NoError(t, err)
-	err = writePemFile(pemTypeCert, srePem, path.Join(DirInterm, "sre"+extCACert))
+	err = writePemFile(pemTypeCert, srePem, sreCertFile)
+	assert.NoError(t, err)
+	err = util.ConcatFiles(sreChainFile, false, sreCertFile, rootCertFile)
 	assert.NoError(t, err)
 
 	// Mock second-level intermediate CA
+	rdCertFile := path.Join(DirInterm, "rd"+extCACert)
+	rdChainFile := path.Join(DirInterm, "rd"+extCAChain)
 	pub, priv, err = genKeyPair(testKeyLen)
 	assert.NoError(t, err)
 	rdCA := &x509.Certificate{
-		SerialNumber: big.NewInt(300),
+		SerialNumber: big.NewInt(200),
 		Subject: pkix.Name{
 			CommonName: "R&D CA",
 		},
 	}
 	rdPem, err := x509.CreateCertificate(rand.Reader, rdCA, sreCA, pub, priv)
 	assert.NoError(t, err)
-	err = writePemFile(pemTypeCert, rdPem, path.Join(DirInterm, "rd"+extCACert))
+	err = writePemFile(pemTypeCert, rdPem, rdCertFile)
+	assert.NoError(t, err)
+	err = util.ConcatFiles(rdChainFile, false, rdCertFile, sreCertFile, rootCertFile)
 	assert.NoError(t, err)
 }
 
@@ -368,39 +370,53 @@ func TestSignCSRError(t *testing.T) {
 func TestVerifyCertError(t *testing.T) {
 	tests := []struct {
 		title string
-		md    Metadata
 		mdCA  Metadata
+		md    Metadata
 	}{
 		{
-			"InvalidCertMetadata",
+			"InvalidCA",
+			Metadata{CertType: CertTypeServer},
 			Metadata{},
+		},
+		{
+			"CANotExist",
+			Metadata{CertType: CertTypeInterm},
+			Metadata{Name: "sre", CertType: CertTypeInterm},
+		},
+		{
+			"CertNotExist",
+			Metadata{Name: "root", CertType: CertTypeRoot},
 			Metadata{},
+		},
+		{
+			"CannotVerify",
+			Metadata{Name: "root", CertType: CertTypeRoot},
+			Metadata{Name: "rd", CertType: CertTypeInterm},
 		},
 	}
 
-	err := NewWorkspace(NewState(), NewSpec())
-	assert.NoError(t, err)
+	mockWorkspaceWithChains(t)
 	defer CleanupWorkspace()
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			manager := NewX509Manager()
 
-			err := manager.VerifyCert(test.md, test.mdCA)
+			err := manager.VerifyCert(test.mdCA, test.md)
 			assert.Error(t, err)
-
-			err = CleanupWorkspace()
-			assert.NoError(t, err)
 		})
 	}
 }
 
 func TestX509Manager(t *testing.T) {
 	tests := []struct {
-		title string
-		state *State
-		spec  *Spec
-		meta  *Meta
+		title    string
+		state    *State
+		spec     *Spec
+		mdRoot   Metadata
+		mdInterm Metadata
+		mdServer Metadata
+		mdClient Metadata
 	}{
 		{
 			"RootIntermediate",
@@ -434,16 +450,16 @@ func TestX509Manager(t *testing.T) {
 					Supplied: []string{"CommonName"},
 				},
 			},
-			&Meta{
-				Root: Metadata{
-					Name:     "root",
-					CertType: CertTypeRoot,
-				},
-				Interm: Metadata{
-					Name:     "ops",
-					CertType: CertTypeInterm,
-				},
+			Metadata{
+				Name:     "root",
+				CertType: CertTypeRoot,
 			},
+			Metadata{
+				Name:     "ops",
+				CertType: CertTypeInterm,
+			},
+			Metadata{},
+			Metadata{},
 		},
 		{
 			"RootIntermediateServer",
@@ -497,20 +513,19 @@ func TestX509Manager(t *testing.T) {
 					Supplied: []string{"CommonName", "EmailAddress"},
 				},
 			},
-			&Meta{
-				Root: Metadata{
-					Name:     "root",
-					CertType: CertTypeRoot,
-				},
-				Interm: Metadata{
-					Name:     "ops",
-					CertType: CertTypeInterm,
-				},
-				Server: Metadata{
-					Name:     "milad.io",
-					CertType: CertTypeServer,
-				},
+			Metadata{
+				Name:     "root",
+				CertType: CertTypeRoot,
 			},
+			Metadata{
+				Name:     "ops",
+				CertType: CertTypeInterm,
+			},
+			Metadata{
+				Name:     "milad.io",
+				CertType: CertTypeServer,
+			},
+			Metadata{},
 		},
 		{
 			"RootIntermediateServerClient",
@@ -576,23 +591,21 @@ func TestX509Manager(t *testing.T) {
 					Supplied: []string{"CommonName", "EmailAddress"},
 				},
 			},
-			&Meta{
-				Root: Metadata{
-					Name:     "root",
-					CertType: CertTypeRoot,
-				},
-				Interm: Metadata{
-					Name:     "ops",
-					CertType: CertTypeInterm,
-				},
-				Server: Metadata{
-					Name:     "milad.io",
-					CertType: CertTypeServer,
-				},
-				Client: Metadata{
-					Name:     "auth.service",
-					CertType: CertTypeClient,
-				},
+			Metadata{
+				Name:     "root",
+				CertType: CertTypeRoot,
+			},
+			Metadata{
+				Name:     "ops",
+				CertType: CertTypeInterm,
+			},
+			Metadata{
+				Name:     "milad.io",
+				CertType: CertTypeServer,
+			},
+			Metadata{
+				Name:     "auth.service",
+				CertType: CertTypeClient,
 			},
 		},
 	}
@@ -605,52 +618,64 @@ func TestX509Manager(t *testing.T) {
 			manager := NewX509Manager()
 
 			// Generate Root CA
-			if !reflect.DeepEqual(test.state.Root, &Config{}) && !reflect.DeepEqual(test.spec.Root, &Claim{}) && !reflect.DeepEqual(test.meta.Root, &Metadata{}) {
-				err = manager.GenCert(test.state.Root, test.spec.Root, test.meta.Root)
+			if !reflect.DeepEqual(test.state.Root, &Config{}) && !reflect.DeepEqual(test.spec.Root, &Claim{}) && !reflect.DeepEqual(test.mdRoot, &Metadata{}) {
+				err = manager.GenCert(test.state.Root, test.spec.Root, test.mdRoot)
 				assert.NoError(t, err)
 
-				verifyKey(t, test.state.Root.Password, test.meta.Root.KeyPath())
-				verifyCert(t, test.meta.Root.CertPath())
+				parseKey(t, test.state.Root.Password, test.mdRoot.KeyPath())
+				parseCert(t, test.mdRoot.CertPath())
+
+				err = manager.VerifyCert(test.mdRoot, test.mdRoot)
+				assert.NoError(t, err)
 			}
 
 			// Generate Intermediate CSR and sign it by Root CA
-			if !reflect.DeepEqual(test.state.Interm, Config{}) && !reflect.DeepEqual(test.spec.Interm, Claim{}) && !reflect.DeepEqual(test.meta.Interm, Metadata{}) {
-				err = manager.GenCSR(test.state.Interm, test.spec.Interm, test.meta.Interm)
+			if !reflect.DeepEqual(test.state.Interm, Config{}) && !reflect.DeepEqual(test.spec.Interm, Claim{}) && !reflect.DeepEqual(test.mdInterm, Metadata{}) {
+				err = manager.GenCSR(test.state.Interm, test.spec.Interm, test.mdInterm)
 				assert.NoError(t, err)
 
-				err = manager.SignCSR(test.state.Root, test.meta.Root, test.state.Interm, test.meta.Interm, PolicyTrustFunc(test.spec.RootPolicy))
+				err = manager.SignCSR(test.state.Root, test.mdRoot, test.state.Interm, test.mdInterm, PolicyTrustFunc(test.spec.RootPolicy))
 				assert.NoError(t, err)
 
-				verifyKey(t, test.state.Interm.Password, test.meta.Interm.KeyPath())
-				verifyCSR(t, test.meta.Interm.CSRPath())
-				verifyCert(t, test.meta.Interm.CertPath())
-				verifyChain(t, test.meta.Interm.ChainPath())
+				parseKey(t, test.state.Interm.Password, test.mdInterm.KeyPath())
+				parseCSR(t, test.mdInterm.CSRPath())
+				parseCert(t, test.mdInterm.CertPath())
+				parseChain(t, test.mdInterm.ChainPath())
+
+				err = manager.VerifyCert(test.mdRoot, test.mdInterm)
+				assert.NoError(t, err)
 			}
 
 			// Generate Server CSR and it by Intermediate CA
-			if !reflect.DeepEqual(test.state.Server, Config{}) && !reflect.DeepEqual(test.spec.Server, Claim{}) && !reflect.DeepEqual(test.meta.Server, Metadata{}) {
-				err = manager.GenCSR(test.state.Server, test.spec.Server, test.meta.Server)
+			if !reflect.DeepEqual(test.state.Server, Config{}) && !reflect.DeepEqual(test.spec.Server, Claim{}) && !reflect.DeepEqual(test.mdServer, Metadata{}) {
+				err = manager.GenCSR(test.state.Server, test.spec.Server, test.mdServer)
 				assert.NoError(t, err)
 
-				err = manager.SignCSR(test.state.Interm, test.meta.Interm, test.state.Server, test.meta.Server, PolicyTrustFunc(test.spec.IntermPolicy))
+				err = manager.SignCSR(test.state.Interm, test.mdInterm, test.state.Server, test.mdServer, PolicyTrustFunc(test.spec.IntermPolicy))
 				assert.NoError(t, err)
 
-				verifyKey(t, "", test.meta.Server.KeyPath())
-				verifyCSR(t, test.meta.Server.CSRPath())
-				verifyCert(t, test.meta.Server.CertPath())
+				parseKey(t, "", test.mdServer.KeyPath())
+				parseCSR(t, test.mdServer.CSRPath())
+				parseCert(t, test.mdServer.CertPath())
+
+				err = manager.VerifyCert(test.mdInterm, test.mdServer)
+				assert.NoError(t, err)
 			}
 
 			// Generate Client CSR and sign it by Intermediate CA
-			if !reflect.DeepEqual(test.state.Client, Config{}) && !reflect.DeepEqual(test.spec.Client, Claim{}) && !reflect.DeepEqual(test.meta.Client, Metadata{}) {
-				err = manager.GenCSR(test.state.Client, test.spec.Client, test.meta.Client)
+			if !reflect.DeepEqual(test.state.Client, Config{}) && !reflect.DeepEqual(test.spec.Client, Claim{}) && !reflect.DeepEqual(test.mdClient, Metadata{}) {
+				err = manager.GenCSR(test.state.Client, test.spec.Client, test.mdClient)
 				assert.NoError(t, err)
 
-				err = manager.SignCSR(test.state.Interm, test.meta.Interm, test.state.Client, test.meta.Client, PolicyTrustFunc(test.spec.IntermPolicy))
+				err = manager.SignCSR(test.state.Interm, test.mdInterm, test.state.Client, test.mdClient, PolicyTrustFunc(test.spec.IntermPolicy))
 				assert.NoError(t, err)
 
-				verifyKey(t, "", test.meta.Client.KeyPath())
-				verifyCSR(t, test.meta.Client.CSRPath())
-				verifyCert(t, test.meta.Client.CertPath())
+				parseKey(t, "", test.mdClient.KeyPath())
+				parseCSR(t, test.mdClient.CSRPath())
+				parseCert(t, test.mdClient.CertPath())
+
+				err = manager.VerifyCert(test.mdInterm, test.mdClient)
+				assert.NoError(t, err)
 			}
 
 			err = CleanupWorkspace()

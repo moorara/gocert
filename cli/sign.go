@@ -3,7 +3,6 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/mitchellh/cli"
 	"github.com/moorara/gocert/pki"
@@ -43,45 +42,23 @@ func NewSignCommand() *SignCommand {
 	}
 }
 
-func certExist(name string, certType int) bool {
-	md := pki.Metadata{
-		Name:     name,
-		CertType: certType,
-	}
-
-	if _, err := os.Stat(md.KeyPath()); os.IsNotExist(err) {
-		return false
-	}
-	return true
-}
-
-func (c *SignCommand) resolve(mdCA, mdCSR *pki.Metadata) (configCA, configCSR pki.Config, policyCA pki.Policy, status int) {
+func (c *SignCommand) resolve(nameCA, nameCSR string) (configCA pki.Config, mdCA pki.Metadata, configCSR pki.Config, mdCSR pki.Metadata, policyCA pki.Policy, status int) {
 	state, spec, status := loadWorkspace(c.ui)
 	if status != 0 {
 		return
 	}
 
-	if mdCA.Name == rootName && certExist(mdCA.Name, pki.CertTypeRoot) {
-		mdCA.CertType = pki.CertTypeRoot
-	} else if certExist(mdCA.Name, pki.CertTypeInterm) {
-		mdCA.CertType = pki.CertTypeInterm
-	}
+	mdCA = resolveByName(nameCA)
+	mdCSR = resolveByName(nameCSR)
 
-	if mdCA.CertType == 0 {
-		c.ui.Error("CA name can only be root or an intermediate ca name.")
+	if mdCA.CertType != pki.CertTypeRoot && mdCA.CertType != pki.CertTypeInterm {
+		c.ui.Error("Certificate authority name is not valid.")
 		status = ErrorInvalidCA
 		return
 	}
 
-	switch {
-	case certExist(mdCSR.Name, pki.CertTypeInterm):
-		mdCSR.CertType = pki.CertTypeInterm
-	case certExist(mdCSR.Name, pki.CertTypeServer):
-		mdCSR.CertType = pki.CertTypeServer
-	case certExist(mdCSR.Name, pki.CertTypeClient):
-		mdCSR.CertType = pki.CertTypeClient
-	default:
-		c.ui.Error("Certificate signing request not exist.")
+	if mdCSR.CertType == 0 || mdCSR.CertType == pki.CertTypeRoot {
+		c.ui.Error("Certificate name is not valid.")
 		status = ErrorInvalidCSR
 		return
 	}
@@ -113,39 +90,39 @@ func (c *SignCommand) Help() string {
 
 // Run executes the command
 func (c *SignCommand) Run(args []string) int {
-	var mdCA, mdCSR pki.Metadata
+	var nameCA, nameCSR string
 
 	flags := flag.NewFlagSet("sign", flag.ContinueOnError)
 	flags.Usage = func() {}
-	flags.StringVar(&mdCA.Name, "ca", "", "")
-	flags.StringVar(&mdCSR.Name, "name", "", "")
+	flags.StringVar(&nameCA, "ca", "", "")
+	flags.StringVar(&nameCSR, "name", "", "")
 	err := flags.Parse(args)
 	if err != nil {
 		return ErrorInvalidFlag
 	}
 
-	if mdCA.Name == "" {
+	if nameCA == "" {
 		c.ui.Output(signEnterNameCA)
-		mdCA.Name, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CA Name", "string"))
+		nameCA, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CA Name", "string"))
 		if err != nil {
 			return ErrorInvalidName
 		}
 	}
 
-	if mdCSR.Name == "" {
+	if nameCSR == "" {
 		c.ui.Output(signEnterNameCSR)
-		mdCSR.Name, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CSR Name", "string"))
+		nameCSR, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CSR Name", "string"))
 		if err != nil {
 			return ErrorInvalidName
 		}
 	}
 
-	if mdCA.Name == mdCSR.Name {
+	if nameCA == nameCSR {
 		c.ui.Error("CA name and request name cannot be the same.")
 		return ErrorInvalidName
 	}
 
-	configCA, configCSR, policyCA, status := c.resolve(&mdCA, &mdCSR)
+	configCA, mdCA, configCSR, mdCSR, policyCA, status := c.resolve(nameCA, nameCSR)
 	if status != 0 {
 		return status
 	}
@@ -154,7 +131,8 @@ func (c *SignCommand) Run(args []string) int {
 	askForConfig(&configCA, c.ui)
 	c.ui.Output("")
 
-	err = c.pki.SignCSR(configCA, mdCA, configCSR, mdCSR, pki.PolicyTrustFunc(policyCA))
+	trustFunc := pki.PolicyTrustFunc(policyCA)
+	err = c.pki.SignCSR(configCA, mdCA, configCSR, mdCSR, trustFunc)
 	if err != nil {
 		c.ui.Error("Failed to sign certificate request. Error: " + err.Error())
 		return ErrorSign

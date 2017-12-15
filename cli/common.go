@@ -83,6 +83,32 @@ func saveWorkspace(state *pki.State, spec *pki.Spec, ui cli.Ui) int {
 	return 0
 }
 
+func resolveByName(name string) pki.Metadata {
+	var md pki.Metadata
+
+	md.Name, md.CertType = name, pki.CertTypeRoot
+	if _, err := os.Stat(md.KeyPath()); err == nil && name == rootName {
+		return md
+	}
+
+	md.Name, md.CertType = name, pki.CertTypeInterm
+	if _, err := os.Stat(md.KeyPath()); err == nil {
+		return md
+	}
+
+	md.Name, md.CertType = name, pki.CertTypeServer
+	if _, err := os.Stat(md.KeyPath()); err == nil {
+		return md
+	}
+
+	md.Name, md.CertType = name, pki.CertTypeClient
+	if _, err := os.Stat(md.KeyPath()); err == nil {
+		return md
+	}
+
+	return pki.Metadata{}
+}
+
 func askForNewState(ui cli.Ui) *pki.State {
 	root := pki.Config{}
 	ui.Output(textRootEnterConfig)

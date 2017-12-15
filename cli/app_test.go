@@ -26,6 +26,7 @@ var (
 	helpMockServer = "help text for mocked server command"
 	helpMockClient = "help text for mocked client command"
 	helpMockSign   = "help text for mocked sign command"
+	helpMockVerify = "help text for mocked verify command"
 )
 
 func newMockApp(name, version string) *App {
@@ -38,6 +39,7 @@ func newMockApp(name, version string) *App {
 		server:  &cli.MockCommand{RunResult: 0, HelpText: helpMockServer},
 		client:  &cli.MockCommand{RunResult: 0, HelpText: helpMockClient},
 		sign:    &cli.MockCommand{RunResult: 0, HelpText: helpMockSign},
+		verify:  &cli.MockCommand{RunResult: 0, HelpText: helpMockVerify},
 	}
 }
 
@@ -61,6 +63,7 @@ func TestNewApp(t *testing.T) {
 		assert.NotNil(t, app.server)
 		assert.NotNil(t, app.client)
 		assert.NotNil(t, app.sign)
+		assert.NotNil(t, app.verify)
 	}
 }
 
@@ -100,9 +103,13 @@ func TestAppRun(t *testing.T) {
 		{"cli", "0.8.2", []string{"client", "-help"}, 0, []string{helpMockClient}},
 		{"cli", "0.8.3", []string{"client", "--help"}, 0, []string{helpMockClient}},
 
-		{"cli", "0.8.1", []string{"sign"}, 0, nil},
-		{"cli", "0.8.2", []string{"sign", "-help"}, 0, []string{helpMockSign}},
-		{"cli", "0.8.3", []string{"sign", "--help"}, 0, []string{helpMockSign}},
+		{"cli", "0.9.1", []string{"sign"}, 0, nil},
+		{"cli", "0.9.2", []string{"sign", "-help"}, 0, []string{helpMockSign}},
+		{"cli", "0.9.3", []string{"sign", "--help"}, 0, []string{helpMockSign}},
+
+		{"cli", "0.10.1", []string{"verify"}, 0, nil},
+		{"cli", "0.10.2", []string{"verify", "-help"}, 0, []string{helpMockVerify}},
+		{"cli", "0.10.3", []string{"verify", "--help"}, 0, []string{helpMockVerify}},
 	}
 
 	for _, test := range tests {
