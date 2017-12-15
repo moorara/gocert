@@ -15,9 +15,9 @@ import (
 )
 
 const (
-	pemKey  = "RSA PRIVATE KEY"
-	pemCert = "CERTIFICATE"
-	pemCSR  = "CERTIFICATE REQUEST"
+	pemTypeKey  = "RSA PRIVATE KEY"
+	pemTypeCert = "CERTIFICATE"
+	pemTypeCSR  = "CERTIFICATE REQUEST"
 )
 
 func genKeyPair(length int) (*rsa.PublicKey, *rsa.PrivateKey, error) {
@@ -48,11 +48,11 @@ func writePrivateKey(private *rsa.PrivateKey, password, path string) (err error)
 	// Encrypt private key if a password set
 	if password == "" {
 		keyPem = &pem.Block{
-			Type:  pemKey,
+			Type:  pemTypeKey,
 			Bytes: keyData,
 		}
 	} else {
-		keyPem, err = x509.EncryptPEMBlock(rand.Reader, pemKey, keyData, []byte(password), x509.PEMCipherAES256)
+		keyPem, err = x509.EncryptPEMBlock(rand.Reader, pemTypeKey, keyData, []byte(password), x509.PEMCipherAES256)
 		if err != nil {
 			return err
 		}

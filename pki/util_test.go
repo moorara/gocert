@@ -17,7 +17,7 @@ const (
 	testKeyLen = 1024
 )
 
-func setupWorkspace(t *testing.T) {
+func mockWorkspaceWithCA(t *testing.T) {
 	err := NewWorkspace(NewState(), NewSpec())
 	assert.NoError(t, err)
 
@@ -32,7 +32,7 @@ func setupWorkspace(t *testing.T) {
 	}
 	pemData, err := x509.CreateCertificate(rand.Reader, rootCA, rootCA, pub, priv)
 	assert.NoError(t, err)
-	err = writePemFile(pemCert, pemData, path.Join(DirRoot, "root.ca.cert"))
+	err = writePemFile(pemTypeCert, pemData, path.Join(DirRoot, "root"+extCACert))
 	assert.NoError(t, err)
 
 	// Mock an intermediate CA
@@ -46,10 +46,10 @@ func setupWorkspace(t *testing.T) {
 	}
 	pemData, err = x509.CreateCertificate(rand.Reader, opsCA, rootCA, pub, priv)
 	assert.NoError(t, err)
-	err = writePemFile(pemCert, pemData, path.Join(DirInterm, "ops.ca.cert"))
+	err = writePemFile(pemTypeCert, pemData, path.Join(DirInterm, "ops"+extCACert))
 	assert.NoError(t, err)
 
-	// Mock another intermediate CA
+	// Mock first-level intermediate CA
 	pub, priv, err = genKeyPair(testKeyLen)
 	assert.NoError(t, err)
 	sreCA := &x509.Certificate{
@@ -60,10 +60,10 @@ func setupWorkspace(t *testing.T) {
 	}
 	pemData, err = x509.CreateCertificate(rand.Reader, sreCA, rootCA, pub, priv)
 	assert.NoError(t, err)
-	err = writePemFile(pemCert, pemData, path.Join(DirInterm, "sre.ca.cert"))
+	err = writePemFile(pemTypeCert, pemData, path.Join(DirInterm, "sre"+extCACert))
 	assert.NoError(t, err)
 
-	// Mock more intermediate CA
+	// Mock second-level intermediate CA
 	pub, priv, err = genKeyPair(testKeyLen)
 	assert.NoError(t, err)
 	rdCA := &x509.Certificate{
@@ -74,7 +74,7 @@ func setupWorkspace(t *testing.T) {
 	}
 	pemData, err = x509.CreateCertificate(rand.Reader, rdCA, sreCA, pub, priv)
 	assert.NoError(t, err)
-	err = writePemFile(pemCert, pemData, path.Join(DirInterm, "rd.ca.cert"))
+	err = writePemFile(pemTypeCert, pemData, path.Join(DirInterm, "rd"+extCACert))
 	assert.NoError(t, err)
 }
 
@@ -181,7 +181,7 @@ func TestWriteReadPrivateKey(t *testing.T) {
 	// Prepare temporary files
 	for _, test := range tests {
 		if test.setPath {
-			path, cleanup, err := util.WriteTempFile("")
+			path, cleanup, err := util.CreateTempFile("")
 			defer cleanup()
 			assert.NoError(t, err)
 			test.path = path
@@ -242,12 +242,12 @@ func TestWritePemFileReadCertificate(t *testing.T) {
 			true, true,
 		},
 		{
-			pemCert, certData,
+			pemTypeCert, certData,
 			true, "",
 			false, false,
 		},
 		{
-			pemCert, certData[1:],
+			pemTypeCert, certData[1:],
 			true, "",
 			false, true,
 		},
@@ -256,7 +256,7 @@ func TestWritePemFileReadCertificate(t *testing.T) {
 	// Prepare temporary files
 	for _, test := range tests {
 		if test.setPath {
-			path, cleanup, err := util.WriteTempFile("")
+			path, cleanup, err := util.CreateTempFile("")
 			defer cleanup()
 			assert.NoError(t, err)
 			test.path = path
@@ -316,12 +316,12 @@ func TestWritePemFileReadCertificateRequest(t *testing.T) {
 			true, true,
 		},
 		{
-			pemCert, csrData,
+			pemTypeCert, csrData,
 			true, "",
 			false, false,
 		},
 		{
-			pemCert, csrData[1:],
+			pemTypeCert, csrData[1:],
 			true, "",
 			false, true,
 		},
@@ -330,7 +330,7 @@ func TestWritePemFileReadCertificateRequest(t *testing.T) {
 	// Prepare temporary files
 	for _, test := range tests {
 		if test.setPath {
-			path, cleanup, err := util.WriteTempFile("")
+			path, cleanup, err := util.CreateTempFile("")
 			defer cleanup()
 			assert.NoError(t, err)
 			test.path = path
@@ -365,7 +365,7 @@ func TestWritePemFileReadCertificateRequest(t *testing.T) {
 }
 
 func TestWriteReadCertificateChain(t *testing.T) {
-	setupWorkspace(t)
+	mockWorkspaceWithCA(t)
 	defer CleanupWorkspace()
 
 	tests := []struct {

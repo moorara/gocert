@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPathFromCurrent(t *testing.T) {
+func TestAbsPath(t *testing.T) {
 	tests := []struct {
 		execPath        string
 		fromExec        bool
@@ -110,7 +110,7 @@ func TestMkDirs(t *testing.T) {
 	}
 }
 
-func TestWriteTempFile(t *testing.T) {
+func TestCreateTempFile(t *testing.T) {
 	tests := []struct {
 		content string
 	}{
@@ -130,13 +130,100 @@ func TestWriteTempFile(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		path, delete, err := WriteTempFile(test.content)
+		path, delete, err := CreateTempFile(test.content)
 		defer delete()
 		assert.NoError(t, err)
 
 		content, err := ioutil.ReadFile(path)
 		assert.NoError(t, err)
 		assert.Equal(t, test.content, string(content))
+	}
+}
+
+func TestConcatFiles(t *testing.T) {
+	tests := []struct {
+		dest            string
+		destContent     string
+		fileContents    map[string]string
+		append          bool
+		expectError     bool
+		expectedContent string
+	}{
+		{
+			"", "",
+			map[string]string{},
+			false,
+			true,
+			"",
+		},
+		{
+			"list", "mandarin",
+			map[string]string{
+				"": "",
+			},
+			false,
+			true,
+			"",
+		},
+		{
+			"list", "tangerine",
+			map[string]string{},
+			false,
+			false,
+			"",
+		},
+		{
+			"list", "tangerine",
+			map[string]string{},
+			true,
+			false,
+			"tangerine",
+		},
+		{
+			"list", "apple ",
+			map[string]string{
+				"item1": "pear ",
+				"item2": "orange ",
+			},
+			false,
+			false,
+			"pear orange ",
+		},
+		{
+			"list", "apple ",
+			map[string]string{
+				"item1": "pear ",
+				"item2": "orange ",
+			},
+			true,
+			false,
+			"apple pear orange ",
+		},
+	}
+
+	for _, test := range tests {
+		ioutil.WriteFile(test.dest, []byte(test.destContent), 0644)
+
+		files := make([]string, 0)
+		for file, content := range test.fileContents {
+			ioutil.WriteFile(file, []byte(content), 0644)
+			files = append(files, file)
+		}
+
+		err := ConcatFiles(test.dest, test.append, files...)
+
+		if test.expectError {
+			assert.Error(t, err)
+		} else {
+			assert.NoError(t, err)
+			content, err := ioutil.ReadFile(test.dest)
+			assert.NoError(t, err)
+			assert.Equal(t, test.expectedContent, string(content))
+		}
+
+		// Cleanup temporary files
+		files = append(files, test.dest)
+		DeleteAll("", files...)
 	}
 }
 

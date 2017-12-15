@@ -121,7 +121,7 @@ func (m *x509Manager) GenCert(config Config, claim Claim, md Metadata) error {
 	}
 
 	// Write certificate file
-	err = writePemFile(pemCert, certData, md.CertPath())
+	err = writePemFile(pemTypeCert, certData, md.CertPath())
 	if err != nil {
 		return err
 	}
@@ -177,7 +177,7 @@ func (m *x509Manager) GenCSR(config Config, claim Claim, md Metadata) error {
 	}
 
 	/* Write certificate request file */
-	err = writePemFile(pemCSR, csr, md.CSRPath())
+	err = writePemFile(pemTypeCSR, csr, md.CSRPath())
 	if err != nil {
 		return err
 	}
@@ -273,7 +273,7 @@ func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, 
 	}
 
 	// Write certificate file
-	err = writePemFile(pemCert, certData, mdCSR.CertPath())
+	err = writePemFile(pemTypeCert, certData, mdCSR.CertPath())
 	if err != nil {
 		return err
 	}

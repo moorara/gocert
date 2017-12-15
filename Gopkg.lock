@@ -53,7 +53,7 @@
   branch = "master"
   name = "github.com/moorara/go-box"
   packages = ["dt","util"]
-  revision = "9e4a4c2874c23fe8c33d879c41bcf742933fd7bf"
+  revision = "f4837c27861ef7868ffdd7340df7ed78228707eb"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -77,7 +77,7 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "53aa286056ef226755cd898109dbcdaba8ac0b81"
+  revision = "1d2aa6dbdea45adaaebb9905d0666e4537563829"
 
 [[projects]]
   branch = "v2"

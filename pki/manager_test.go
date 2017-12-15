@@ -1,8 +1,12 @@
 package pki
 
 import (
+	"crypto/rand"
 	"crypto/x509"
+	"crypto/x509/pkix"
 	"io/ioutil"
+	"math/big"
+	"path"
 	"reflect"
 	"testing"
 
@@ -40,6 +44,53 @@ func verifyChain(t *testing.T, path string) {
 	assert.NoError(t, err)
 	assert.NotNil(t, certs)
 	assert.True(t, len(certs) >= 2)
+}
+
+func mockWorkspaceWithChains(t *testing.T) {
+	err := NewWorkspace(NewState(), NewSpec())
+	assert.NoError(t, err)
+
+	// Mock root CA
+	pub, priv, err := genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+	rootCA := &x509.Certificate{
+		SerialNumber: big.NewInt(10),
+		Subject: pkix.Name{
+			CommonName: "Root CA",
+		},
+	}
+	rootPem, err := x509.CreateCertificate(rand.Reader, rootCA, rootCA, pub, priv)
+	assert.NoError(t, err)
+	err = writePemFile(pemTypeCert, rootPem, path.Join(DirRoot, "root"+extCACert))
+	assert.NoError(t, err)
+
+	// Mock first-level intermediate CA
+	pub, priv, err = genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+	sreCA := &x509.Certificate{
+		SerialNumber: big.NewInt(200),
+		Subject: pkix.Name{
+			CommonName: "SRE CA",
+		},
+	}
+	srePem, err := x509.CreateCertificate(rand.Reader, sreCA, rootCA, pub, priv)
+	assert.NoError(t, err)
+	err = writePemFile(pemTypeCert, srePem, path.Join(DirInterm, "sre"+extCACert))
+	assert.NoError(t, err)
+
+	// Mock second-level intermediate CA
+	pub, priv, err = genKeyPair(testKeyLen)
+	assert.NoError(t, err)
+	rdCA := &x509.Certificate{
+		SerialNumber: big.NewInt(300),
+		Subject: pkix.Name{
+			CommonName: "R&D CA",
+		},
+	}
+	rdPem, err := x509.CreateCertificate(rand.Reader, rdCA, sreCA, pub, priv)
+	assert.NoError(t, err)
+	err = writePemFile(pemTypeCert, rdPem, path.Join(DirInterm, "rd"+extCACert))
+	assert.NoError(t, err)
 }
 
 func TestGenCertError(t *testing.T) {
