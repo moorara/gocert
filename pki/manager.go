@@ -20,7 +20,7 @@ type (
 		GenCert(Config, Claim, Metadata) error
 		GenCSR(Config, Claim, Metadata) error
 		SignCSR(Config, Metadata, Config, Metadata, TrustFunc) error
-		VerifyCert(Metadata, Metadata) error
+		VerifyCert(Metadata, Metadata, string) error
 	}
 
 	// x509Manager provides methods for managing x509 certificates
@@ -282,7 +282,7 @@ func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, 
 }
 
 // VerifyCert verifies a certificate using a ceritifcate authority
-func (m *x509Manager) VerifyCert(mdCA, md Metadata) error {
+func (m *x509Manager) VerifyCert(mdCA, md Metadata, dnsName string) error {
 	if mdCA.CertType != CertTypeRoot && mdCA.CertType != CertTypeInterm {
 		return errors.New("Certificate authority is invalid")
 	}
@@ -310,7 +310,7 @@ func (m *x509Manager) VerifyCert(mdCA, md Metadata) error {
 	opts := x509.VerifyOptions{
 		Roots:         roots,
 		Intermediates: interms,
-		DNSName:       "", // TODO
+		DNSName:       dnsName,
 	}
 
 	_, err = cert.Verify(opts)

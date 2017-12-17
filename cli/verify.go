@@ -23,6 +23,7 @@ const (
 	Flags:
 		-ca      the name of certificate authorithy
 		-name    the name of certificate
+		-dns     if provided, determines whether the certificate can be used for the given dns name
 	`
 )
 
@@ -52,12 +53,13 @@ func (c *VerifyCommand) Help() string {
 
 // Run executes the command
 func (c *VerifyCommand) Run(args []string) (exit int) {
-	var fCA, fName string
+	var fCA, fName, fDNS string
 
 	flags := flag.NewFlagSet("verify", flag.ContinueOnError)
 	flags.Usage = func() {}
 	flags.StringVar(&fCA, "ca", "", "")
 	flags.StringVar(&fName, "name", "", "")
+	flags.StringVar(&fDNS, "dns", "", "")
 	err := flags.Parse(args)
 	if err != nil {
 		return ErrorInvalidFlag
@@ -87,7 +89,7 @@ func (c *VerifyCommand) Run(args []string) (exit int) {
 	for _, certName := range certNames {
 		mdCert := resolveByName(certName)
 
-		err = c.pki.VerifyCert(mdCA, mdCert)
+		err = c.pki.VerifyCert(mdCA, mdCert, fDNS)
 		if err != nil {
 			c.ui.Error(fmt.Sprintf(verifyFailure, mdCert.Name, err.Error()))
 			exit = ErrorVerify

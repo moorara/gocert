@@ -41,7 +41,7 @@ func (m *mockedManager) SignCSR(pki.Config, pki.Metadata, pki.Config, pki.Metada
 	return m.SignCSRError
 }
 
-func (m *mockedManager) VerifyCert(pki.Metadata, pki.Metadata) error {
+func (m *mockedManager) VerifyCert(pki.Metadata, pki.Metadata, string) error {
 	m.VerifyCertCalled = true
 	return m.VerifyCertError
 }

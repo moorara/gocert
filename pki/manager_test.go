@@ -9,6 +9,7 @@ import (
 	"path"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/moorara/go-box/util"
 	"github.com/stretchr/testify/assert"
@@ -49,6 +50,8 @@ func mockWorkspaceWithChains(t *testing.T) {
 	assert.NoError(t, err)
 	rootCA := &x509.Certificate{
 		SerialNumber: big.NewInt(10),
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().AddDate(0, 0, 1),
 		Subject: pkix.Name{
 			CommonName: "Root CA",
 		},
@@ -65,6 +68,8 @@ func mockWorkspaceWithChains(t *testing.T) {
 	assert.NoError(t, err)
 	sreCA := &x509.Certificate{
 		SerialNumber: big.NewInt(100),
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().AddDate(0, 0, 1),
 		Subject: pkix.Name{
 			CommonName: "SRE CA",
 		},
@@ -83,6 +88,8 @@ func mockWorkspaceWithChains(t *testing.T) {
 	assert.NoError(t, err)
 	rdCA := &x509.Certificate{
 		SerialNumber: big.NewInt(200),
+		NotBefore:    time.Now(),
+		NotAfter:     time.Now().AddDate(0, 0, 1),
 		Subject: pkix.Name{
 			CommonName: "R&D CA",
 		},
@@ -369,29 +376,40 @@ func TestSignCSRError(t *testing.T) {
 
 func TestVerifyCertError(t *testing.T) {
 	tests := []struct {
-		title string
-		mdCA  Metadata
-		md    Metadata
+		title   string
+		mdCA    Metadata
+		md      Metadata
+		dnsName string
 	}{
 		{
 			"InvalidCA",
 			Metadata{CertType: CertTypeServer},
 			Metadata{},
+			"",
 		},
 		{
 			"CANotExist",
 			Metadata{CertType: CertTypeInterm},
 			Metadata{Name: "sre", CertType: CertTypeInterm},
+			"",
 		},
 		{
 			"CertNotExist",
 			Metadata{Name: "root", CertType: CertTypeRoot},
 			Metadata{},
+			"",
 		},
 		{
 			"CannotVerify",
 			Metadata{Name: "root", CertType: CertTypeRoot},
 			Metadata{Name: "rd", CertType: CertTypeInterm},
+			"",
+		},
+		{
+			"CannotVerifyDNS",
+			Metadata{Name: "root", CertType: CertTypeRoot},
+			Metadata{Name: "sre", CertType: CertTypeInterm},
+			"example.com",
 		},
 	}
 
@@ -402,7 +420,7 @@ func TestVerifyCertError(t *testing.T) {
 		t.Run(test.title, func(t *testing.T) {
 			manager := NewX509Manager()
 
-			err := manager.VerifyCert(test.mdCA, test.md)
+			err := manager.VerifyCert(test.mdCA, test.md, test.dnsName)
 			assert.Error(t, err)
 		})
 	}
@@ -410,13 +428,15 @@ func TestVerifyCertError(t *testing.T) {
 
 func TestX509Manager(t *testing.T) {
 	tests := []struct {
-		title    string
-		state    *State
-		spec     *Spec
-		mdRoot   Metadata
-		mdInterm Metadata
-		mdServer Metadata
-		mdClient Metadata
+		title     string
+		state     *State
+		spec      *Spec
+		mdRoot    Metadata
+		mdInterm  Metadata
+		mdServer  Metadata
+		mdClient  Metadata
+		dnsServer string
+		dnsClient string
 	}{
 		{
 			"RootIntermediate",
@@ -438,7 +458,7 @@ func TestX509Manager(t *testing.T) {
 					Organization: []string{"Milad"},
 				},
 				Interm: Claim{
-					CommonName:   "Milad Ops CA",
+					CommonName:   "Milad SRE CA",
 					Organization: []string{"Milad"},
 				},
 				RootPolicy: Policy{
@@ -460,6 +480,8 @@ func TestX509Manager(t *testing.T) {
 			},
 			Metadata{},
 			Metadata{},
+			"",
+			"",
 		},
 		{
 			"RootIntermediateServer",
@@ -490,19 +512,19 @@ func TestX509Manager(t *testing.T) {
 					Organization: []string{"Milad"},
 				},
 				Interm: Claim{
-					CommonName:         "Milad Ops CA",
+					CommonName:         "Milad SRE CA",
 					Country:            []string{"CA"},
 					Province:           []string{"Ontario"},
 					Organization:       []string{"Milad"},
-					OrganizationalUnit: []string{"Ops"},
-					EmailAddress:       []string{"ops@example.com"},
+					OrganizationalUnit: []string{"SRE"},
+					EmailAddress:       []string{"sre@example.com"},
 				},
 				Server: Claim{
 					CommonName:         "milad.io",
 					Country:            []string{"CA"},
 					Organization:       []string{"Milad"},
 					OrganizationalUnit: []string{"R&D"},
-					EmailAddress:       []string{"rd@example.com"},
+					DNSName:            []string{"milad.io"},
 				},
 				RootPolicy: Policy{
 					Match:    []string{"Country", "Organization"},
@@ -510,7 +532,7 @@ func TestX509Manager(t *testing.T) {
 				},
 				IntermPolicy: Policy{
 					Match:    []string{"Organization"},
-					Supplied: []string{"CommonName", "EmailAddress"},
+					Supplied: []string{"CommonName", "DNSName"},
 				},
 			},
 			Metadata{
@@ -526,6 +548,8 @@ func TestX509Manager(t *testing.T) {
 				CertType: CertTypeServer,
 			},
 			Metadata{},
+			"milad.io",
+			"",
 		},
 		{
 			"RootIntermediateServerClient",
@@ -561,25 +585,26 @@ func TestX509Manager(t *testing.T) {
 					Organization: []string{"Milad"},
 				},
 				Interm: Claim{
-					CommonName:         "Milad Ops CA",
+					CommonName:         "Milad SRE CA",
 					Country:            []string{"CA"},
 					Province:           []string{"Ontario"},
 					Organization:       []string{"Milad"},
-					OrganizationalUnit: []string{"Ops"},
-					EmailAddress:       []string{"ops@example.com"},
+					OrganizationalUnit: []string{"SRE"},
+					EmailAddress:       []string{"sre@example.com"},
 				},
 				Server: Claim{
 					CommonName:         "milad.io",
 					Country:            []string{"CA"},
 					Organization:       []string{"Milad"},
 					OrganizationalUnit: []string{"R&D"},
-					EmailAddress:       []string{"rd@example.com"},
+					DNSName:            []string{"milad.io"},
 				},
 				Client: Claim{
 					CommonName:         "auth.service",
 					Country:            []string{"CA"},
 					Organization:       []string{"Milad"},
 					OrganizationalUnit: []string{"R&D"},
+					DNSName:            []string{"auth.milad.io"},
 					EmailAddress:       []string{"rd@example.com"},
 				},
 				RootPolicy: Policy{
@@ -588,7 +613,7 @@ func TestX509Manager(t *testing.T) {
 				},
 				IntermPolicy: Policy{
 					Match:    []string{"Organization"},
-					Supplied: []string{"CommonName", "EmailAddress"},
+					Supplied: []string{"CommonName", "DNSName"},
 				},
 			},
 			Metadata{
@@ -607,6 +632,8 @@ func TestX509Manager(t *testing.T) {
 				Name:     "auth.service",
 				CertType: CertTypeClient,
 			},
+			"milad.io",
+			"auth.milad.io",
 		},
 	}
 
@@ -625,7 +652,7 @@ func TestX509Manager(t *testing.T) {
 				parseKey(t, test.state.Root.Password, test.mdRoot.KeyPath())
 				parseCert(t, test.mdRoot.CertPath())
 
-				err = manager.VerifyCert(test.mdRoot, test.mdRoot)
+				err = manager.VerifyCert(test.mdRoot, test.mdRoot, "")
 				assert.NoError(t, err)
 			}
 
@@ -642,7 +669,7 @@ func TestX509Manager(t *testing.T) {
 				parseCert(t, test.mdInterm.CertPath())
 				parseChain(t, test.mdInterm.ChainPath())
 
-				err = manager.VerifyCert(test.mdRoot, test.mdInterm)
+				err = manager.VerifyCert(test.mdRoot, test.mdInterm, "")
 				assert.NoError(t, err)
 			}
 
@@ -658,7 +685,7 @@ func TestX509Manager(t *testing.T) {
 				parseCSR(t, test.mdServer.CSRPath())
 				parseCert(t, test.mdServer.CertPath())
 
-				err = manager.VerifyCert(test.mdInterm, test.mdServer)
+				err = manager.VerifyCert(test.mdInterm, test.mdServer, test.dnsServer)
 				assert.NoError(t, err)
 			}
 
@@ -674,7 +701,7 @@ func TestX509Manager(t *testing.T) {
 				parseCSR(t, test.mdClient.CSRPath())
 				parseCert(t, test.mdClient.CertPath())
 
-				err = manager.VerifyCert(test.mdInterm, test.mdClient)
+				err = manager.VerifyCert(test.mdInterm, test.mdClient, test.dnsClient)
 				assert.NoError(t, err)
 			}
 
