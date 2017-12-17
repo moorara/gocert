@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"net"
 	"path"
 	"strings"
 	"testing"
@@ -144,11 +145,11 @@ func TestSpec(t *testing.T) {
 		},
 		RootPolicy: Policy{
 			Match:    []string{"Organization"},
-			Supplied: []string{"CommonName"},
+			Supplied: []string{"CommonName", "DNSName"},
 		},
 		IntermPolicy: Policy{
 			Match:    []string{"Country", "Organization"},
-			Supplied: []string{"CommonName", "EmailAddress"},
+			Supplied: []string{"CommonName", "DNSName", "EmailAddress"},
 		},
 	}
 
@@ -180,7 +181,7 @@ func TestSpec(t *testing.T) {
 			true,
 			Policy{
 				Match:    []string{"Organization"},
-				Supplied: []string{"CommonName"},
+				Supplied: []string{"CommonName", "DNSName"},
 			},
 			true,
 		},
@@ -197,7 +198,7 @@ func TestSpec(t *testing.T) {
 			true,
 			Policy{
 				Match:    []string{"Country", "Organization"},
-				Supplied: []string{"CommonName", "EmailAddress"},
+				Supplied: []string{"CommonName", "DNSName", "EmailAddress"},
 			},
 			true,
 		},
@@ -239,6 +240,52 @@ func TestSpec(t *testing.T) {
 		policy, ok := test.spec.PolicyFor(test.certType)
 		assert.Equal(t, test.expectedPolicyOK, ok)
 		assert.Equal(t, test.expectedPolicy, policy)
+	}
+}
+
+func TestClaim(t *testing.T) {
+	tests := []struct {
+		claim Claim
+	}{
+		{
+			Claim{},
+		},
+		{
+			Claim{
+				CommonName: "Test",
+			},
+		},
+		{
+			Claim{
+				CommonName:         "Test",
+				Country:            []string{"CA"},
+				Province:           []string{"Ontario"},
+				Locality:           []string{"Ottawa"},
+				Organization:       []string{"Milad"},
+				OrganizationalUnit: []string{"R&D"},
+			},
+		},
+		{
+			Claim{
+				CommonName:         "Test",
+				Country:            []string{"CA"},
+				Province:           []string{"Ontario"},
+				Locality:           []string{"Ottawa"},
+				Organization:       []string{"Milad"},
+				OrganizationalUnit: []string{"R&D"},
+				DNSName:            []string{"example.com"},
+				IPAddress:          []net.IP{net.ParseIP("127.0.0.1")},
+				EmailAddress:       []string{"milad@example.com"},
+				StreetAddress:      []string{"Island Park Dr"},
+				PostalCode:         []string{"K1Z"},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		claim := test.claim.Clone()
+
+		assert.Equal(t, test.claim, claim)
 	}
 }
 

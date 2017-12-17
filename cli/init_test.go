@@ -18,6 +18,7 @@ func TestNewInitCommand(t *testing.T) {
 
 func TestInitCommand(t *testing.T) {
 	tests := []struct {
+		title         string
 		args          []string
 		input         string
 		expectedExit  int
@@ -25,6 +26,7 @@ func TestInitCommand(t *testing.T) {
 		expectedSpec  string
 	}{
 		{
+			"DefaultStateSpec",
 			[]string{},
 			``,
 			0,
@@ -59,6 +61,7 @@ func TestInitCommand(t *testing.T) {
 			`,
 		},
 		{
+			"CustomStateSpec",
 			[]string{},
 			`CA
 			Ontario
@@ -72,15 +75,25 @@ func TestInitCommand(t *testing.T) {
 
 
 
+
+
+
+
 			Ops
+			example.com
+
 
 
 
 			R&D
+			example.org
+
 
 
 
 			SRE
+
+
 
 
 
@@ -119,6 +132,7 @@ func TestInitCommand(t *testing.T) {
 				locality = ["Ottawa"]
 				organization = ["Milad"]
 				organizational_unit = ["Ops"]
+				dns_name = ["example.com"]
 
 			[server]
 				country = ["CA"]
@@ -126,6 +140,7 @@ func TestInitCommand(t *testing.T) {
 				locality = ["Ottawa"]
 				organization = ["Milad"]
 				organizational_unit = ["R&D"]
+				dns_name = ["example.org"]
 
 			[client]
 				country = ["CA"]
@@ -146,33 +161,35 @@ func TestInitCommand(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
 
-		cmd := &InitCommand{
-			ui: mockUI,
-		}
-		exit := cmd.Run(test.args)
+			cmd := &InitCommand{
+				ui: mockUI,
+			}
+			exit := cmd.Run(test.args)
 
-		assert.Equal(t, initSynopsis, cmd.Synopsis())
-		assert.Equal(t, initHelp, cmd.Help())
-		assert.Equal(t, test.expectedExit, exit)
+			assert.Equal(t, initSynopsis, cmd.Synopsis())
+			assert.Equal(t, initHelp, cmd.Help())
+			assert.Equal(t, test.expectedExit, exit)
 
-		// Verify state file
-		stateData, err := ioutil.ReadFile(pki.FileState)
-		assert.NoError(t, err)
-		stateYAML := strings.Replace(test.expectedState, "\t\t\t", "", -1)
-		stateYAML = strings.Replace(stateYAML, "\t", "  ", -1)
-		assert.Equal(t, stateYAML, string(stateData))
+			// Verify state file
+			stateData, err := ioutil.ReadFile(pki.FileState)
+			assert.NoError(t, err)
+			stateYAML := strings.Replace(test.expectedState, "\t\t\t", "", -1)
+			stateYAML = strings.Replace(stateYAML, "\t", "  ", -1)
+			assert.Equal(t, stateYAML, string(stateData))
 
-		// Verify spec file
-		specData, err := ioutil.ReadFile(pki.FileSpec)
-		assert.NoError(t, err)
-		specTOML := strings.Replace(test.expectedSpec, "\t\t\t", "", -1)
-		specTOML = strings.Replace(specTOML, "\t", "  ", -1)
-		assert.Equal(t, specTOML, string(specData))
+			// Verify spec file
+			specData, err := ioutil.ReadFile(pki.FileSpec)
+			assert.NoError(t, err)
+			specTOML := strings.Replace(test.expectedSpec, "\t\t\t", "", -1)
+			specTOML = strings.Replace(specTOML, "\t", "  ", -1)
+			assert.Equal(t, specTOML, string(specData))
 
-		err = pki.CleanupWorkspace()
-		assert.NoError(t, err)
+			err = pki.CleanupWorkspace()
+			assert.NoError(t, err)
+		})
 	}
 }

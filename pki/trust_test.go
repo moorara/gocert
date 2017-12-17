@@ -3,6 +3,7 @@ package pki
 import (
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,18 +11,28 @@ import (
 
 func TestPolicyTrustFunc(t *testing.T) {
 	tests := []struct {
+		title          string
 		policy         Policy
 		ca             *x509.Certificate
 		csr            *x509.CertificateRequest
 		expectedResult bool
 	}{
 		{
+			"NoCA",
 			Policy{},
 			nil,
 			nil,
 			false,
 		},
 		{
+			"NoCSR",
+			Policy{},
+			&x509.Certificate{},
+			nil,
+			false,
+		},
+		{
+			"CommonNameNotSupplied",
 			Policy{
 				Supplied: []string{"common_name"},
 			},
@@ -32,6 +43,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"CountryNotSupplied",
 			Policy{
 				Supplied: []string{"country"},
 			},
@@ -42,6 +54,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"CountryNotSupplied",
 			Policy{
 				Supplied: []string{"country"},
 			},
@@ -54,6 +67,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"ProvinceNotSupplied",
 			Policy{
 				Supplied: []string{"province"},
 			},
@@ -64,6 +78,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"ProvinceNotSupplied",
 			Policy{
 				Supplied: []string{"province"},
 			},
@@ -76,6 +91,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"LocalityNotSupplied",
 			Policy{
 				Supplied: []string{"locality"},
 			},
@@ -86,6 +102,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"LocalityNotSupplied",
 			Policy{
 				Supplied: []string{"locality"},
 			},
@@ -98,6 +115,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"OrganizationNotSupplied",
 			Policy{
 				Supplied: []string{"organization"},
 			},
@@ -108,6 +126,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"OrganizationNotSupplied",
 			Policy{
 				Supplied: []string{"organization"},
 			},
@@ -120,6 +139,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"OrganizationalUnitNotSupplied",
 			Policy{
 				Supplied: []string{"organizationalUnit"},
 			},
@@ -130,6 +150,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"OrganizationalUnitNotSupplied",
 			Policy{
 				Supplied: []string{"organizational_unit"},
 			},
@@ -142,6 +163,67 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"DNSNameNotSupplied",
+			Policy{
+				Supplied: []string{"DNSNames"},
+			},
+			&x509.Certificate{},
+			&x509.CertificateRequest{},
+			false,
+		},
+		{
+			"DNSNameNotSupplied",
+			Policy{
+				Supplied: []string{"dns_name"},
+			},
+			&x509.Certificate{},
+			&x509.CertificateRequest{
+				EmailAddresses: []string{},
+			},
+			false,
+		},
+		{
+			"IPAddressNotSupplied",
+			Policy{
+				Supplied: []string{"IPAddresses"},
+			},
+			&x509.Certificate{},
+			&x509.CertificateRequest{},
+			false,
+		},
+		{
+			"IPAddressNotSupplied",
+			Policy{
+				Supplied: []string{"ip_address"},
+			},
+			&x509.Certificate{},
+			&x509.CertificateRequest{
+				EmailAddresses: []string{},
+			},
+			false,
+		},
+		{
+			"EmailAddressNotSupplied",
+			Policy{
+				Supplied: []string{"EmailAddresses"},
+			},
+			&x509.Certificate{},
+			&x509.CertificateRequest{},
+			false,
+		},
+		{
+			"EmailAddressNotSupplied",
+			Policy{
+				Supplied: []string{"email_address"},
+			},
+			&x509.Certificate{},
+			&x509.CertificateRequest{
+				EmailAddresses: []string{},
+			},
+			false,
+		},
+		{
+			"StreetAddressNotSupplied",
 			Policy{
 				Supplied: []string{"streetAddress"},
 			},
@@ -152,6 +234,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"StreetAddressNotSupplied",
 			Policy{
 				Supplied: []string{"street_address"},
 			},
@@ -164,6 +247,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"PostalCodeNotSupplied",
 			Policy{
 				Supplied: []string{"postalCode"},
 			},
@@ -174,6 +258,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"PostalCodeNotSupplied",
 			Policy{
 				Supplied: []string{"postal_code"},
 			},
@@ -186,24 +271,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
-			Policy{
-				Supplied: []string{"EmailAddresses"},
-			},
-			&x509.Certificate{},
-			&x509.CertificateRequest{},
-			false,
-		},
-		{
-			Policy{
-				Supplied: []string{"email_address"},
-			},
-			&x509.Certificate{},
-			&x509.CertificateRequest{
-				EmailAddresses: []string{},
-			},
-			false,
-		},
-		{
+			"CommonNameNotMatched",
 			Policy{
 				Match: []string{"CommonName"},
 			},
@@ -220,6 +288,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"CommonNameNotMatched",
 			Policy{
 				Match: []string{"common_name"},
 			},
@@ -234,6 +303,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"CountryNotMatched",
 			Policy{
 				Match: []string{"Country"},
 			},
@@ -250,6 +320,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"CountryNotMatched",
 			Policy{
 				Match: []string{"country"},
 			},
@@ -264,6 +335,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"CountryNotMatched",
 			Policy{
 				Match: []string{"country"},
 			},
@@ -280,6 +352,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"ProvinceNotMatched",
 			Policy{
 				Match: []string{"Province"},
 			},
@@ -296,6 +369,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"ProvinceNotMatched",
 			Policy{
 				Match: []string{"province"},
 			},
@@ -310,6 +384,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"ProvinceNotMatched",
 			Policy{
 				Match: []string{"province"},
 			},
@@ -326,6 +401,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"LocalityNotMatched",
 			Policy{
 				Match: []string{"Locality"},
 			},
@@ -342,6 +418,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"LocalityNotMatched",
 			Policy{
 				Match: []string{"locality"},
 			},
@@ -356,6 +433,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"LocalityNotMatched",
 			Policy{
 				Match: []string{"locality"},
 			},
@@ -372,6 +450,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"OrganizationNotMatched",
 			Policy{
 				Match: []string{"Organization"},
 			},
@@ -388,6 +467,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"OrganizationNotMatched",
 			Policy{
 				Match: []string{"organization"},
 			},
@@ -402,6 +482,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"OrganizationNotMatched",
 			Policy{
 				Match: []string{"organization"},
 			},
@@ -418,6 +499,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"OrganizationalUnitNotMatched",
 			Policy{
 				Match: []string{"OrganizationalUnit"},
 			},
@@ -434,6 +516,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"OrganizationalUnitNotMatched",
 			Policy{
 				Match: []string{"organizationalUnit"},
 			},
@@ -448,6 +531,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"OrganizationalUnitNotMatched",
 			Policy{
 				Match: []string{"organizational_unit"},
 			},
@@ -464,6 +548,118 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"DNSNameNotMatched",
+			Policy{
+				Match: []string{"DNSName"},
+			},
+			&x509.Certificate{
+				DNSNames: []string{"example.com"},
+			},
+			&x509.CertificateRequest{
+				DNSNames: []string{"example.org"},
+			},
+			false,
+		},
+		{
+			"DNSNameNotMatched",
+			Policy{
+				Match: []string{"DNSNames"},
+			},
+			&x509.Certificate{
+				DNSNames: []string{"example.com"},
+			},
+			&x509.CertificateRequest{},
+			false,
+		},
+		{
+			"DNSNameNotMatched",
+			Policy{
+				Match: []string{"dns_name"},
+			},
+			&x509.Certificate{
+				DNSNames: []string{"example.com"},
+			},
+			&x509.CertificateRequest{
+				DNSNames: []string{},
+			},
+			false,
+		},
+		{
+			"IPAddressNotMatched",
+			Policy{
+				Match: []string{"IPAddress"},
+			},
+			&x509.Certificate{
+				IPAddresses: []net.IP{net.IPv4(8, 8, 8, 8)},
+			},
+			&x509.CertificateRequest{
+				IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+			},
+			false,
+		},
+		{
+			"IPAddressNotMatched",
+			Policy{
+				Match: []string{"IPAddresses"},
+			},
+			&x509.Certificate{
+				IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+			},
+			&x509.CertificateRequest{},
+			false,
+		},
+		{
+			"IPAddressNotMatched",
+			Policy{
+				Match: []string{"ip_address"},
+			},
+			&x509.Certificate{
+				IPAddresses: []net.IP{net.ParseIP("127.0.0.1")},
+			},
+			&x509.CertificateRequest{
+				IPAddresses: []net.IP{},
+			},
+			false,
+		},
+		{
+			"EmailAddressNotMatched",
+			Policy{
+				Match: []string{"EmailAddress"},
+			},
+			&x509.Certificate{
+				EmailAddresses: []string{"milad@example.com"},
+			},
+			&x509.CertificateRequest{
+				EmailAddresses: []string{"moorara@example.com"},
+			},
+			false,
+		},
+		{
+			"EmailAddressNotMatched",
+			Policy{
+				Match: []string{"EmailAddresses"},
+			},
+			&x509.Certificate{
+				EmailAddresses: []string{"milad@example.com"},
+			},
+			&x509.CertificateRequest{},
+			false,
+		},
+		{
+			"EmailAddressNotMatched",
+			Policy{
+				Match: []string{"email_address"},
+			},
+			&x509.Certificate{
+				EmailAddresses: []string{"milad@example.com"},
+			},
+			&x509.CertificateRequest{
+				EmailAddresses: []string{},
+			},
+			false,
+		},
+		{
+			"StreetAddressNotMatched",
 			Policy{
 				Match: []string{"StreetAddress"},
 			},
@@ -480,6 +676,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"StreetAddressNotMatched",
 			Policy{
 				Match: []string{"streetAddress"},
 			},
@@ -494,6 +691,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"StreetAddressNotMatched",
 			Policy{
 				Match: []string{"street_address"},
 			},
@@ -510,6 +708,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"PostalCodeNotMatched",
 			Policy{
 				Match: []string{"PostalCode"},
 			},
@@ -526,6 +725,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"PostalCodeNotMatched",
 			Policy{
 				Match: []string{"postalCode"},
 			},
@@ -540,6 +740,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 			false,
 		},
 		{
+			"PostalCodeNotMatched",
 			Policy{
 				Match: []string{"postal_code"},
 			},
@@ -555,50 +756,19 @@ func TestPolicyTrustFunc(t *testing.T) {
 			},
 			false,
 		},
+
 		{
-			Policy{
-				Match: []string{"EmailAddress"},
-			},
-			&x509.Certificate{
-				EmailAddresses: []string{"milad@example.com"},
-			},
-			&x509.CertificateRequest{
-				EmailAddresses: []string{"moorara@example.com"},
-			},
-			false,
-		},
-		{
-			Policy{
-				Match: []string{"EmailAddresses"},
-			},
-			&x509.Certificate{
-				EmailAddresses: []string{"milad@example.com"},
-			},
-			&x509.CertificateRequest{},
-			false,
-		},
-		{
-			Policy{
-				Match: []string{"email_address"},
-			},
-			&x509.Certificate{
-				EmailAddresses: []string{"milad@example.com"},
-			},
-			&x509.CertificateRequest{
-				EmailAddresses: []string{},
-			},
-			false,
-		},
-		{
+			"PolicyCACSREmpty",
 			Policy{},
 			&x509.Certificate{},
 			&x509.CertificateRequest{},
 			true,
 		},
 		{
+			"PolicyCACSRProvided",
 			Policy{
-				Match:    []string{"Country", "Province", "Locality", "Organization"},
-				Supplied: []string{"CommonName", "OrganizationalUnit", "EmailAddress"},
+				Match:    []string{"Country", "Province", "Locality", "Organization", "DNSName"},
+				Supplied: []string{"CommonName", "OrganizationalUnit", "IPAddress", "EmailAddress"},
 			},
 			&x509.Certificate{
 				Subject: pkix.Name{
@@ -608,6 +778,7 @@ func TestPolicyTrustFunc(t *testing.T) {
 					Locality:     []string{"Ottawa", "San Francisco"},
 					Organization: []string{"Milad"},
 				},
+				DNSNames: []string{"example.com"},
 			},
 			&x509.CertificateRequest{
 				Subject: pkix.Name{
@@ -618,6 +789,8 @@ func TestPolicyTrustFunc(t *testing.T) {
 					Organization:       []string{"Milad"},
 					OrganizationalUnit: []string{"R&D", "SRE", "IT"},
 				},
+				DNSNames:       []string{"example.com"},
+				IPAddresses:    []net.IP{net.ParseIP("127.0.0.1")},
 				EmailAddresses: []string{"milad@example.com"},
 			},
 			true,
@@ -625,9 +798,11 @@ func TestPolicyTrustFunc(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		trust := PolicyTrustFunc(test.policy)
-		result := trust(test.ca, test.csr)
+		t.Run(test.title, func(t *testing.T) {
+			trust := PolicyTrustFunc(test.policy)
+			result := trust(test.ca, test.csr)
 
-		assert.Equal(t, test.expectedResult, result)
+			assert.Equal(t, test.expectedResult, result)
+		})
 	}
 }

@@ -13,9 +13,11 @@ var (
 	regexLocality           = regexp.MustCompile("(?i)^Locality$")
 	regexOrganization       = regexp.MustCompile("(?i)^Organization$")
 	regexOrganizationalUnit = regexp.MustCompile("(?i)^Organizational[_-]?Unit$")
+	regexDNSName            = regexp.MustCompile("(?i)^DNS[_-]?Name(s)?$")
+	regexIPAddress          = regexp.MustCompile("(?i)^IP[_-]?Address(es)?$")
+	regexEmailAddress       = regexp.MustCompile("(?i)^Email[_-]?Address(es)?$")
 	regexStreetAddress      = regexp.MustCompile("(?i)^Street[_-]?Address$")
 	regexPostalCode         = regexp.MustCompile("(?i)^Postal[_-]?Code$")
-	regexEmailAddress       = regexp.MustCompile("(?i)^Email[_-]?Address(es)?$")
 )
 
 type (
@@ -63,6 +65,21 @@ func PolicyTrustFunc(policy Policy) TrustFunc {
 					return false
 				}
 
+			case regexDNSName.MatchString(name):
+				if !reflect.DeepEqual(ca.DNSNames, csr.DNSNames) {
+					return false
+				}
+
+			case regexIPAddress.MatchString(name):
+				if !reflect.DeepEqual(ca.IPAddresses, csr.IPAddresses) {
+					return false
+				}
+
+			case regexEmailAddress.MatchString(name):
+				if !reflect.DeepEqual(ca.EmailAddresses, csr.EmailAddresses) {
+					return false
+				}
+
 			case regexStreetAddress.MatchString(name):
 				if !reflect.DeepEqual(ca.Subject.StreetAddress, csr.Subject.StreetAddress) {
 					return false
@@ -70,11 +87,6 @@ func PolicyTrustFunc(policy Policy) TrustFunc {
 
 			case regexPostalCode.MatchString(name):
 				if !reflect.DeepEqual(ca.Subject.PostalCode, csr.Subject.PostalCode) {
-					return false
-				}
-
-			case regexEmailAddress.MatchString(name):
-				if !reflect.DeepEqual(ca.EmailAddresses, csr.EmailAddresses) {
 					return false
 				}
 			}
@@ -113,6 +125,21 @@ func PolicyTrustFunc(policy Policy) TrustFunc {
 					return false
 				}
 
+			case regexDNSName.MatchString(name):
+				if csr.DNSNames == nil || len(csr.DNSNames) == 0 {
+					return false
+				}
+
+			case regexIPAddress.MatchString(name):
+				if csr.IPAddresses == nil || len(csr.IPAddresses) == 0 {
+					return false
+				}
+
+			case regexEmailAddress.MatchString(name):
+				if csr.EmailAddresses == nil || len(csr.EmailAddresses) == 0 {
+					return false
+				}
+
 			case regexStreetAddress.MatchString(name):
 				if csr.Subject.StreetAddress == nil || len(csr.Subject.StreetAddress) == 0 {
 					return false
@@ -120,11 +147,6 @@ func PolicyTrustFunc(policy Policy) TrustFunc {
 
 			case regexPostalCode.MatchString(name):
 				if csr.Subject.PostalCode == nil || len(csr.Subject.PostalCode) == 0 {
-					return false
-				}
-
-			case regexEmailAddress.MatchString(name):
-				if csr.EmailAddresses == nil || len(csr.EmailAddresses) == 0 {
 					return false
 				}
 			}

@@ -2,6 +2,7 @@ package pki
 
 import (
 	"io/ioutil"
+	"net"
 	"strings"
 	"testing"
 
@@ -95,6 +96,7 @@ var (
 					[server]
 						country = [ "US" ]
 						organization = [ "AWS" ]
+						dns_name = [ "example.com" ]
 						email_address = [ "moorara@example.com" ]
 					`,
 				false,
@@ -107,6 +109,7 @@ var (
 					Server: Claim{
 						Country:      []string{"US"},
 						Organization: []string{"AWS"},
+						DNSName:      []string{"example.com"},
 						EmailAddress: []string{"moorara@example.com"},
 					},
 					Client: Claim{},
@@ -175,6 +178,8 @@ var (
 						province = [ "Virginia" ]
 						locality = [ "Richmond" ]
 						organization = [ "Moorara" ]
+						dns_name = [ "example.com" ]
+						ip_address = [ "127.0.0.1" ]
 						email_address = [ "moorara@example.com" ]
 					[client]
 						country = [ "UK" ]
@@ -208,6 +213,8 @@ var (
 						Province:     []string{"Virginia"},
 						Locality:     []string{"Richmond"},
 						Organization: []string{"Moorara"},
+						DNSName:      []string{"example.com"},
+						IPAddress:    []net.IP{net.ParseIP("127.0.0.1")},
 						EmailAddress: []string{"moorara@example.com"},
 					},
 					Client: Claim{

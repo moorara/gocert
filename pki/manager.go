@@ -86,8 +86,8 @@ func (m *x509Manager) GenCert(config Config, claim Claim, md Metadata) error {
 			PostalCode:         claim.PostalCode,
 		},
 
-		// DNSNames:    []string{},
-		// IPAddresses: []net.IP{},
+		DNSNames:       claim.DNSName,
+		IPAddresses:    claim.IPAddress,
 		EmailAddresses: claim.EmailAddress,
 
 		BasicConstraintsValid: true,
@@ -151,8 +151,8 @@ func (m *x509Manager) GenCSR(config Config, claim Claim, md Metadata) error {
 			PostalCode:         claim.PostalCode,
 		},
 
-		// DNSNames:    []string{},
-		// IPAddresses: []net.IP{},
+		DNSNames:       claim.DNSName,
+		IPAddresses:    claim.IPAddress,
 		EmailAddresses: claim.EmailAddress,
 
 		// Extensions:      []pkix.Extension{},
@@ -227,8 +227,8 @@ func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, 
 		Issuer:  certCA.Subject,
 		Subject: csr.Subject,
 
-		// DNSNames:    csr.DNSNames,
-		// IPAddresses: csr.IPAddresses,
+		DNSNames:       csr.DNSNames,
+		IPAddresses:    csr.IPAddresses,
 		EmailAddresses: csr.EmailAddresses,
 
 		SubjectKeyId:   subjectKeyID,

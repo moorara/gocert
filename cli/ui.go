@@ -3,6 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 	"strconv"
 	"strings"
@@ -117,6 +118,17 @@ func toFloat64Slice(list string) []float64 {
 	return float64Slice
 }
 
+func toNetIPSlice(list string) []net.IP {
+	slice := strings.Split(list, ",")
+	netIPSlice := make([]net.IP, len(slice))
+
+	for i, str := range slice {
+		netIPSlice[i] = net.ParseIP(str)
+	}
+
+	return netIPSlice
+}
+
 func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
 	// v: reflect.Value --> v.Kind()
 	t := v.Type() // reflect.Type --> t.Kind(), t.Name()
@@ -146,7 +158,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui
 		if kind == reflect.Struct {
 			askForStructV(vField, tagKey, ignoreOmitted, ui)
 		} else if kind == reflect.Bool && vField.Bool() == false {
-			str, err := ask(fmt.Sprintf(askTemplate, name, "true|false"))
+			str, err := ask(fmt.Sprintf(askTemplate, name, "boolean"))
 			if err == nil {
 				b, err := strconv.ParseBool(str)
 				if err == nil {
@@ -191,7 +203,8 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui
 				vField.SetString(str)
 			}
 		} else if kind == reflect.Slice && vField.Len() == 0 {
-			sliceKind := reflect.TypeOf(value).Elem().Kind()
+			sliceType := reflect.TypeOf(value).Elem()
+			sliceKind := sliceType.Kind()
 			if sliceKind == reflect.Int {
 				list, err := ask(fmt.Sprintf(askTemplate, name, "integer numbers"))
 				if err == nil && list != "" {
@@ -221,6 +234,12 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui
 				if err == nil && list != "" {
 					slice := strings.Split(list, ",")
 					vField.Set(reflect.ValueOf(slice))
+				}
+			} else if sliceType.String() == "net.IP" {
+				list, err := ask(fmt.Sprintf(askTemplate, name, "string list"))
+				if err == nil && list != "" {
+					netIPSlice := toNetIPSlice(list)
+					vField.Set(reflect.ValueOf(netIPSlice))
 				}
 			}
 		}

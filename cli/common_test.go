@@ -2,6 +2,7 @@ package cli
 
 import (
 	"io/ioutil"
+	"net"
 	"os"
 	"path"
 	"strings"
@@ -81,6 +82,7 @@ func TestNewColoredUi(t *testing.T) {
 
 func TestLoadWorkspace(t *testing.T) {
 	tests := []struct {
+		title          string
 		stateYAML      string
 		specTOML       string
 		expectedStatus int
@@ -88,6 +90,7 @@ func TestLoadWorkspace(t *testing.T) {
 		expectedSpec   *pki.Spec
 	}{
 		{
+			"Empty",
 			``,
 			``,
 			0,
@@ -95,6 +98,7 @@ func TestLoadWorkspace(t *testing.T) {
 			&pki.Spec{},
 		},
 		{
+			"InvalidYAML",
 			`invalid yaml`,
 			``,
 			ErrorReadState,
@@ -102,6 +106,7 @@ func TestLoadWorkspace(t *testing.T) {
 			&pki.Spec{},
 		},
 		{
+			"InvalidTOML",
 			``,
 			`invalid toml`,
 			ErrorReadSpec,
@@ -109,6 +114,7 @@ func TestLoadWorkspace(t *testing.T) {
 			&pki.Spec{},
 		},
 		{
+			"Complex",
 			`
 			root:
 				serial: 10
@@ -144,6 +150,8 @@ func TestLoadWorkspace(t *testing.T) {
 				province = [ "Virginia" ]
 				locality = [ "Richmond" ]
 				organization = [ "Moorara" ]
+				dns_name = [ "example.com" ]
+				ip_address = [ "127.0.0.1" ]
 				email_address = [ "moorara@example.com" ]
 			[client]
 				country = [ "UK" ]
@@ -199,6 +207,8 @@ func TestLoadWorkspace(t *testing.T) {
 					Province:     []string{"Virginia"},
 					Locality:     []string{"Richmond"},
 					Organization: []string{"Moorara"},
+					DNSName:      []string{"example.com"},
+					IPAddress:    []net.IP{net.ParseIP("127.0.0.1")},
 					EmailAddress: []string{"moorara@example.com"},
 				},
 				Client: pki.Claim{
@@ -220,28 +230,31 @@ func TestLoadWorkspace(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		stateYAML := strings.Replace(test.stateYAML, "\t", "  ", -1)
-		err := ioutil.WriteFile(pki.FileState, []byte(stateYAML), 0644)
-		assert.NoError(t, err)
-		err = ioutil.WriteFile(pki.FileSpec, []byte(test.specTOML), 0644)
-		assert.NoError(t, err)
+		t.Run(test.title, func(t *testing.T) {
+			stateYAML := strings.Replace(test.stateYAML, "\t", "  ", -1)
+			err := ioutil.WriteFile(pki.FileState, []byte(stateYAML), 0644)
+			assert.NoError(t, err)
+			err = ioutil.WriteFile(pki.FileSpec, []byte(test.specTOML), 0644)
+			assert.NoError(t, err)
 
-		mockUI := cli.NewMockUi()
-		state, spec, status := loadWorkspace(mockUI)
+			mockUI := cli.NewMockUi()
+			state, spec, status := loadWorkspace(mockUI)
 
-		assert.Equal(t, test.expectedStatus, status)
-		if test.expectedStatus == 0 {
-			assert.Equal(t, test.expectedState, state)
-			assert.Equal(t, test.expectedSpec, spec)
-		}
+			assert.Equal(t, test.expectedStatus, status)
+			if test.expectedStatus == 0 {
+				assert.Equal(t, test.expectedState, state)
+				assert.Equal(t, test.expectedSpec, spec)
+			}
 
-		err = util.DeleteAll("", pki.FileState, pki.FileSpec)
-		assert.NoError(t, err)
+			err = util.DeleteAll("", pki.FileState, pki.FileSpec)
+			assert.NoError(t, err)
+		})
 	}
 }
 
 func TestSaveWorkspace(t *testing.T) {
 	tests := []struct {
+		title             string
 		state             *pki.State
 		spec              *pki.Spec
 		expectedStatus    int
@@ -249,6 +262,7 @@ func TestSaveWorkspace(t *testing.T) {
 		expectedSpecTOML  string
 	}{
 		{
+			"Simple",
 			&pki.State{},
 			&pki.Spec{},
 			0,
@@ -283,6 +297,7 @@ func TestSaveWorkspace(t *testing.T) {
 			`,
 		},
 		{
+			"Complex",
 			&pki.State{
 				Root: pki.Config{
 					Serial: 10,
@@ -391,61 +406,70 @@ func TestSaveWorkspace(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		mockUI := cli.NewMockUi()
-		status := saveWorkspace(test.state, test.spec, mockUI)
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			status := saveWorkspace(test.state, test.spec, mockUI)
 
-		assert.Equal(t, test.expectedStatus, status)
-		if test.expectedStatus == 0 {
-			stateYAML, err := ioutil.ReadFile(pki.FileState)
+			assert.Equal(t, test.expectedStatus, status)
+			if test.expectedStatus == 0 {
+				stateYAML, err := ioutil.ReadFile(pki.FileState)
+				assert.NoError(t, err)
+				expectedStateYAML := strings.Replace(test.expectedStateYAML, "\t\t\t\t", "  ", -1)
+				expectedStateYAML = strings.Replace(expectedStateYAML, "\t\t\t", "", -1)
+				assert.Equal(t, expectedStateYAML, string(stateYAML))
+
+				specTOML, err := ioutil.ReadFile(pki.FileSpec)
+				assert.NoError(t, err)
+				expectedSpecTOML := strings.Replace(test.expectedSpecTOML, "\t\t\t\t", "  ", -1)
+				expectedSpecTOML = strings.Replace(expectedSpecTOML, "\t\t\t", "", -1)
+				assert.Equal(t, expectedSpecTOML, string(specTOML))
+			}
+
+			err := util.DeleteAll("", pki.FileState, pki.FileSpec)
 			assert.NoError(t, err)
-			expectedStateYAML := strings.Replace(test.expectedStateYAML, "\t\t\t\t", "  ", -1)
-			expectedStateYAML = strings.Replace(expectedStateYAML, "\t\t\t", "", -1)
-			assert.Equal(t, expectedStateYAML, string(stateYAML))
-
-			specTOML, err := ioutil.ReadFile(pki.FileSpec)
-			assert.NoError(t, err)
-			expectedSpecTOML := strings.Replace(test.expectedSpecTOML, "\t\t\t\t", "  ", -1)
-			expectedSpecTOML = strings.Replace(expectedSpecTOML, "\t\t\t", "", -1)
-			assert.Equal(t, expectedSpecTOML, string(specTOML))
-		}
-
-		err := util.DeleteAll("", pki.FileState, pki.FileSpec)
-		assert.NoError(t, err)
+		})
 	}
 }
 
 func TestResolveByName(t *testing.T) {
 	tests := []struct {
+		title            string
 		keyFile          string
 		name             string
 		expectedMetadata pki.Metadata
 	}{
 		{
+			"Empty",
 			"",
 			"",
 			pki.Metadata{},
 		},
 		{
+			"InvalidRootName",
 			path.Join(pki.DirRoot, "top.ca.key"),
 			"top",
 			pki.Metadata{},
 		},
 		{
+			"ResolveRoot",
 			path.Join(pki.DirRoot, "root.ca.key"),
 			"root",
 			pki.Metadata{Name: "root", CertType: pki.CertTypeRoot},
 		},
 		{
+			"ResolveIntermediate",
 			path.Join(pki.DirInterm, "interm.ca.key"),
 			"interm",
 			pki.Metadata{Name: "interm", CertType: pki.CertTypeInterm},
 		},
 		{
+			"ResolveServer",
 			path.Join(pki.DirServer, "server.key"),
 			"server",
 			pki.Metadata{Name: "server", CertType: pki.CertTypeServer},
 		},
 		{
+			"ResolveClient",
 			path.Join(pki.DirClient, "client.key"),
 			"client",
 			pki.Metadata{Name: "client", CertType: pki.CertTypeClient},
@@ -457,21 +481,25 @@ func TestResolveByName(t *testing.T) {
 	assert.NoError(t, err)
 
 	for _, test := range tests {
-		ioutil.WriteFile(test.keyFile, []byte("mocked cert"), 0644)
+		t.Run(test.title, func(t *testing.T) {
+			ioutil.WriteFile(test.keyFile, []byte("mocked cert"), 0644)
 
-		md := resolveByName(test.name)
-		assert.Equal(t, test.expectedMetadata, md)
+			md := resolveByName(test.name)
+			assert.Equal(t, test.expectedMetadata, md)
 
-		os.Remove(test.keyFile)
+			os.Remove(test.keyFile)
+		})
 	}
 }
 
 func TestAskForNewState(t *testing.T) {
 	tests := []struct {
+		title         string
 		input         string
 		expectedState pki.State
 	}{
 		{
+			"Empty",
 			``,
 			pki.State{
 				Root:   pki.Config{},
@@ -481,6 +509,7 @@ func TestAskForNewState(t *testing.T) {
 			},
 		},
 		{
+			"Simple",
 			`10
 			4096
 			7300
@@ -519,24 +548,29 @@ func TestAskForNewState(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
-		state := askForNewState(mockUI)
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
+			state := askForNewState(mockUI)
 
-		assert.Equal(t, test.expectedState, *state)
+			assert.Equal(t, test.expectedState, *state)
+		})
 	}
 }
 
 func TestAskForNewSpec(t *testing.T) {
 	tests := []struct {
+		title        string
 		input        string
 		expectedSpec pki.Spec
 	}{
 		{
+			"Empty",
 			``,
 			pki.Spec{},
 		},
 		{
+			"Simple",
 			`CA
 			Ontario
 
@@ -566,10 +600,15 @@ func TestAskForNewSpec(t *testing.T) {
 			},
 		},
 		{
+			"Complex",
 			`CA
 			Ontario
 
 			Milad
+
+
+
+
 
 
 
@@ -584,14 +623,20 @@ func TestAskForNewSpec(t *testing.T) {
 
 
 
+
+
 			Toronto,Montreal
 
+			example.com
+			127.0.0.1
 
 
 
 			Ottawa
 
 
+
+			milad@example.com
 
 
 			Country,Organization
@@ -617,12 +662,15 @@ func TestAskForNewSpec(t *testing.T) {
 					Province:     []string{"Ontario"},
 					Locality:     []string{"Toronto", "Montreal"},
 					Organization: []string{"Milad"},
+					DNSName:      []string{"example.com"},
+					IPAddress:    []net.IP{net.ParseIP("127.0.0.1")},
 				},
 				Client: pki.Claim{
 					Country:      []string{"CA"},
 					Province:     []string{"Ontario"},
 					Locality:     []string{"Ottawa"},
 					Organization: []string{"Milad"},
+					EmailAddress: []string{"milad@example.com"},
 				},
 				RootPolicy: pki.Policy{
 					Match:    []string{"Country", "Organization"},
@@ -637,26 +685,31 @@ func TestAskForNewSpec(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
-		spec := askForNewSpec(mockUI)
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
+			spec := askForNewSpec(mockUI)
 
-		assert.Equal(t, test.expectedSpec, *spec)
+			assert.Equal(t, test.expectedSpec, *spec)
+		})
 	}
 }
 
 func TestAskForConfig(t *testing.T) {
 	tests := []struct {
+		title          string
 		config         pki.Config
 		input          string
 		expectedConfig pki.Config
 	}{
 		{
+			"Empty",
 			pki.Config{},
 			``,
 			pki.Config{},
 		},
 		{
+			"Simple",
 			pki.Config{
 				Length: 2048,
 			},
@@ -672,26 +725,31 @@ func TestAskForConfig(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
-		askForConfig(&test.config, mockUI)
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
+			askForConfig(&test.config, mockUI)
 
-		assert.Equal(t, test.expectedConfig, test.config)
+			assert.Equal(t, test.expectedConfig, test.config)
+		})
 	}
 }
 
 func TestAskForConfigCA(t *testing.T) {
 	tests := []struct {
+		title            string
 		config           pki.Config
 		input            string
 		expectedConfigCA pki.Config
 	}{
 		{
+			"Empty",
 			pki.Config{},
 			``,
 			pki.Config{},
 		},
 		{
+			"Simple",
 			pki.Config{},
 			`100
 			4096
@@ -709,26 +767,31 @@ func TestAskForConfigCA(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
-		askForConfig(&test.config, mockUI)
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
+			askForConfig(&test.config, mockUI)
 
-		assert.Equal(t, test.expectedConfigCA, test.config)
+			assert.Equal(t, test.expectedConfigCA, test.config)
+		})
 	}
 }
 
 func TestAskForClaim(t *testing.T) {
 	tests := []struct {
+		title         string
 		claim         pki.Claim
 		input         string
 		expectedClaim pki.Claim
 	}{
 		{
+			"Empty",
 			pki.Claim{},
 			``,
 			pki.Claim{},
 		},
 		{
+			"Simple",
 			pki.Claim{
 				Country:      []string{"CA"},
 				Province:     []string{"Ontario"},
@@ -748,10 +811,12 @@ func TestAskForClaim(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
-		askForClaim(&test.claim, mockUI)
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
+			askForClaim(&test.claim, mockUI)
 
-		assert.Equal(t, test.expectedClaim, test.claim)
+			assert.Equal(t, test.expectedClaim, test.claim)
+		})
 	}
 }

@@ -1,6 +1,7 @@
 package pki
 
 import (
+	"net"
 	"path"
 	"strings"
 )
@@ -77,9 +78,11 @@ type (
 		Locality           []string `toml:"locality"`
 		Organization       []string `toml:"organization"`
 		OrganizationalUnit []string `toml:"organizational_unit"`
+		DNSName            []string `toml:"dns_name"`
+		IPAddress          []net.IP `toml:"ip_address"`
+		EmailAddress       []string `toml:"email_address"`
 		StreetAddress      []string `toml:"street_address"`
 		PostalCode         []string `toml:"postal_code"`
-		EmailAddress       []string `toml:"email_address"`
 	}
 
 	// Policy represents the subtype for a policy
@@ -180,6 +183,23 @@ func (s *Spec) PolicyFor(certType int) (Policy, bool) {
 		return s.IntermPolicy, true
 	default:
 		return Policy{}, false
+	}
+}
+
+// Clone return a deep copy of claim
+func (c Claim) Clone() Claim {
+	return Claim{
+		CommonName:         c.CommonName,
+		Country:            c.Country,
+		Province:           c.Province,
+		Locality:           c.Locality,
+		Organization:       c.Organization,
+		OrganizationalUnit: c.OrganizationalUnit,
+		DNSName:            c.DNSName,
+		IPAddress:          c.IPAddress,
+		EmailAddress:       c.EmailAddress,
+		StreetAddress:      c.StreetAddress,
+		PostalCode:         c.PostalCode,
 	}
 }
 

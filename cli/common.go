@@ -23,20 +23,6 @@ const (
 	textIntermEnterPolicy = "\nTRUST POLICY RULES FOR INTERMEDIATE CERTIFICATE AUTHORITIES ..."
 )
 
-func copyClaim(c pki.Claim) pki.Claim {
-	return pki.Claim{
-		CommonName:         c.CommonName,
-		Country:            c.Country,
-		Province:           c.Province,
-		Locality:           c.Locality,
-		Organization:       c.Organization,
-		OrganizationalUnit: c.OrganizationalUnit,
-		StreetAddress:      c.StreetAddress,
-		PostalCode:         c.PostalCode,
-		EmailAddress:       c.EmailAddress,
-	}
-}
-
 func newColoredUI() *cli.ColoredUi {
 	return &cli.ColoredUi{
 		OutputColor: cli.UiColorNone,
@@ -140,19 +126,19 @@ func askForNewSpec(ui cli.Ui) *pki.Spec {
 	ui.Output(textCommonEnterClaim)
 	askForStruct(&common, "toml", true, ui)
 
-	root := copyClaim(common)
+	root := common.Clone()
 	ui.Output(textRootEnterClaim)
 	askForStruct(&root, "toml", true, ui)
 
-	interm := copyClaim(common)
+	interm := common.Clone()
 	ui.Output(textIntermEnterClaim)
 	askForStruct(&interm, "toml", true, ui)
 
-	server := copyClaim(common)
+	server := common.Clone()
 	ui.Output(textServerEnterClaim)
 	askForStruct(&server, "toml", true, ui)
 
-	client := copyClaim(common)
+	client := common.Clone()
 	ui.Output(textClientEnterClaim)
 	askForStruct(&client, "toml", true, ui)
 
