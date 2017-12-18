@@ -91,14 +91,14 @@ var (
 			},
 			specLoadTest{
 				`[root]
-						locality = [ "Ottawa" ]
-						organization = [ "Moorara" ]
-					[server]
-						country = [ "US" ]
-						organization = [ "AWS" ]
-						dns_name = [ "example.com" ]
-						email_address = [ "moorara@example.com" ]
-					`,
+					locality = [ "Ottawa" ]
+					organization = [ "Moorara" ]
+				[server]
+					country = [ "US" ]
+					organization = [ "AWS" ]
+					dns_name = [ "example.com" ]
+					email_address = [ "moorara@example.com" ]
+				`,
 				false,
 				&Spec{
 					Root: Claim{
@@ -161,38 +161,37 @@ var (
 				},
 			},
 			specLoadTest{
-				`
-					[root]
-						country = [ "CA", "US" ]
-						province = [ "Ontario", "Massachusetts" ]
-						locality = [ "Ottawa", "Boston" ]
-						organization = [ "Moorara" ]
-					[intermediate]
-						country = [ "CA" ]
-						province = [ "Ontario" ]
-						locality = [ "Ottawa" ]
-						organization = [ "Moorara" ]
-						email_address = [ "moorara@example.com" ]
-					[server]
-						country = [ "US" ]
-						province = [ "Virginia" ]
-						locality = [ "Richmond" ]
-						organization = [ "Moorara" ]
-						dns_name = [ "example.com" ]
-						ip_address = [ "127.0.0.1" ]
-						email_address = [ "moorara@example.com" ]
-					[client]
-						country = [ "UK" ]
-						locality = [ "London" ]
-						organization = [ "Moorara" ]
-						email_address = [ "moorara@example.com" ]
-					[root_policy]
-						match = ["Country", "Organization"]
-						supplied = ["CommonName"]
-					[intermediate_policy]
-						match = ["Organization"]
-						supplied = ["CommonName"]
-					`,
+				`[root]
+					country = [ "CA", "US" ]
+					province = [ "Ontario", "Massachusetts" ]
+					locality = [ "Ottawa", "Boston" ]
+					organization = [ "Moorara" ]
+				[intermediate]
+					country = [ "CA" ]
+					province = [ "Ontario" ]
+					locality = [ "Ottawa" ]
+					organization = [ "Moorara" ]
+					email_address = [ "moorara@example.com" ]
+				[server]
+					country = [ "US" ]
+					province = [ "Virginia" ]
+					locality = [ "Richmond" ]
+					organization = [ "Moorara" ]
+					dns_name = [ "example.com" ]
+					ip_address = [ "127.0.0.1" ]
+					email_address = [ "moorara@example.com" ]
+				[client]
+					country = [ "UK" ]
+					locality = [ "London" ]
+					organization = [ "Moorara" ]
+					email_address = [ "moorara@example.com" ]
+				[root_policy]
+					match = ["Country", "Organization"]
+					supplied = ["CommonName"]
+				[intermediate_policy]
+					match = ["Organization"]
+					supplied = ["CommonName"]
+				`,
 				false,
 				&Spec{
 					Root: Claim{

@@ -109,6 +109,10 @@ func TestGenKeyPair(t *testing.T) {
 }
 
 func TestComputeSubjectKeyID(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	pub, _, err := genKeyPair(testKeyLen)
 	assert.NoError(t, err)
 
@@ -134,6 +138,10 @@ func TestComputeSubjectKeyID(t *testing.T) {
 }
 
 func TestWriteReadPrivateKey(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	_, priv, err := genKeyPair(testKeyLen)
 	assert.NoError(t, err)
 
@@ -216,6 +224,10 @@ func TestWriteReadPrivateKey(t *testing.T) {
 }
 
 func TestWritePemFileReadCertificate(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	pub, priv, err := genKeyPair(testKeyLen)
 	assert.NoError(t, err)
 
@@ -291,6 +303,10 @@ func TestWritePemFileReadCertificate(t *testing.T) {
 }
 
 func TestWritePemFileReadCertificateRequest(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	_, priv, err := genKeyPair(testKeyLen)
 	assert.NoError(t, err)
 
@@ -365,6 +381,10 @@ func TestWritePemFileReadCertificateRequest(t *testing.T) {
 }
 
 func TestWriteReadCertificateChain(t *testing.T) {
+	if testing.Short() {
+		t.Skip()
+	}
+
 	mockWorkspaceWithCA(t)
 	defer CleanupWorkspace()
 

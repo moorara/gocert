@@ -31,6 +31,9 @@ install:
 test:
 	@ go test -v -race ./...
 
+test-short:
+	@ go test -v -race -short ./...
+
 coverage:
 	@ mkdir -p $(reports) && \
 	  echo "mode: atomic" > $(reports)/cover.out
@@ -43,4 +46,4 @@ coverage:
 
 .PHONY: clean
 .PHONY: run build install
-.PHONY: test coverage
+.PHONY: test test-short coverage

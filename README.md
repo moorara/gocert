@@ -9,7 +9,7 @@ A lightweight library and also command-line interface for generating self-signed
 mkdir certs
 cd certs
 
-gocert init
+gocert init -short
 gocert root
 
 gocert intermediate -name=ops

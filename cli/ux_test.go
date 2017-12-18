@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"net"
 	"strings"
 	"testing"
 
@@ -27,11 +28,13 @@ type example struct {
 	Float32Slice []float32
 	Float64Slice []float64
 	StringSlice  []string
+	IPSlice      []net.IP
 	Inner        inner
 }
 
 func TestAskForStruct(t *testing.T) {
 	tests := []struct {
+		title           string
 		tagKey          string
 		ignoreOmitted   bool
 		example         example
@@ -39,12 +42,14 @@ func TestAskForStruct(t *testing.T) {
 		expectedExample example
 	}{
 		{
+			"EmptyNoInput",
 			"custom", false,
 			example{},
 			``,
 			example{},
 		},
 		{
+			"SimpleOmitEmpty",
 			"custom", true,
 			example{},
 			`27
@@ -60,6 +65,7 @@ func TestAskForStruct(t *testing.T) {
 			},
 		},
 		{
+			"EnterInvalidSecret",
 			"custom", false,
 			example{
 				Bool:    true,
@@ -79,6 +85,7 @@ func TestAskForStruct(t *testing.T) {
 			},
 		},
 		{
+			"EnterNotConfirmedSecret",
 			"custom", false,
 			example{
 				Bool:    true,
@@ -98,6 +105,7 @@ func TestAskForStruct(t *testing.T) {
 			},
 		},
 		{
+			"EnterNotMatchingSecret",
 			"custom", false,
 			example{
 				Bool:    true,
@@ -118,6 +126,7 @@ func TestAskForStruct(t *testing.T) {
 			},
 		},
 		{
+			"EnterAll",
 			"custom", false,
 			example{},
 			`true
@@ -134,6 +143,7 @@ func TestAskForStruct(t *testing.T) {
 			2.71,3.14
 			2.7182818284,3.1415926535
 			Milad,Mona
+			8.8.8.8,127.0.0.1
 			1001
 			nested
 			`,
@@ -150,6 +160,7 @@ func TestAskForStruct(t *testing.T) {
 				Float32Slice: []float32{2.71, 3.14},
 				Float64Slice: []float64{2.7182818284, 3.1415926535},
 				StringSlice:  []string{"Milad", "Mona"},
+				IPSlice:      []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("127.0.0.1")},
 				Inner: inner{
 					Int:    1001,
 					String: "nested",
@@ -159,10 +170,12 @@ func TestAskForStruct(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
-		askForStruct(&test.example, test.tagKey, test.ignoreOmitted, mockUI)
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
+			askForStruct(&test.example, test.tagKey, test.ignoreOmitted, mockUI)
 
-		assert.Equal(t, test.expectedExample, test.example)
+			assert.Equal(t, test.expectedExample, test.example)
+		})
 	}
 }

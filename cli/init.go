@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"flag"
+
 	"github.com/mitchellh/cli"
 	"github.com/moorara/go-box/util"
 	"github.com/moorara/gocert/pki"
@@ -45,8 +47,15 @@ func (c *InitCommand) Help() string {
 
 // Run executes the command
 func (c *InitCommand) Run(args []string) int {
+	flags := flag.NewFlagSet("init", flag.ContinueOnError)
+	flags.Usage = func() {}
+	err := flags.Parse(args)
+	if err != nil {
+		return ErrorInvalidFlag
+	}
+
 	// Make sub-directories
-	_, err := util.MkDirs("", pki.DirRoot, pki.DirInterm, pki.DirServer, pki.DirClient, pki.DirCSR)
+	_, err = util.MkDirs("", pki.DirRoot, pki.DirInterm, pki.DirServer, pki.DirClient, pki.DirCSR)
 	if err != nil {
 		return ErrorMakeDir
 	}

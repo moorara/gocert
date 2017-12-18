@@ -11,9 +11,24 @@ import (
 )
 
 func TestNewInitCommand(t *testing.T) {
-	cmd := NewInitCommand()
+	tests := []struct {
+		expectedSynopsis string
+	}{
+		{
+			"Initializes a new workspace with desired configurations and specifications.",
+		},
+		{
+			"Initializes a new workspace with desired configurations and specifications.",
+		},
+	}
 
-	assert.Equal(t, newColoredUI(), cmd.ui)
+	for _, test := range tests {
+		cmd := NewInitCommand()
+
+		assert.Equal(t, newColoredUI(), cmd.ui)
+		assert.Equal(t, test.expectedSynopsis, cmd.Synopsis())
+		assert.NotEmpty(t, cmd.Help())
+	}
 }
 
 func TestInitCommand(t *testing.T) {
@@ -21,7 +36,6 @@ func TestInitCommand(t *testing.T) {
 		title         string
 		args          []string
 		input         string
-		expectedExit  int
 		expectedState string
 		expectedSpec  string
 	}{
@@ -29,7 +43,6 @@ func TestInitCommand(t *testing.T) {
 			"DefaultStateSpec",
 			[]string{},
 			``,
-			0,
 			`root:
 				serial: 10
 				length: 4096
@@ -102,7 +115,6 @@ func TestInitCommand(t *testing.T) {
 			Organization
 			CommonName
 			`,
-			0,
 			`root:
 				serial: 10
 				length: 4096
@@ -168,11 +180,9 @@ func TestInitCommand(t *testing.T) {
 			cmd := &InitCommand{
 				ui: mockUI,
 			}
-			exit := cmd.Run(test.args)
 
-			assert.Equal(t, initSynopsis, cmd.Synopsis())
-			assert.Equal(t, initHelp, cmd.Help())
-			assert.Equal(t, test.expectedExit, exit)
+			exit := cmd.Run(test.args)
+			assert.Zero(t, exit)
 
 			// Verify state file
 			stateData, err := ioutil.ReadFile(pki.FileState)
@@ -190,6 +200,36 @@ func TestInitCommand(t *testing.T) {
 
 			err = pki.CleanupWorkspace()
 			assert.NoError(t, err)
+		})
+	}
+}
+
+func TestInitCommandError(t *testing.T) {
+	tests := []struct {
+		title        string
+		args         []string
+		input        string
+		expectedExit int
+	}{
+		{
+			"InvalidFlag",
+			[]string{"-invalid"},
+			``,
+			ErrorInvalidFlag,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
+
+			cmd := &InitCommand{
+				ui: mockUI,
+			}
+
+			exit := cmd.Run(test.args)
+			assert.Equal(t, test.expectedExit, exit)
 		})
 	}
 }

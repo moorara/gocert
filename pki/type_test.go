@@ -46,7 +46,6 @@ func TestNewSpec(t *testing.T) {
 	assert.Equal(t, expectedClaim, spec.Interm)
 	assert.Equal(t, expectedClaim, spec.Server)
 	assert.Equal(t, expectedClaim, spec.Client)
-
 	assert.Equal(t, expectedRootPolicy, spec.RootPolicy)
 	assert.Equal(t, expectedIntermPolicy, spec.IntermPolicy)
 }

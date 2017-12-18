@@ -103,7 +103,7 @@ func (c *SignCommand) Run(args []string) (exit int) {
 		c.ui.Output(signEnterNameCA)
 		fCA, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CA Name", "string"))
 		if err != nil {
-			return ErrorInvalidName
+			return ErrorInvalidCA
 		}
 	}
 
@@ -111,7 +111,7 @@ func (c *SignCommand) Run(args []string) (exit int) {
 		c.ui.Output(signEnterNameCSR)
 		fName, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CSR Name", "string list"))
 		if err != nil {
-			return ErrorInvalidName
+			return ErrorInvalidCSR
 		}
 	}
 

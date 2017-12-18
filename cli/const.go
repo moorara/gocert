@@ -18,12 +18,12 @@ const (
 	ErrorInvalidFlag = 21
 	// ErrorInvalidName is returned when no name is provided
 	ErrorInvalidName = 22
-	// ErrorInvalidMetadata is returned when an invalid metadata is set
-	ErrorInvalidMetadata = 23
 	// ErrorInvalidCA is returned when an invalid ca name is set
-	ErrorInvalidCA = 24
+	ErrorInvalidCA = 23
 	// ErrorInvalidCSR is returned when an invalid csr name is set
-	ErrorInvalidCSR = 25
+	ErrorInvalidCSR = 24
+	// ErrorInvalidMetadata is returned when an invalid metadata is set
+	ErrorInvalidMetadata = 25
 
 	// ErrorCert is returned when generating root ca fails
 	ErrorCert = 31

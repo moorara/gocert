@@ -49,6 +49,7 @@ func TestNewSignCommand(t *testing.T) {
 
 func TestSignCommand(t *testing.T) {
 	tests := []struct {
+		title string
 		state *pki.State
 		spec  *pki.Spec
 		mocks []pki.Metadata
@@ -56,6 +57,7 @@ func TestSignCommand(t *testing.T) {
 		input string
 	}{
 		{
+			"RootSignsIntermediate",
 			pki.NewState(),
 			pki.NewSpec(),
 			[]pki.Metadata{
@@ -66,6 +68,7 @@ func TestSignCommand(t *testing.T) {
 			``,
 		},
 		{
+			"IntermediateSignsServer",
 			pki.NewState(),
 			pki.NewSpec(),
 			[]pki.Metadata{
@@ -77,6 +80,7 @@ func TestSignCommand(t *testing.T) {
 			`,
 		},
 		{
+			"IntermediateSignsClient",
 			pki.NewState(),
 			pki.NewSpec(),
 			[]pki.Metadata{
@@ -89,6 +93,7 @@ func TestSignCommand(t *testing.T) {
 			`,
 		},
 		{
+			"IntermediateSignsServerClient",
 			pki.NewState(),
 			pki.NewSpec(),
 			[]pki.Metadata{
@@ -102,29 +107,32 @@ func TestSignCommand(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := pki.NewWorkspace(test.state, test.spec)
-		assert.NoError(t, err)
+		t.Run(test.title, func(t *testing.T) {
+			err := pki.NewWorkspace(test.state, test.spec)
+			assert.NoError(t, err)
 
-		writeSignMocks(t, test.mocks)
+			writeSignMocks(t, test.mocks)
 
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
 
-		cmd := &SignCommand{
-			ui:  mockUI,
-			pki: &mockedManager{},
-		}
+			cmd := &SignCommand{
+				ui:  mockUI,
+				pki: &mockedManager{},
+			}
 
-		exit := cmd.Run(test.args)
-		assert.Zero(t, exit)
+			exit := cmd.Run(test.args)
+			assert.Zero(t, exit)
 
-		err = pki.CleanupWorkspace()
-		assert.NoError(t, err)
+			err = pki.CleanupWorkspace()
+			assert.NoError(t, err)
+		})
 	}
 }
 
 func TestSignCommandError(t *testing.T) {
 	tests := []struct {
+		title        string
 		state        *pki.State
 		spec         *pki.Spec
 		mocks        []pki.Metadata
@@ -134,6 +142,7 @@ func TestSignCommandError(t *testing.T) {
 		expectedExit int
 	}{
 		{
+			"InvalidFlag",
 			nil,
 			nil,
 			nil,
@@ -143,15 +152,17 @@ func TestSignCommandError(t *testing.T) {
 			ErrorInvalidFlag,
 		},
 		{
+			"NoCAName",
 			nil,
 			nil,
 			nil,
 			[]string{},
 			``,
 			nil,
-			ErrorInvalidName,
+			ErrorInvalidCA,
 		},
 		{
+			"NoCertName",
 			nil,
 			nil,
 			nil,
@@ -159,9 +170,10 @@ func TestSignCommandError(t *testing.T) {
 			`root
 			`,
 			nil,
-			ErrorInvalidName,
+			ErrorInvalidCSR,
 		},
 		{
+			"SameCACertName",
 			nil,
 			nil,
 			nil,
@@ -172,6 +184,7 @@ func TestSignCommandError(t *testing.T) {
 			ErrorInvalidName,
 		},
 		{
+			"NoState",
 			nil,
 			nil,
 			nil,
@@ -182,6 +195,7 @@ func TestSignCommandError(t *testing.T) {
 			ErrorReadState,
 		},
 		{
+			"NoSpec",
 			pki.NewState(),
 			nil,
 			nil,
@@ -191,6 +205,7 @@ func TestSignCommandError(t *testing.T) {
 			ErrorReadSpec,
 		},
 		{
+			"CANotExist",
 			pki.NewState(),
 			pki.NewSpec(),
 			nil,
@@ -200,6 +215,7 @@ func TestSignCommandError(t *testing.T) {
 			ErrorInvalidCA,
 		},
 		{
+			"CANotExist",
 			pki.NewState(),
 			pki.NewSpec(),
 			nil,
@@ -209,6 +225,7 @@ func TestSignCommandError(t *testing.T) {
 			ErrorInvalidCA,
 		},
 		{
+			"CertNotExist",
 			pki.NewState(),
 			pki.NewSpec(),
 			[]pki.Metadata{
@@ -220,6 +237,7 @@ func TestSignCommandError(t *testing.T) {
 			ErrorInvalidCSR,
 		},
 		{
+			"CertNotExist",
 			pki.NewState(),
 			pki.NewSpec(),
 			[]pki.Metadata{
@@ -231,6 +249,7 @@ func TestSignCommandError(t *testing.T) {
 			ErrorInvalidCSR,
 		},
 		{
+			"RootCannotSignIntermediate",
 			pki.NewState(),
 			pki.NewSpec(),
 			[]pki.Metadata{
@@ -243,6 +262,7 @@ func TestSignCommandError(t *testing.T) {
 			ErrorInvalidCSR,
 		},
 		{
+			"IntermediateCannotSignRoot",
 			pki.NewState(),
 			pki.NewSpec(),
 			[]pki.Metadata{
@@ -255,6 +275,7 @@ func TestSignCommandError(t *testing.T) {
 			ErrorInvalidCSR,
 		},
 		{
+			"SignCSRError",
 			pki.NewState(),
 			pki.NewSpec(),
 			[]pki.Metadata{
@@ -269,25 +290,27 @@ func TestSignCommandError(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := pki.NewWorkspace(test.state, test.spec)
-		assert.NoError(t, err)
+		t.Run(test.title, func(t *testing.T) {
+			err := pki.NewWorkspace(test.state, test.spec)
+			assert.NoError(t, err)
 
-		writeSignMocks(t, test.mocks)
+			writeSignMocks(t, test.mocks)
 
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
 
-		cmd := &SignCommand{
-			ui: mockUI,
-			pki: &mockedManager{
-				SignCSRError: test.SignCSRError,
-			},
-		}
+			cmd := &SignCommand{
+				ui: mockUI,
+				pki: &mockedManager{
+					SignCSRError: test.SignCSRError,
+				},
+			}
 
-		exit := cmd.Run(test.args)
-		assert.Equal(t, test.expectedExit, exit)
+			exit := cmd.Run(test.args)
+			assert.Equal(t, test.expectedExit, exit)
 
-		err = pki.CleanupWorkspace()
-		assert.NoError(t, err)
+			err = pki.CleanupWorkspace()
+			assert.NoError(t, err)
+		})
 	}
 }

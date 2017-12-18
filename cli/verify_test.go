@@ -35,73 +35,86 @@ func TestNewVerifyCommand(t *testing.T) {
 
 func TestVerifyCommand(t *testing.T) {
 	tests := []struct {
+		title string
 		args  []string
 		input string
 	}{
 		{
+			"RootVerifiesIntermediate",
 			[]string{},
 			`root
 			interm
 			`,
 		},
 		{
+			"RootVerifiesIntermediate",
 			[]string{"-ca=root"},
 			`interm
 			`,
 		},
 		{
+			"RootVerifiesIntermediate",
 			[]string{"-ca=root", "--name", "interm"},
 			``,
 		},
 		{
+			"IntermediateVerifiesServerClient",
 			[]string{"-ca=interm"},
 			`server
 			client`,
 		},
 		{
+			"IntermediateVerifiesServerClient",
 			[]string{"-ca=interm", "--name", "server,client"},
 			``,
 		},
 		{
-			[]string{"-ca=interm", "-name=server,client", "-dns=example.com"},
+			"IntermediateVerifiesServerWithDNS",
+			[]string{"-ca=interm", "-name=server", "-dns=example.com"},
 			``,
 		},
 	}
 
 	for _, test := range tests {
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
 
-		cmd := &VerifyCommand{
-			ui:  mockUI,
-			pki: &mockedManager{},
-		}
+			cmd := &VerifyCommand{
+				ui:  mockUI,
+				pki: &mockedManager{},
+			}
 
-		exit := cmd.Run(test.args)
-		assert.Zero(t, exit)
+			exit := cmd.Run(test.args)
+			assert.Zero(t, exit)
+		})
 	}
 }
 
 func TestVerifyCommandError(t *testing.T) {
 	tests := []struct {
+		title           string
 		args            []string
 		input           string
 		VerifyCertError error
 		expectedExit    int
 	}{
 		{
+			"InvalidFlag",
 			[]string{"-invalid"},
 			``,
 			nil,
 			ErrorInvalidFlag,
 		},
 		{
+			"NoCAName",
 			[]string{},
 			``,
 			nil,
 			ErrorInvalidName,
 		},
 		{
+			"NoCertName",
 			[]string{},
 			`root
 			`,
@@ -109,6 +122,7 @@ func TestVerifyCommandError(t *testing.T) {
 			ErrorInvalidName,
 		},
 		{
+			"VerifyCertError",
 			[]string{"-ca=root", "-name=interm"},
 			``,
 			errors.New("error"),
@@ -121,17 +135,19 @@ func TestVerifyCommandError(t *testing.T) {
 	assert.NoError(t, err)
 
 	for _, test := range tests {
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
+		t.Run(test.title, func(t *testing.T) {
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
 
-		cmd := &VerifyCommand{
-			ui: mockUI,
-			pki: &mockedManager{
-				VerifyCertError: test.VerifyCertError,
-			},
-		}
+			cmd := &VerifyCommand{
+				ui: mockUI,
+				pki: &mockedManager{
+					VerifyCertError: test.VerifyCertError,
+				},
+			}
 
-		exit := cmd.Run(test.args)
-		assert.Equal(t, test.expectedExit, exit)
+			exit := cmd.Run(test.args)
+			assert.Equal(t, test.expectedExit, exit)
+		})
 	}
 }

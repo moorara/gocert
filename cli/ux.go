@@ -147,6 +147,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui
 		kind := vField.Kind()
 		value := vField.Interface()
 
+		// Check for omit empty tag
 		tag := tField.Tag.Get(tagKey)
 		if ignoreOmitted && strings.HasPrefix(tag, "-") {
 			continue

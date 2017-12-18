@@ -36,8 +36,8 @@ const (
 	You will be asked for entering those specifications not set in "spec.toml" file.
 	These specifications are supposed to be certificate-specific and not common across all ceritificates.
 	You can enter a list by comma-separating values. If you don't want to use any of the entries, leave it empty.
-
 	{{if ne .CertType 1}}
+
 	Flags:
 		-name    set a name for the new certificate
 	{{- end}}
@@ -65,27 +65,6 @@ func (c *ReqCommand) output(text string) {
 	c.ui.Output(text)
 }
 
-func (c *ReqCommand) load() (config pki.Config, claim pki.Claim, status int) {
-	state, spec, status := loadWorkspace(c.ui)
-	if status != 0 {
-		return
-	}
-
-	config, ok1 := state.ConfigFor(c.md.CertType)
-	claim, ok2 := spec.ClaimFor(c.md.CertType)
-	if !ok1 || !ok2 {
-		status = ErrorInvalidMetadata
-		return
-	}
-
-	// User certificates should not have a password
-	if c.md.CertType == pki.CertTypeServer || c.md.CertType == pki.CertTypeClient {
-		config.Password = "bypass"
-	}
-
-	return
-}
-
 // Synopsis returns the short help text for command
 func (c *ReqCommand) Synopsis() string {
 	var buf bytes.Buffer
@@ -104,11 +83,6 @@ func (c *ReqCommand) Help() string {
 
 // Run executes the command
 func (c *ReqCommand) Run(args []string) int {
-	config, claim, status := c.load()
-	if status != 0 {
-		return status
-	}
-
 	flags := flag.NewFlagSet("req", flag.ContinueOnError)
 	flags.Usage = func() {}
 	flags.StringVar(&c.md.Name, "name", "", "")
@@ -130,8 +104,25 @@ func (c *ReqCommand) Run(args []string) int {
 		}
 	}
 
+	state, spec, status := loadWorkspace(c.ui)
+	if status != 0 {
+		return status
+	}
+
+	config, ok1 := state.ConfigFor(c.md.CertType)
+	claim, ok2 := spec.ClaimFor(c.md.CertType)
+	if !ok1 || !ok2 {
+		return ErrorInvalidMetadata
+	}
+
+	// User certificates should not have a password
+	if c.md.CertType == pki.CertTypeServer || c.md.CertType == pki.CertTypeClient {
+		config.Password = "bypass"
+	}
+
 	c.output(reqEnterConfig)
 	askForConfig(&config, c.ui)
+	config.Password = ""
 	c.output(reqEnterClaim)
 	askForClaim(&claim, c.ui)
 

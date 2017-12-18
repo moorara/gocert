@@ -47,6 +47,7 @@ func TestNewReqCommand(t *testing.T) {
 
 func TestReqCommand(t *testing.T) {
 	tests := []struct {
+		title string
 		state *pki.State
 		spec  *pki.Spec
 		md    pki.Metadata
@@ -54,6 +55,7 @@ func TestReqCommand(t *testing.T) {
 		input string
 	}{
 		{
+			"GenSimpleRootCA",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeRoot},
@@ -62,6 +64,7 @@ func TestReqCommand(t *testing.T) {
 			`,
 		},
 		{
+			"GenSimpleIntermediateCA",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeInterm},
@@ -70,6 +73,7 @@ func TestReqCommand(t *testing.T) {
 			`,
 		},
 		{
+			"GenSimpleServerCert",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeServer},
@@ -78,6 +82,7 @@ func TestReqCommand(t *testing.T) {
 			`,
 		},
 		{
+			"GenSimpleClientCert",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeClient},
@@ -87,9 +92,10 @@ func TestReqCommand(t *testing.T) {
 			`,
 		},
 		{
+			"GenRootCA",
 			pki.NewState(),
 			&pki.Spec{
-				Interm: pki.Claim{
+				Root: pki.Claim{
 					Country:      []string{"CA"},
 					Province:     []string{"Ontario"},
 					Organization: []string{"Milad"},
@@ -101,6 +107,7 @@ func TestReqCommand(t *testing.T) {
 			`,
 		},
 		{
+			"GenIntermediateCA",
 			pki.NewState(),
 			&pki.Spec{
 				Interm: pki.Claim{
@@ -117,6 +124,7 @@ func TestReqCommand(t *testing.T) {
 			`,
 		},
 		{
+			"GenServerCert",
 			pki.NewState(),
 			&pki.Spec{
 				Server: pki.Claim{
@@ -132,6 +140,7 @@ func TestReqCommand(t *testing.T) {
 			`,
 		},
 		{
+			"GenClientCert",
 			pki.NewState(),
 			&pki.Spec{
 				Client: pki.Claim{
@@ -150,28 +159,31 @@ func TestReqCommand(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		err := pki.NewWorkspace(test.state, test.spec)
-		assert.NoError(t, err)
+		t.Run(test.title, func(t *testing.T) {
+			err := pki.NewWorkspace(test.state, test.spec)
+			assert.NoError(t, err)
 
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
 
-		cmd := &ReqCommand{
-			ui:  mockUI,
-			pki: &mockedManager{},
-			md:  test.md,
-		}
+			cmd := &ReqCommand{
+				ui:  mockUI,
+				pki: &mockedManager{},
+				md:  test.md,
+			}
 
-		exit := cmd.Run(test.args)
-		assert.Zero(t, exit)
+			exit := cmd.Run(test.args)
+			assert.Zero(t, exit)
 
-		err = pki.CleanupWorkspace()
-		assert.NoError(t, err)
+			err = pki.CleanupWorkspace()
+			assert.NoError(t, err)
+		})
 	}
 }
 
 func TestReqCommandError(t *testing.T) {
 	tests := []struct {
+		title        string
 		state        *pki.State
 		spec         *pki.Spec
 		md           pki.Metadata
@@ -182,36 +194,7 @@ func TestReqCommandError(t *testing.T) {
 		expectedExit int
 	}{
 		{
-			nil,
-			nil,
-			pki.Metadata{},
-			[]string{},
-			``,
-			nil,
-			nil,
-			ErrorReadState,
-		},
-		{
-			pki.NewState(),
-			nil,
-			pki.Metadata{},
-			[]string{},
-			``,
-			nil,
-			nil,
-			ErrorReadSpec,
-		},
-		{
-			pki.NewState(),
-			pki.NewSpec(),
-			pki.Metadata{},
-			[]string{},
-			``,
-			nil,
-			nil,
-			ErrorInvalidMetadata,
-		},
-		{
+			"InvalidFlag",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeRoot},
@@ -222,9 +205,10 @@ func TestReqCommandError(t *testing.T) {
 			ErrorInvalidFlag,
 		},
 		{
+			"NoName",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeInterm},
+			pki.Metadata{},
 			[]string{},
 			``,
 			nil,
@@ -232,88 +216,108 @@ func TestReqCommandError(t *testing.T) {
 			ErrorInvalidName,
 		},
 		{
-			pki.NewState(),
-			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeServer},
+			"NoState",
+			nil,
+			nil,
+			pki.Metadata{},
 			[]string{},
+			`sre
+			`,
+			nil,
+			nil,
+			ErrorReadState,
+		},
+		{
+			"NoSpec",
+			pki.NewState(),
+			nil,
+			pki.Metadata{},
+			[]string{"-name=sre"},
 			``,
 			nil,
 			nil,
-			ErrorInvalidName,
+			ErrorReadSpec,
 		},
 		{
+			"NoMetadata",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeClient},
-			[]string{},
+			pki.Metadata{},
+			[]string{"-name", "sre"},
 			``,
 			nil,
 			nil,
-			ErrorInvalidName,
+			ErrorInvalidMetadata,
 		},
 		{
+			"GenCertError",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeRoot},
 			[]string{},
 			``,
 			errors.New("error"),
-			errors.New("error"),
+			nil,
 			ErrorCert,
 		},
 		{
+			"GenCSRError",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeInterm},
 			[]string{"-name=ops"},
 			``,
-			errors.New("error"),
+			nil,
 			errors.New("error"),
 			ErrorCSR,
 		},
 		{
+			"GenCSRError",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeServer},
 			[]string{"-name", "webapp"},
 			``,
-			errors.New("error"),
+			nil,
 			errors.New("error"),
 			ErrorCSR,
 		},
 		{
+			"GenCSRError",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Metadata{CertType: pki.CertTypeClient},
 			[]string{"-name=ops"},
 			`myservice
 			`,
-			errors.New("error"),
+			nil,
 			errors.New("error"),
 			ErrorCSR,
 		},
 	}
 
 	for _, test := range tests {
-		err := pki.NewWorkspace(test.state, test.spec)
-		assert.NoError(t, err)
+		t.Run(test.title, func(t *testing.T) {
+			err := pki.NewWorkspace(test.state, test.spec)
+			assert.NoError(t, err)
 
-		mockUI := cli.NewMockUi()
-		mockUI.InputReader = strings.NewReader(test.input)
+			mockUI := cli.NewMockUi()
+			mockUI.InputReader = strings.NewReader(test.input)
 
-		cmd := &ReqCommand{
-			ui: mockUI,
-			pki: &mockedManager{
-				GenCertError: test.GenCertError,
-				GenCSRError:  test.GenCSRError,
-			},
-			md: test.md,
-		}
+			cmd := &ReqCommand{
+				ui: mockUI,
+				pki: &mockedManager{
+					GenCertError: test.GenCertError,
+					GenCSRError:  test.GenCSRError,
+				},
+				md: test.md,
+			}
 
-		exit := cmd.Run(test.args)
-		assert.Equal(t, test.expectedExit, exit)
+			exit := cmd.Run(test.args)
+			assert.Equal(t, test.expectedExit, exit)
 
-		err = pki.CleanupWorkspace()
-		assert.NoError(t, err)
+			err = pki.CleanupWorkspace()
+			assert.NoError(t, err)
+		})
 	}
 }

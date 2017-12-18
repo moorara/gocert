@@ -114,6 +114,70 @@ func TestLoadWorkspace(t *testing.T) {
 			&pki.Spec{},
 		},
 		{
+			"Simple",
+			`
+			root:
+				serial: 10
+				length: 4096
+				days: 7300
+			intermediate:
+				serial: 100
+				length: 4096
+				days: 3650
+			`,
+			`
+			[root]
+				country = [ "CA", "US" ]
+				province = [ "Ontario", "Massachusetts" ]
+				locality = [ "Ottawa", "Boston" ]
+				organization = [ "Moorara" ]
+			[intermediate]
+				country = [ "CA" ]
+				province = [ "Ontario" ]
+				locality = [ "Ottawa" ]
+				organization = [ "Moorara" ]
+				email_address = [ "moorara@example.com" ]
+			[root_policy]
+				supplied = ["CommonName"]
+			[intermediate_policy]
+				supplied = ["CommonName"]
+			`,
+			0,
+			&pki.State{
+				Root: pki.Config{
+					Serial: int64(10),
+					Length: 4096,
+					Days:   7300,
+				},
+				Interm: pki.Config{
+					Serial: int64(100),
+					Length: 4096,
+					Days:   3650,
+				},
+			},
+			&pki.Spec{
+				Root: pki.Claim{
+					Country:      []string{"CA", "US"},
+					Province:     []string{"Ontario", "Massachusetts"},
+					Locality:     []string{"Ottawa", "Boston"},
+					Organization: []string{"Moorara"},
+				},
+				Interm: pki.Claim{
+					Country:      []string{"CA"},
+					Province:     []string{"Ontario"},
+					Locality:     []string{"Ottawa"},
+					Organization: []string{"Moorara"},
+					EmailAddress: []string{"moorara@example.com"},
+				},
+				RootPolicy: pki.Policy{
+					Supplied: []string{"CommonName"},
+				},
+				IntermPolicy: pki.Policy{
+					Supplied: []string{"CommonName"},
+				},
+			},
+		},
+		{
 			"Complex",
 			`
 			root:
@@ -501,12 +565,7 @@ func TestAskForNewState(t *testing.T) {
 		{
 			"Empty",
 			``,
-			pki.State{
-				Root:   pki.Config{},
-				Interm: pki.Config{},
-				Server: pki.Config{},
-				Client: pki.Config{},
-			},
+			pki.State{},
 		},
 		{
 			"Simple",
@@ -525,21 +584,21 @@ func TestAskForNewState(t *testing.T) {
 			`,
 			pki.State{
 				Root: pki.Config{
-					Serial: int64(10),
+					Serial: 10,
 					Length: 4096,
 					Days:   7300,
 				},
 				Interm: pki.Config{
-					Serial: int64(100),
+					Serial: 100,
 					Length: 4096,
 					Days:   3650,
 				},
 				Server: pki.Config{
-					Serial: int64(1000),
+					Serial: 1000,
 					Length: 2048, Days: 375,
 				},
 				Client: pki.Config{
-					Serial: int64(10000),
+					Serial: 10000,
 					Length: 2048,
 					Days:   40,
 				},
@@ -572,29 +631,25 @@ func TestAskForNewSpec(t *testing.T) {
 		{
 			"Simple",
 			`CA
-			Ontario
+
 
 			Milad
 			`,
 			pki.Spec{
 				Root: pki.Claim{
 					Country:      []string{"CA"},
-					Province:     []string{"Ontario"},
 					Organization: []string{"Milad"},
 				},
 				Interm: pki.Claim{
 					Country:      []string{"CA"},
-					Province:     []string{"Ontario"},
 					Organization: []string{"Milad"},
 				},
 				Server: pki.Claim{
 					Country:      []string{"CA"},
-					Province:     []string{"Ontario"},
 					Organization: []string{"Milad"},
 				},
 				Client: pki.Claim{
 					Country:      []string{"CA"},
-					Province:     []string{"Ontario"},
 					Organization: []string{"Milad"},
 				},
 			},
@@ -711,45 +766,19 @@ func TestAskForConfig(t *testing.T) {
 		{
 			"Simple",
 			pki.Config{
-				Length: 2048,
+				Length: 4096,
 			},
-			`1000
-			375
+			`100
+			3650
 			`,
 			pki.Config{
-				Serial: int64(1000),
-				Length: 2048,
-				Days:   375,
+				Serial: 100,
+				Length: 4096,
+				Days:   3650,
 			},
 		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.title, func(t *testing.T) {
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-			askForConfig(&test.config, mockUI)
-
-			assert.Equal(t, test.expectedConfig, test.config)
-		})
-	}
-}
-
-func TestAskForConfigCA(t *testing.T) {
-	tests := []struct {
-		title            string
-		config           pki.Config
-		input            string
-		expectedConfigCA pki.Config
-	}{
 		{
-			"Empty",
-			pki.Config{},
-			``,
-			pki.Config{},
-		},
-		{
-			"Simple",
+			"Complex",
 			pki.Config{},
 			`100
 			4096
@@ -758,7 +787,7 @@ func TestAskForConfigCA(t *testing.T) {
 			secret
 			`,
 			pki.Config{
-				Serial:   int64(100),
+				Serial:   100,
 				Length:   4096,
 				Days:     3650,
 				Password: "secret",
@@ -772,7 +801,7 @@ func TestAskForConfigCA(t *testing.T) {
 			mockUI.InputReader = strings.NewReader(test.input)
 			askForConfig(&test.config, mockUI)
 
-			assert.Equal(t, test.expectedConfigCA, test.config)
+			assert.Equal(t, test.expectedConfig, test.config)
 		})
 	}
 }
@@ -792,20 +821,39 @@ func TestAskForClaim(t *testing.T) {
 		},
 		{
 			"Simple",
-			pki.Claim{
-				Country:      []string{"CA"},
-				Province:     []string{"Ontario"},
-				Organization: []string{"Milad"},
-			},
-			`IntermediateCA
-			Ottawa
+			pki.Claim{},
+			`RootCA
+			CA
+
+
+			Milad
 			`,
 			pki.Claim{
-				CommonName:   "IntermediateCA",
+				CommonName:   "RootCA",
 				Country:      []string{"CA"},
-				Province:     []string{"Ontario"},
-				Locality:     []string{"Ottawa"},
 				Organization: []string{"Milad"},
+			},
+		},
+		{
+			"Complex",
+			pki.Claim{
+				Country:  []string{"CA"},
+				Province: []string{"Ontario"},
+				Locality: []string{"Ottawa"},
+			},
+			`IntermediateCA
+			Milad
+			SRE
+			example.com
+			`,
+			pki.Claim{
+				CommonName:         "IntermediateCA",
+				Country:            []string{"CA"},
+				Province:           []string{"Ontario"},
+				Locality:           []string{"Ottawa"},
+				Organization:       []string{"Milad"},
+				OrganizationalUnit: []string{"SRE"},
+				DNSName:            []string{"example.com"},
 			},
 		},
 	}
