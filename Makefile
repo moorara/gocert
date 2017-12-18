@@ -43,7 +43,17 @@ coverage:
 	@ go tool cover -html=$(reports)/cover.out -o $(reports)/cover.html && \
 	  rm cover.out $(reports)/cover.out
 
+release:
+	@ ./release.sh patch
+
+release-minor:
+	@ ./release.sh minor
+
+release-major:
+	@ ./release.sh major
+
 
 .PHONY: clean
 .PHONY: run build install
 .PHONY: test test-short coverage
+.PHONY: release release-minor release-major

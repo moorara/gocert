@@ -52,11 +52,11 @@ You can later change these specs by editing `spec.toml` file.
 
 Here is the default configurations for certificates:
 
-| Type         | Serial Number | Key Length | Expiry Days     |
-| ------------ | ------------- | ---------- | --------------- |
-| Root         | 10            | 4096       | 7300 (20 years) |
-| Intermediate | 100           | 4096       | 3650 (10 years) |
-| Server       | 1000          | 2048       | 375 (1 year)    |
-| Client       | 10000         | 2048       | 40 (1 month)    |
+| Type         | Key Length | Expiry Days     |
+| ------------ | ---------- | --------------- |
+| Root         | 4096       | 7300 (20 years) |
+| Intermediate | 4096       | 3650 (10 years) |
+| Server       | 2048       | 375 (1 year)    |
+| Client       | 2048       | 40 (1 month)    |
 
 You can change these configurations by editing `state.yaml` file.
