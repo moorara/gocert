@@ -2,6 +2,7 @@
 A lightweight library and also command-line interface for generating self-signed SSL/TLS certificates using pure go!
 
 ## Installing
+You can download the appropriate binary from [releases](https://github.com/moorara/gocert/releases) page.
 
 ## Quick Start
 
@@ -9,15 +10,18 @@ A lightweight library and also command-line interface for generating self-signed
 mkdir certs
 cd certs
 
-gocert init -short
+gocert init
 gocert root
 
-gocert intermediate -name=ops
-gocert sign -ca=root -name=ops
+gocert intermediate -name=sre
+gocert sign -ca=root -name=sre
 
 gocert server -name=webapp
 gocert client -name=myservice
-gocert sign -ca=ops -name=webapp,myservice
+gocert sign -ca=sre -name=webapp,myservice
+
+gocert verify -ca=root -name=sre
+gocert verify -ca=sre -name=webapp,myservice
 ```
 
 ## Certificates Explained
@@ -50,7 +54,7 @@ Next, you will be asked for entering more-specific specs for **Root CA**, **Inte
 You can enter a list by comma-separating values. If you don't want to use any of the specs, leave it empty.
 You can later change these specs by editing `spec.toml` file.
 
-Here is the default configurations for certificates:
+Here is the default configs for certificates:
 
 | Type         | Key Length | Expiry Days     |
 | ------------ | ---------- | --------------- |
@@ -59,4 +63,61 @@ Here is the default configurations for certificates:
 | Server       | 2048       | 375 (1 year)    |
 | Client       | 2048       | 40 (1 month)    |
 
-You can change these configurations by editing `state.yaml` file.
+You can change these configs by editing `state.yaml` file.
+
+## Root CA
+For generating your root certificate authority, run the following command:
+
+```
+gocert root
+```
+
+You can only have one root certificate authority and it is called `root` by default.
+Setting a password for root certificate authority key is **mandatory**.
+
+## Intermediate CAs
+For generating an intermediate certificate authority, run the following command:
+
+```
+gocert intermediate -name=<...>
+```
+
+You can have one or more intermediate certificate authorities.
+Setting password for intermediate certificate authorities are **mandatory** too.
+
+Then, you need to sign your intermediate ca by root ca as follows:
+
+```
+gocert sign -ca=root -name=<intermediate_name>
+```
+
+You will be asked for entering the password for root ca.
+
+## Server Certificates
+You can generate a server certificate by running:
+
+```
+gocert server -name=<server_name>
+```
+
+The `CommonName` for server certificates must be a **Fully Qualified Domain Name** (FQDN).
+
+Your server certificate should be signed by an intermediate certificate.
+
+```
+gocert sign -ca=<intermediate_name> -name=<server_name>
+```
+
+## Client Certificates
+You can generate a client certificate similarly:
+
+```
+gocert client -name=<client_name>
+```
+
+Likewise, your client certificate should be signed by an intermediate certificate.
+
+```
+gocert sign -ca=<intermediate_name> -name=<client_name>
+```
+
