@@ -1,3 +1,5 @@
+[![Build Status][travisci-image]][travisci-url]
+
 # gocert
 A lightweight library and also command-line interface for generating self-signed SSL/TLS certificates using pure go!
 
@@ -121,3 +123,6 @@ Likewise, your client certificate should be signed by an intermediate certificat
 gocert sign -ca=<intermediate_name> -name=<client_name>
 ```
 
+
+[travisci-url]: https://travis-ci.com/moorara/gocert
+[travisci-image]: https://travis-ci.com/moorara/gocert.svg?branch=master&token=HyJPFzY74fNDzrcekdXq
