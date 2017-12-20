@@ -70,7 +70,7 @@ function ensure_env_var {
   done
 }
 
-function ensure_repo_ok {
+function ensure_repo_clean {
   status=$(git status --porcelain | tail -n 1)
   if [[ -n $status ]]; then
     printf "${red}Working direcrory is not clean.${nocolor}\n"
@@ -188,7 +188,9 @@ function release_version {
 function finish {
   disable_master_push
 
-  printf "${green}Done.${nocolor}\n"
+  if [ "$?" == "0" ]; then
+    printf "${green}Done.${nocolor}\n"
+  fi
 }
 
 
@@ -197,7 +199,7 @@ trap finish EXIT
 process_args "$@"
 ensure_command "sed" "curl" "git" "github_changelog_generator"
 ensure_env_var "GITHUB_TOKEN"
-ensure_repo_ok
+ensure_repo_clean
 
 get_repo_name
 enable_master_push
