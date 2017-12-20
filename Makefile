@@ -1,4 +1,6 @@
 path := $(shell pwd)
+binary := gocert
+build_dir := $(path)/artifacts
 reports := $(path)/reports
 
 go_packages := $(shell go list ./... | grep -v //)
@@ -15,18 +17,32 @@ flag_branch := -X $(version_package).Branch=$(branch)
 flag_buildtime := -X $(version_package).BuildTime=$(buildtime)
 ldflags := -ldflags "$(flag_version) $(flag_revision) $(flag_branch) $(flag_buildtime)"
 
+platforms := linux-386 linux-amd64 darwin-386 darwin-amd64 windows-386 windows-amd64
+
+
+define cross_compile
+	GOOS=$(shell echo $(1) | cut -d- -f1) \
+	GOARCH=$(shell echo $(1) | cut -d- -f2) \
+	go build $(ldflags) -o $(build_dir)/$(binary)-$(1);
+	printf "\033[1;32m ✓ \033[1;36m $(binary)-$(1) \033[0m\n";
+endef
+
 
 clean:
-	@ rm -rf gocert reports
+	@ rm -rf $(binary) $(build_dir) $(reports)
 
 run:
 	@ go run main.go
 
+install:
+	@ go install $(ldflags)
+
 build:
 	@ go build $(ldflags)
 
-install:
-	@ go install $(ldflags)
+build-all:
+	@ mkdir -p $(build_dir)
+	@ $(foreach platform, $(platforms), $(call cross_compile,$(platform)))
 
 test:
 	@ go test -v -race ./...
@@ -54,6 +70,6 @@ release-major:
 
 
 .PHONY: clean
-.PHONY: run build install
+.PHONY: run install build build-all
 .PHONY: test test-short coverage
 .PHONY: release release-minor release-major
