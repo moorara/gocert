@@ -59,3 +59,7 @@ They should be signed by an intermediate certificate.
 | Client       | 2048       | 40 (~1 month)   |
 
 You can change these configs by editing `state.yaml` file.
+
+
+[travisci-url]: https://travis-ci.com/moorara/gocert
+[travisci-image]: https://travis-ci.com/moorara/gocert.svg?branch=master&token=HyJPFzY74fNDzrcekdXq
