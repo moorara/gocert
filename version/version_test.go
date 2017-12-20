@@ -1,6 +1,7 @@
 package version
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -43,23 +44,23 @@ func TestGetSemVer(t *testing.T) {
 func TestGetFullSpec(t *testing.T) {
 	tests := []struct {
 		version, revision, branch, buildTime string
-		expectedFullSpec                     string
+		expectedFullSpecPrefix               string
 	}{
 		{
 			"0.1.0-0", "401f690", "local", "2017-11-28T10:00:00Z+0000",
-			"0.1.0-0+401f690 local 2017-11-28T10:00:00Z+0000 go1.9 darwin/amd64",
+			"0.1.0-0+401f690 local 2017-11-28T10:00:00Z+0000 go",
 		},
 		{
 			"0.2.0-27", "365f39f", "ci", "2017-11-29T16:06:58Z+0000",
-			"0.2.0-27+365f39f ci 2017-11-29T16:06:58Z+0000 go1.9 darwin/amd64",
+			"0.2.0-27+365f39f ci 2017-11-29T16:06:58Z+0000 go",
 		},
 		{
 			"0.3.0", "b435957", "master", "2017-11-30T12:00:00Z+0000",
-			"0.3.0+b435957 master 2017-11-30T12:00:00Z+0000 go1.9 darwin/amd64",
+			"0.3.0+b435957 master 2017-11-30T12:00:00Z+0000 go",
 		},
 		{
 			"1.0.0", "c9b0448", "master", "2017-12-01T09:09:00Z+0000",
-			"1.0.0+c9b0448 master 2017-12-01T09:09:00Z+0000 go1.9 darwin/amd64",
+			"1.0.0+c9b0448 master 2017-12-01T09:09:00Z+0000 go",
 		},
 	}
 
@@ -70,6 +71,6 @@ func TestGetFullSpec(t *testing.T) {
 		BuildTime = test.buildTime
 		fullSpec := GetFullSpec()
 
-		assert.Equal(t, test.expectedFullSpec, fullSpec)
+		assert.True(t, strings.HasPrefix(fullSpec, test.expectedFullSpecPrefix))
 	}
 }
