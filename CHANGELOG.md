@@ -1,5 +1,16 @@
 # Change Log
 
+## [v0.1.1](https://github.com/moorara/gocert/tree/v0.1.1) (2017-12-20)
+[Full Changelog](https://github.com/moorara/gocert/compare/v0.1.0...v0.1.1)
+
+**Fixed bugs:**
+
+- Fix issue with binary version [\#5](https://github.com/moorara/gocert/issues/5)
+
+**Merged pull requests:**
+
+- Fix releasing issues [\#7](https://github.com/moorara/gocert/pull/7) ([moorara](https://github.com/moorara))
+
 ## [v0.1.0](https://github.com/moorara/gocert/tree/v0.1.0) (2017-12-20)
 **Merged pull requests:**
 
