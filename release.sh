@@ -17,40 +17,13 @@ set -euo pipefail
 red='\033[1;31m'
 green='\033[1;32m'
 yellow='\033[1;33m'
+purple='\033[1;35m'
 blue='\033[1;36m'
 nocolor='\033[0m'
 
+binary="gocert"
+build_dir="./artifacts"
 
-# set: comment, component
-function process_args {
-  while [[ $# > 0 ]]; do
-    key="$1"
-    case $key in
-      patch)
-      component="$1"
-      ;;
-      minor)
-      component="$1"
-      ;;
-      major)
-      component="$1"
-      ;;
-      -c|--comment)
-      comment="$2"
-      shift
-      ;;
-    esac
-    shift
-  done
-
-  comment=${comment:-""}
-  component=${component:-patch}
-  # component=${component,,}
-  if [ "$component" != "patch" ] && [ "$component" != "minor" ] && [ "$component" != "major" ]; then
-    printf "${red}Version component $component is not valid.${nocolor}\n"
-    exit 1
-  fi
-}
 
 function ensure_command {
   for cmd in $@; do
@@ -91,6 +64,38 @@ function get_repo_name {
   )
 }
 
+
+# set: component, comment
+function process_args {
+  while [[ $# > 0 ]]; do
+    key="$1"
+    case $key in
+      patch)
+      component="$1"
+      ;;
+      minor)
+      component="$1"
+      ;;
+      major)
+      component="$1"
+      ;;
+      -c|--comment)
+      comment="$2"
+      shift
+      ;;
+    esac
+    shift
+  done
+
+  comment=${comment:-""}
+  component=${component:-patch}
+  # component=${component,,}
+  if [ "$component" != "patch" ] && [ "$component" != "minor" ] && [ "$component" != "major" ]; then
+    printf "${red}Version component $component is not valid.${nocolor}\n"
+    exit 1
+  fi
+}
+
 function enable_master_push {
   printf "${yellow}Temporarily enabling push to master branch ...${nocolor}\n"
   curl "https://api.github.com/repos/$repo/branches/master/protection/enforce_admins" \
@@ -109,29 +114,52 @@ function disable_master_push {
     -H "Accept: application/vnd.github.v3+json"
 }
 
+# set: release_version
+function release_current_version {
+  printf "${blue}Releasing current version ...${nocolor}\n"
+
+  version=$(cat version/VERSION)
+  components=(${version//./ })
+  major="${components[0]}"
+  minor="${components[1]}"
+  patch="${components[2]/-0/}"
+
+  case "$component" in
+    patch)  release_version="$major.$minor.$patch"       next_version="$major.$minor.$(( patch + 1 ))-0"  ;;
+    minor)  release_version="$major.$(( minor + 1 )).0"  next_version="$major.$(( minor + 1 )).1-0"       ;;
+    major)  release_version="$(( major + 1 )).0.0"       next_version="$(( major + 1 )).0.1-0"            ;;
+  esac
+
+  echo "$release_version" > version/VERSION
+}
+
 function generate_changelog {
-  printf "${blue}Generating changelog v$release_version ...${nocolor}\n"
+  printf "${blue}Generating changelog ...${nocolor}\n"
   CHANGELOG_GITHUB_TOKEN=$GITHUB_TOKEN \
   github_changelog_generator \
     --no-filter-by-milestone \
     --exclude-labels question,duplicate,invalid,wontfix \
+    --future-release v$release_version \
   &> /dev/null
-
-  {
-    git add .
-    git commit -m "Changelog v$release_version [skip ci]"
-    git push
-  } &> /dev/null
 }
 
 function create_github_release {
+  printf "${blue}Creating github release ${purple}v$release_version${blue} ...${nocolor}\n"
+
+  {
+    git add .
+    git commit -m "Releasing v$release_version"
+    git tag "v$release_version"
+    git push
+    git push --tags
+  } &> /dev/null
+
   changelog=$(
-    git diff v$release_version CHANGELOG.md |
+    git diff HEAD~1 CHANGELOG.md |
     sed '/^+/!d; /^+++\|+##/d; s/^+//; s/\\/\\\\/g;' |
     sed -E ':a; N; $!ba; s/\r{0,1}\n/\\n/g'
   )
 
-  printf "${blue}Creating github release v$release_version ...${nocolor}\n"
   curl "https://api.github.com/repos/$repo/releases" \
     -s -o /dev/null \
     -X POST \
@@ -149,33 +177,42 @@ function create_github_release {
 EOF
 }
 
-# set: release_version
-function release_version {
-  version=$(cat version/VERSION)
-  components=(${version//./ })
-  major="${components[0]}"
-  minor="${components[1]}"
-  patch="${components[2]/-0/}"
+function cross_compile {
+  printf "${blue}Running tests ...${nocolor}\n"
+  make test-short &> /dev/null
 
-  case "$component" in
-    patch)  release_version="$major.$minor.$patch"       next_version="$major.$minor.$(( patch + 1 ))-0"  ;;
-    minor)  release_version="$major.$(( minor + 1 )).0"  next_version="$major.$(( minor + 1 )).1-0"       ;;
-    major)  release_version="$(( major + 1 )).0.0"       next_version="$(( major + 1 )).0.1-0"            ;;
-  esac
+  printf "${blue}Cross-compiling artifacts ...${nocolor}\n"
+  make clean
+  make build-all
+}
 
-  printf "${blue}Releasing current version v$release_version ...${nocolor}\n"
-  echo "$release_version" > version/VERSION
-  {
-    git add .
-    git commit -m "Releasing v$release_version"
-    git tag "v$release_version"
-    git push
-    git push --tags
-  } &> /dev/null
+function upload_artifacts {
+  printf "${blue}Uploading artifacts to GitHub release ${purple}v$release_version${blue} ...${nocolor}\n"
 
-  generate_changelog
-  create_github_release
+  upload_url=$(
+    curl "https://api.github.com/repos/$repo/releases/latest" \
+      -s \
+      -X GET \
+      -H "Authorization: token $GITHUB_TOKEN" \
+      -H "Accept: application/vnd.github.v3+json" \
+    | jq -r ".upload_url" | sed "s/{?name,label}//1"
+  )
 
+  for filepath in $build_dir/$binary-*; do
+    filename=$(basename $filepath)
+    mimetype=$(file -b --mime-type $filepath)
+
+    curl "$upload_url?name=$filename" \
+      -s -o /dev/null \
+      -X POST \
+      -H "Authorization: token $GITHUB_TOKEN" \
+      -H "Content-Type: $mimetype" \
+      -H "Accept: application/vnd.github.v3+json" \
+      --data-binary @$filepath
+  done
+}
+
+function prepare_next_version {
   printf "${blue}Preparing next version v$next_version ...${nocolor}\n"
   echo "$next_version" > version/VERSION
   {
@@ -186,9 +223,12 @@ function release_version {
 }
 
 function finish {
-  disable_master_push
+  status=$?
 
-  if [ "$?" == "0" ]; then
+  disable_master_push
+  make clean
+
+  if [ "$status" == "0" ]; then
     printf "${green}Done.${nocolor}\n"
   fi
 }
@@ -197,10 +237,15 @@ function finish {
 trap finish EXIT
 
 process_args "$@"
-ensure_command "sed" "curl" "git" "github_changelog_generator"
+ensure_command "sed" "curl" "jq" "git" "github_changelog_generator"
 ensure_env_var "GITHUB_TOKEN"
+get_repo_name
 ensure_repo_clean
 
-get_repo_name
 enable_master_push
-release_version
+release_current_version
+generate_changelog
+create_github_release
+cross_compile
+upload_artifacts
+prepare_next_version
