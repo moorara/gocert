@@ -1,7 +1,7 @@
 path := $(shell pwd)
 binary := gocert
 build_dir := $(path)/artifacts
-reports := $(path)/reports
+report_dir := $(path)/report_dir
 
 go_packages := $(shell go list ./... | grep -v //)
 version_package := $(shell go list ./version)
@@ -24,12 +24,12 @@ define cross_compile
 	GOOS=$(shell echo $(1) | cut -d- -f1) \
 	GOARCH=$(shell echo $(1) | cut -d- -f2) \
 	go build $(ldflags) -o $(build_dir)/$(binary)-$(1);
-	printf "\033[1;32m ✓ \033[1;36m $(binary)-$(1) \033[0m\n";
+	printf "\033[1;32m ✓ \033[1;35m $(binary)-$(1) \033[0m\n";
 endef
 
 
 clean:
-	@ rm -rf $(binary) $(build_dir) $(reports)
+	@ rm -rf $(binary) $(build_dir) $(report_dir)
 
 run:
 	@ go run main.go
@@ -51,25 +51,15 @@ test-short:
 	@ go test -v -race -short ./...
 
 coverage:
-	@ mkdir -p $(reports) && \
-	  echo "mode: atomic" > $(reports)/cover.out
+	@ mkdir -p $(report_dir) && \
+	  echo "mode: atomic" > $(report_dir)/cover.out
 	@ $(foreach package, $(go_packages), \
 	    go test -covermode=atomic -coverprofile=cover.out $(package) || exit 1; \
-	    tail -n +2 cover.out >> $(reports)/cover.out;)
-	@ go tool cover -html=$(reports)/cover.out -o $(reports)/cover.html && \
-	  rm cover.out $(reports)/cover.out
-
-release:
-	@ ./release.sh patch
-
-release-minor:
-	@ ./release.sh minor
-
-release-major:
-	@ ./release.sh major
+	    tail -n +2 cover.out >> $(report_dir)/cover.out;)
+	@ go tool cover -html=$(report_dir)/cover.out -o $(report_dir)/cover.html && \
+	  rm cover.out $(report_dir)/cover.out
 
 
 .PHONY: clean
 .PHONY: run install build build-all
 .PHONY: test test-short coverage
-.PHONY: release release-minor release-major
