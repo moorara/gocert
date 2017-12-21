@@ -19,25 +19,24 @@ const (
 	reqEnterClaim   = "\nENTER SPECIFICATIONS FOR %s ..."
 
 	reqSynopsis = `Creates a new {{if eq .CertType 1}}root certificate authority{{- else}}certificate signing request{{- end}}.`
-	reqHelp     = `
-	{{if eq .CertType 1}}
+	reqHelp     = `{{if eq .CertType 1}}
 	You can use this command to create a new root certificate authority (CA).
 	The generated CA can be used for signing more intermediate certificate authorities.
 	{{- else}}
 	You can use this command to create a new certificate signing request (CSR).
 	The generated request can be later signed by a certificate authority to create the actual certificate.
 	{{- end}}
-
 	{{if eq .CertType 1}}
 	The name of root certificate authority will be "root" by default.
 	{{- else}}
 	You need to choose a name for the new certificate and its signing request.
 	{{- end}}
-	You will be asked for entering those specifications not set in "spec.toml" file.
-	These specifications are supposed to be certificate-specific and not common across all ceritificates.
-	You can enter a list by comma-separating values. If you don't want to use any of the entries, leave it empty.
-	{{if ne .CertType 1}}
+	You will be asked for entering those specs not set in "spec.toml" file.
+	These specs are supposed to be certificate-specific and not common across all ceritificates.
 
+	You can enter a list by comma-separating values.
+	If you don't want to use any of the specs, leave it empty.
+	{{if ne .CertType 1}}
 	Flags:
 		-name    set a name for the new certificate
 	{{- end}}
