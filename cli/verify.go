@@ -83,18 +83,18 @@ func (c *VerifyCommand) Run(args []string) (exit int) {
 
 	c.ui.Output("")
 
-	mdCA := resolveByName(fCA)
+	cCA := resolveByName(fCA)
 	certNames := strings.Split(fName, ",")
 
 	for _, certName := range certNames {
-		mdCert := resolveByName(certName)
+		cCert := resolveByName(certName)
 
-		err = c.pki.VerifyCert(mdCA, mdCert, fDNS)
+		err = c.pki.VerifyCert(cCA, cCert, fDNS)
 		if err != nil {
-			c.ui.Error(fmt.Sprintf(verifyFailure, mdCert.Name, err.Error()))
+			c.ui.Error(fmt.Sprintf(verifyFailure, cCert.Name, err.Error()))
 			exit = ErrorVerify
 		} else {
-			c.ui.Info(fmt.Sprintf(verifySuccess, mdCert.Name))
+			c.ui.Info(fmt.Sprintf(verifySuccess, cCert.Name))
 		}
 	}
 

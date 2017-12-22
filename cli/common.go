@@ -69,30 +69,30 @@ func saveWorkspace(state *pki.State, spec *pki.Spec, ui cli.Ui) int {
 	return 0
 }
 
-func resolveByName(name string) pki.Metadata {
-	var md pki.Metadata
+func resolveByName(name string) pki.Cert {
+	var c pki.Cert
 
-	md.Name, md.CertType = name, pki.CertTypeRoot
-	if _, err := os.Stat(md.KeyPath()); err == nil && name == rootName {
-		return md
+	c.Name, c.Type = name, pki.CertTypeRoot
+	if _, err := os.Stat(c.KeyPath()); err == nil && name == rootName {
+		return c
 	}
 
-	md.Name, md.CertType = name, pki.CertTypeInterm
-	if _, err := os.Stat(md.KeyPath()); err == nil {
-		return md
+	c.Name, c.Type = name, pki.CertTypeInterm
+	if _, err := os.Stat(c.KeyPath()); err == nil {
+		return c
 	}
 
-	md.Name, md.CertType = name, pki.CertTypeServer
-	if _, err := os.Stat(md.KeyPath()); err == nil {
-		return md
+	c.Name, c.Type = name, pki.CertTypeServer
+	if _, err := os.Stat(c.KeyPath()); err == nil {
+		return c
 	}
 
-	md.Name, md.CertType = name, pki.CertTypeClient
-	if _, err := os.Stat(md.KeyPath()); err == nil {
-		return md
+	c.Name, c.Type = name, pki.CertTypeClient
+	if _, err := os.Stat(c.KeyPath()); err == nil {
+		return c
 	}
 
-	return pki.Metadata{}
+	return pki.Cert{}
 }
 
 func askForNewState(ui cli.Ui) *pki.State {

@@ -18,15 +18,15 @@ const (
 	reqEnterConfig  = "\nENTER CONFIGURATIONS FOR %s ..."
 	reqEnterClaim   = "\nENTER SPECIFICATIONS FOR %s ..."
 
-	reqSynopsis = `Creates a new {{if eq .CertType 1}}root certificate authority{{- else}}certificate signing request{{- end}}.`
-	reqHelp     = `{{if eq .CertType 1}}
+	reqSynopsis = `Creates a new {{if eq .Type 1}}root certificate authority{{- else}}certificate signing request{{- end}}.`
+	reqHelp     = `{{if eq .Type 1}}
 	You can use this command to create a new root certificate authority (CA).
 	The generated CA can be used for signing more intermediate certificate authorities.
 	{{- else}}
 	You can use this command to create a new certificate signing request (CSR).
 	The generated request can be later signed by a certificate authority to create the actual certificate.
 	{{- end}}
-	{{if eq .CertType 1}}
+	{{if eq .Type 1}}
 	The name of root certificate authority will be "root" by default.
 	{{- else}}
 	You need to choose a name for the new certificate and its signing request.
@@ -36,7 +36,7 @@ const (
 
 	You can enter a list by comma-separating values.
 	If you don't want to use any of the specs, leave it empty.
-	{{if ne .CertType 1}}
+	{{if ne .Type 1}}
 	Flags:
 		-name    set a name for the new certificate
 	{{- end}}
@@ -47,20 +47,20 @@ const (
 type ReqCommand struct {
 	ui  cli.Ui
 	pki pki.Manager
-	md  pki.Metadata
+	c   pki.Cert
 }
 
 // NewReqCommand creates a new command
-func NewReqCommand(md pki.Metadata) *ReqCommand {
+func NewReqCommand(c pki.Cert) *ReqCommand {
 	return &ReqCommand{
 		ui:  newColoredUI(),
 		pki: pki.NewX509Manager(),
-		md:  md,
+		c:   c,
 	}
 }
 
 func (c *ReqCommand) output(text string) {
-	text = fmt.Sprintf(text, strings.ToUpper(c.md.Title()))
+	text = fmt.Sprintf(text, strings.ToUpper(c.c.Title()))
 	c.ui.Output(text)
 }
 
@@ -68,7 +68,7 @@ func (c *ReqCommand) output(text string) {
 func (c *ReqCommand) Synopsis() string {
 	var buf bytes.Buffer
 	t := template.Must(template.New("synopsis").Parse(reqSynopsis))
-	t.Execute(&buf, c.md) // In case of error, empty string will be returned
+	t.Execute(&buf, c.c) // In case of error, empty string will be returned
 	return buf.String()
 }
 
@@ -76,7 +76,7 @@ func (c *ReqCommand) Synopsis() string {
 func (c *ReqCommand) Help() string {
 	var buf bytes.Buffer
 	t := template.Must(template.New("help").Parse(reqHelp))
-	t.Execute(&buf, c.md) // In case of error, empty string will be returned
+	t.Execute(&buf, c.c) // In case of error, empty string will be returned
 	return buf.String()
 }
 
@@ -84,20 +84,20 @@ func (c *ReqCommand) Help() string {
 func (c *ReqCommand) Run(args []string) int {
 	flags := flag.NewFlagSet("req", flag.ContinueOnError)
 	flags.Usage = func() {}
-	flags.StringVar(&c.md.Name, "name", "", "")
+	flags.StringVar(&c.c.Name, "name", "", "")
 	err := flags.Parse(args)
 	if err != nil {
 		return ErrorInvalidFlag
 	}
 
 	// There should be only one root ca with a default name
-	if c.md.CertType == pki.CertTypeRoot {
-		c.md.Name = rootName
+	if c.c.Type == pki.CertTypeRoot {
+		c.c.Name = rootName
 	}
 
-	if c.md.Name == "" {
+	if c.c.Name == "" {
 		c.output(reqEnterName)
-		c.md.Name, err = c.ui.Ask(fmt.Sprintf(askTemplate, "Name", "string"))
+		c.c.Name, err = c.ui.Ask(fmt.Sprintf(askTemplate, "Name", "string"))
 		if err != nil {
 			return ErrorInvalidName
 		}
@@ -108,14 +108,14 @@ func (c *ReqCommand) Run(args []string) int {
 		return status
 	}
 
-	config, ok1 := state.ConfigFor(c.md.CertType)
-	claim, ok2 := spec.ClaimFor(c.md.CertType)
+	config, ok1 := state.ConfigFor(c.c.Type)
+	claim, ok2 := spec.ClaimFor(c.c.Type)
 	if !ok1 || !ok2 {
-		return ErrorInvalidMetadata
+		return ErrorInvalidCert
 	}
 
 	// User certificates should not have a password
-	if c.md.CertType == pki.CertTypeServer || c.md.CertType == pki.CertTypeClient {
+	if c.c.Type == pki.CertTypeServer || c.c.Type == pki.CertTypeClient {
 		config.Password = "bypass"
 	}
 
@@ -125,20 +125,20 @@ func (c *ReqCommand) Run(args []string) int {
 	c.output(reqEnterClaim)
 	askForClaim(&claim, c.ui)
 
-	if c.md.CertType == pki.CertTypeRoot {
-		err = c.pki.GenCert(config, claim, c.md)
+	if c.c.Type == pki.CertTypeRoot {
+		err = c.pki.GenCert(config, claim, c.c)
 		if err != nil {
 			c.ui.Error("Failed to generate root ca. Error: " + err.Error())
 			return ErrorCert
 		}
-		c.ui.Info(fmt.Sprintf(reqMessageRoot, c.md.Name))
+		c.ui.Info(fmt.Sprintf(reqMessageRoot, c.c.Name))
 	} else {
-		err = c.pki.GenCSR(config, claim, c.md)
+		err = c.pki.GenCSR(config, claim, c.c)
 		if err != nil {
 			c.ui.Error("Failed to generate certificate signing request. Error: " + err.Error())
 			return ErrorCSR
 		}
-		c.ui.Info(fmt.Sprintf(reqMessageOther, c.md.Name))
+		c.ui.Info(fmt.Sprintf(reqMessageOther, c.c.Name))
 	}
 
 	return 0

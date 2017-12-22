@@ -12,33 +12,33 @@ import (
 
 func TestNewReqCommand(t *testing.T) {
 	tests := []struct {
-		md               pki.Metadata
+		c                pki.Cert
 		expectedSynopsis string
 	}{
 		{
-			pki.Metadata{CertType: pki.CertTypeRoot},
+			pki.Cert{Type: pki.CertTypeRoot},
 			"Creates a new root certificate authority.",
 		},
 		{
-			pki.Metadata{CertType: pki.CertTypeInterm},
+			pki.Cert{Type: pki.CertTypeInterm},
 			"Creates a new certificate signing request.",
 		},
 		{
-			pki.Metadata{CertType: pki.CertTypeServer},
+			pki.Cert{Type: pki.CertTypeServer},
 			"Creates a new certificate signing request.",
 		},
 		{
-			pki.Metadata{CertType: pki.CertTypeClient},
+			pki.Cert{Type: pki.CertTypeClient},
 			"Creates a new certificate signing request.",
 		},
 	}
 
 	for _, test := range tests {
-		cmd := NewReqCommand(test.md)
+		cmd := NewReqCommand(test.c)
 
 		assert.Equal(t, newColoredUI(), cmd.ui)
 		assert.Equal(t, pki.NewX509Manager(), cmd.pki)
-		assert.Equal(t, test.md, cmd.md)
+		assert.Equal(t, test.c, cmd.c)
 
 		assert.Equal(t, test.expectedSynopsis, cmd.Synopsis())
 		assert.NotEmpty(t, cmd.Help())
@@ -50,7 +50,7 @@ func TestReqCommand(t *testing.T) {
 		title string
 		state *pki.State
 		spec  *pki.Spec
-		md    pki.Metadata
+		c     pki.Cert
 		args  []string
 		input string
 	}{
@@ -58,7 +58,7 @@ func TestReqCommand(t *testing.T) {
 			"GenSimpleRootCA",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeRoot},
+			pki.Cert{Type: pki.CertTypeRoot},
 			[]string{},
 			`RootCA
 			`,
@@ -67,7 +67,7 @@ func TestReqCommand(t *testing.T) {
 			"GenSimpleIntermediateCA",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeInterm},
+			pki.Cert{Type: pki.CertTypeInterm},
 			[]string{"-name=ops"},
 			`OpsCA
 			`,
@@ -76,7 +76,7 @@ func TestReqCommand(t *testing.T) {
 			"GenSimpleServerCert",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeServer},
+			pki.Cert{Type: pki.CertTypeServer},
 			[]string{"-name", "webapp"},
 			`WebApp
 			`,
@@ -85,7 +85,7 @@ func TestReqCommand(t *testing.T) {
 			"GenSimpleClientCert",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeClient},
+			pki.Cert{Type: pki.CertTypeClient},
 			[]string{},
 			`myservice
 			MyService
@@ -101,7 +101,7 @@ func TestReqCommand(t *testing.T) {
 					Organization: []string{"Milad"},
 				},
 			},
-			pki.Metadata{CertType: pki.CertTypeRoot},
+			pki.Cert{Type: pki.CertTypeRoot},
 			[]string{},
 			`RootCA
 			`,
@@ -116,7 +116,7 @@ func TestReqCommand(t *testing.T) {
 					Organization: []string{"Milad"},
 				},
 			},
-			pki.Metadata{CertType: pki.CertTypeInterm},
+			pki.Cert{Type: pki.CertTypeInterm},
 			[]string{"-name=ops"},
 			`IntermediateCA
 			Ottawa
@@ -134,7 +134,7 @@ func TestReqCommand(t *testing.T) {
 					Organization: []string{"Milad"},
 				},
 			},
-			pki.Metadata{CertType: pki.CertTypeServer},
+			pki.Cert{Type: pki.CertTypeServer},
 			[]string{"-name", "webapp"},
 			`WebApp
 			`,
@@ -150,7 +150,7 @@ func TestReqCommand(t *testing.T) {
 					Organization: []string{"Milad"},
 				},
 			},
-			pki.Metadata{CertType: pki.CertTypeClient},
+			pki.Cert{Type: pki.CertTypeClient},
 			[]string{},
 			`myservice
 			MyService
@@ -169,7 +169,7 @@ func TestReqCommand(t *testing.T) {
 			cmd := &ReqCommand{
 				ui:  mockUI,
 				pki: &mockedManager{},
-				md:  test.md,
+				c:   test.c,
 			}
 
 			exit := cmd.Run(test.args)
@@ -186,7 +186,7 @@ func TestReqCommandError(t *testing.T) {
 		title        string
 		state        *pki.State
 		spec         *pki.Spec
-		md           pki.Metadata
+		c            pki.Cert
 		args         []string
 		input        string
 		GenCertError error
@@ -197,7 +197,7 @@ func TestReqCommandError(t *testing.T) {
 			"InvalidFlag",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeRoot},
+			pki.Cert{Type: pki.CertTypeRoot},
 			[]string{"-invalid"},
 			``,
 			nil,
@@ -208,7 +208,7 @@ func TestReqCommandError(t *testing.T) {
 			"NoName",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{},
+			pki.Cert{},
 			[]string{},
 			``,
 			nil,
@@ -219,7 +219,7 @@ func TestReqCommandError(t *testing.T) {
 			"NoState",
 			nil,
 			nil,
-			pki.Metadata{},
+			pki.Cert{},
 			[]string{},
 			`sre
 			`,
@@ -231,7 +231,7 @@ func TestReqCommandError(t *testing.T) {
 			"NoSpec",
 			pki.NewState(),
 			nil,
-			pki.Metadata{},
+			pki.Cert{},
 			[]string{"-name=sre"},
 			``,
 			nil,
@@ -239,21 +239,21 @@ func TestReqCommandError(t *testing.T) {
 			ErrorReadSpec,
 		},
 		{
-			"NoMetadata",
+			"NoCert",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{},
+			pki.Cert{},
 			[]string{"-name", "sre"},
 			``,
 			nil,
 			nil,
-			ErrorInvalidMetadata,
+			ErrorInvalidCert,
 		},
 		{
 			"GenCertError",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeRoot},
+			pki.Cert{Type: pki.CertTypeRoot},
 			[]string{},
 			``,
 			errors.New("error"),
@@ -264,7 +264,7 @@ func TestReqCommandError(t *testing.T) {
 			"GenCSRError",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeInterm},
+			pki.Cert{Type: pki.CertTypeInterm},
 			[]string{"-name=ops"},
 			``,
 			nil,
@@ -275,7 +275,7 @@ func TestReqCommandError(t *testing.T) {
 			"GenCSRError",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeServer},
+			pki.Cert{Type: pki.CertTypeServer},
 			[]string{"-name", "webapp"},
 			``,
 			nil,
@@ -286,7 +286,7 @@ func TestReqCommandError(t *testing.T) {
 			"GenCSRError",
 			pki.NewState(),
 			pki.NewSpec(),
-			pki.Metadata{CertType: pki.CertTypeClient},
+			pki.Cert{Type: pki.CertTypeClient},
 			[]string{"-name=ops"},
 			`myservice
 			`,
@@ -310,7 +310,7 @@ func TestReqCommandError(t *testing.T) {
 					GenCertError: test.GenCertError,
 					GenCSRError:  test.GenCSRError,
 				},
-				md: test.md,
+				c: test.c,
 			}
 
 			exit := cmd.Run(test.args)
