@@ -176,14 +176,14 @@ func readCertificateRequest(path string) (*x509.CertificateRequest, error) {
 	return csr, nil
 }
 
-func writeCertificateChain(md, mdCA Metadata) error {
+func writeCertificateChain(c, cCA Cert) error {
 	// Only an intermediate ca needs a certificate chain
-	if md.CertType != CertTypeInterm {
+	if c.Type != CertTypeInterm {
 		return errors.New("Only intermediate CAs have certificate chain")
 	}
 
 	// CA can only be root or another intermediate
-	if mdCA.CertType != CertTypeRoot && mdCA.CertType != CertTypeInterm {
+	if cCA.Type != CertTypeRoot && cCA.Type != CertTypeInterm {
 		return errors.New("CA can only be root ca or another intermediate CA")
 	}
 
@@ -191,7 +191,7 @@ func writeCertificateChain(md, mdCA Metadata) error {
 
 	/* First, write certificate to chain */
 
-	certFile, err := os.Open(md.CertPath())
+	certFile, err := os.Open(c.CertPath())
 	if err != nil {
 		return err
 	}
@@ -208,7 +208,7 @@ func writeCertificateChain(md, mdCA Metadata) error {
 
 	/* Next, wrtite the root ca certifiate or ca chain */
 
-	caFile, err := os.Open(mdCA.ChainPath())
+	caFile, err := os.Open(cCA.ChainPath())
 	if err != nil {
 		return err
 	}
@@ -225,7 +225,7 @@ func writeCertificateChain(md, mdCA Metadata) error {
 
 	/* Finally, write certificate chain file */
 
-	chainFile, err := os.Create(md.ChainPath())
+	chainFile, err := os.Create(c.ChainPath())
 	if err != nil {
 		return err
 	}

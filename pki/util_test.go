@@ -390,68 +390,68 @@ func TestWriteReadCertificateChain(t *testing.T) {
 
 	tests := []struct {
 		title       string
-		md          Metadata
-		mdCA        Metadata
+		c           Cert
+		cCA         Cert
 		expectError bool
 	}{
 		{
 			"InvalidCertTypeRoot",
-			Metadata{CertType: CertTypeRoot},
-			Metadata{},
+			Cert{Type: CertTypeRoot},
+			Cert{},
 			true,
 		},
 		{
 			"InvalidCertTypeServer",
-			Metadata{CertType: CertTypeServer},
-			Metadata{},
+			Cert{Type: CertTypeServer},
+			Cert{},
 			true,
 		},
 		{
 			"InvalidCertTypeClient",
-			Metadata{CertType: CertTypeClient},
-			Metadata{},
+			Cert{Type: CertTypeClient},
+			Cert{},
 			true,
 		},
 		{
 			"InvalidCATypeServer",
-			Metadata{CertType: CertTypeInterm},
-			Metadata{CertType: CertTypeServer},
+			Cert{Type: CertTypeInterm},
+			Cert{Type: CertTypeServer},
 			true,
 		},
 		{
 			"InvalidCATypeClient",
-			Metadata{CertType: CertTypeInterm},
-			Metadata{CertType: CertTypeClient},
+			Cert{Type: CertTypeInterm},
+			Cert{Type: CertTypeClient},
 			true,
 		},
 		{
 			"InvalidCertName",
-			Metadata{CertType: CertTypeInterm},
-			Metadata{CertType: CertTypeRoot},
+			Cert{Type: CertTypeInterm},
+			Cert{Type: CertTypeRoot},
 			true,
 		},
 		{
 			"CertNotExist",
-			Metadata{Name: "interm", CertType: CertTypeInterm},
-			Metadata{CertType: CertTypeRoot},
+			Cert{Name: "interm", Type: CertTypeInterm},
+			Cert{Type: CertTypeRoot},
 			true,
 		},
 		{
 			"CANotExist",
-			Metadata{Name: "ops", CertType: CertTypeInterm},
-			Metadata{Name: "bad", CertType: CertTypeRoot},
+			Cert{Name: "ops", Type: CertTypeInterm},
+			Cert{Name: "bad", Type: CertTypeRoot},
 			true,
 		},
 		{
 			"RootInterm",
-			Metadata{Name: "sre", CertType: CertTypeInterm},
-			Metadata{Name: "root", CertType: CertTypeRoot},
+			Cert{Name: "sre", Type: CertTypeInterm},
+			Cert{Name: "root", Type: CertTypeRoot},
 			false,
 		},
 		{
 			"IntermInterm",
-			Metadata{Name: "rd", CertType: CertTypeInterm},
-			Metadata{Name: "sre", CertType: CertTypeInterm},
+			Cert{Name: "rd", Type: CertTypeInterm},
+			Cert{Name: "sre", Type: CertTypeInterm},
 			false,
 		},
 	}
@@ -459,7 +459,7 @@ func TestWriteReadCertificateChain(t *testing.T) {
 	t.Run("TestWriteCertificateChain", func(t *testing.T) {
 		for _, test := range tests {
 			t.Run(test.title, func(t *testing.T) {
-				err := writeCertificateChain(test.md, test.mdCA)
+				err := writeCertificateChain(test.c, test.cCA)
 
 				if test.expectError {
 					assert.Error(t, err)
@@ -473,7 +473,7 @@ func TestWriteReadCertificateChain(t *testing.T) {
 	t.Run("TestReadCertificateChain", func(t *testing.T) {
 		for _, test := range tests {
 			t.Run(test.title, func(t *testing.T) {
-				certs, err := readCertificateChain(test.md.ChainPath())
+				certs, err := readCertificateChain(test.c.ChainPath())
 
 				if test.expectError {
 					assert.Error(t, err)

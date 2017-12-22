@@ -107,15 +107,15 @@ func TestGenCertError(t *testing.T) {
 		title      string
 		config     Config
 		claim      Claim
-		md         Metadata
+		c          Cert
 		writeFiles bool
 	}{
 		{
 			"RootNoName",
 			Config{},
 			Claim{},
-			Metadata{
-				CertType: CertTypeRoot,
+			Cert{
+				Type: CertTypeRoot,
 			},
 			false,
 		},
@@ -123,9 +123,9 @@ func TestGenCertError(t *testing.T) {
 			"RootExistingName",
 			Config{},
 			Claim{},
-			Metadata{
-				Name:     "root",
-				CertType: CertTypeRoot,
+			Cert{
+				Name: "root",
+				Type: CertTypeRoot,
 			},
 			true,
 		},
@@ -133,9 +133,9 @@ func TestGenCertError(t *testing.T) {
 			"RootNoConfig",
 			Config{},
 			Claim{},
-			Metadata{
-				Name:     "root",
-				CertType: CertTypeRoot,
+			Cert{
+				Name: "root",
+				Type: CertTypeRoot,
 			},
 			false,
 		},
@@ -148,17 +148,17 @@ func TestGenCertError(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			if test.writeFiles {
-				err = ioutil.WriteFile(test.md.KeyPath(), nil, 0644)
+				err = ioutil.WriteFile(test.c.KeyPath(), nil, 0644)
 				assert.NoError(t, err)
-				err = ioutil.WriteFile(test.md.CertPath(), nil, 0644)
+				err = ioutil.WriteFile(test.c.CertPath(), nil, 0644)
 				assert.NoError(t, err)
 			}
 
 			manager := NewX509Manager()
-			err = manager.GenCert(test.config, test.claim, test.md)
+			err = manager.GenCert(test.config, test.claim, test.c)
 			assert.Error(t, err)
 
-			err = util.DeleteAll("", test.md.KeyPath(), test.md.CertPath())
+			err = util.DeleteAll("", test.c.KeyPath(), test.c.CertPath())
 			assert.NoError(t, err)
 		})
 	}
@@ -169,15 +169,15 @@ func TestGenCSRError(t *testing.T) {
 		title      string
 		config     Config
 		claim      Claim
-		md         Metadata
+		c          Cert
 		writeFiles bool
 	}{
 		{
 			"IntermNoName",
 			Config{},
 			Claim{},
-			Metadata{
-				CertType: CertTypeInterm,
+			Cert{
+				Type: CertTypeInterm,
 			},
 			false,
 		},
@@ -185,8 +185,8 @@ func TestGenCSRError(t *testing.T) {
 			"ServerNoName",
 			Config{},
 			Claim{},
-			Metadata{
-				CertType: CertTypeServer,
+			Cert{
+				Type: CertTypeServer,
 			},
 			false,
 		},
@@ -194,8 +194,8 @@ func TestGenCSRError(t *testing.T) {
 			"ClientNoName",
 			Config{},
 			Claim{},
-			Metadata{
-				CertType: CertTypeClient,
+			Cert{
+				Type: CertTypeClient,
 			},
 			false,
 		},
@@ -203,9 +203,9 @@ func TestGenCSRError(t *testing.T) {
 			"IntermExistingName",
 			Config{},
 			Claim{},
-			Metadata{
-				Name:     "interm",
-				CertType: CertTypeInterm,
+			Cert{
+				Name: "interm",
+				Type: CertTypeInterm,
 			},
 			true,
 		},
@@ -213,9 +213,9 @@ func TestGenCSRError(t *testing.T) {
 			"ServerExistingName",
 			Config{},
 			Claim{},
-			Metadata{
-				Name:     "server",
-				CertType: CertTypeServer,
+			Cert{
+				Name: "server",
+				Type: CertTypeServer,
 			},
 			true,
 		},
@@ -223,9 +223,9 @@ func TestGenCSRError(t *testing.T) {
 			"ClientExistingName",
 			Config{},
 			Claim{},
-			Metadata{
-				Name:     "client",
-				CertType: CertTypeClient,
+			Cert{
+				Name: "client",
+				Type: CertTypeClient,
 			},
 			true,
 		},
@@ -233,9 +233,9 @@ func TestGenCSRError(t *testing.T) {
 			"IntermNoConfig",
 			Config{},
 			Claim{},
-			Metadata{
-				Name:     "interm",
-				CertType: CertTypeInterm,
+			Cert{
+				Name: "interm",
+				Type: CertTypeInterm,
 			},
 			false,
 		},
@@ -243,9 +243,9 @@ func TestGenCSRError(t *testing.T) {
 			"ServerNoConfig",
 			Config{},
 			Claim{},
-			Metadata{
-				Name:     "server",
-				CertType: CertTypeServer,
+			Cert{
+				Name: "server",
+				Type: CertTypeServer,
 			},
 			false,
 		},
@@ -253,9 +253,9 @@ func TestGenCSRError(t *testing.T) {
 			"ClientNoConfig",
 			Config{},
 			Claim{},
-			Metadata{
-				Name:     "client",
-				CertType: CertTypeClient,
+			Cert{
+				Name: "client",
+				Type: CertTypeClient,
 			},
 			false,
 		},
@@ -268,19 +268,19 @@ func TestGenCSRError(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			if test.writeFiles {
-				err = ioutil.WriteFile(test.md.KeyPath(), nil, 0644)
+				err = ioutil.WriteFile(test.c.KeyPath(), nil, 0644)
 				assert.NoError(t, err)
-				err = ioutil.WriteFile(test.md.CSRPath(), nil, 0644)
+				err = ioutil.WriteFile(test.c.CSRPath(), nil, 0644)
 				assert.NoError(t, err)
-				err = ioutil.WriteFile(test.md.CertPath(), nil, 0644)
+				err = ioutil.WriteFile(test.c.CertPath(), nil, 0644)
 				assert.NoError(t, err)
 			}
 
 			manager := NewX509Manager()
-			err = manager.GenCSR(test.config, test.claim, test.md)
+			err = manager.GenCSR(test.config, test.claim, test.c)
 			assert.Error(t, err)
 
-			err = util.DeleteAll("", test.md.KeyPath(), test.md.CSRPath(), test.md.CertPath())
+			err = util.DeleteAll("", test.c.KeyPath(), test.c.CSRPath(), test.c.CertPath())
 			assert.NoError(t, err)
 		})
 	}
@@ -290,17 +290,17 @@ func TestSignCSRError(t *testing.T) {
 	tests := []struct {
 		title     string
 		configCA  Config
-		mdCA      Metadata
+		cCA       Cert
 		configCSR Config
-		mdCSR     Metadata
+		cCSR      Cert
 		trust     TrustFunc
 	}{
 		{
 			"NoCA",
 			Config{},
-			Metadata{},
+			Cert{},
 			Config{},
-			Metadata{},
+			Cert{},
 			nil,
 		},
 		{
@@ -310,12 +310,12 @@ func TestSignCSRError(t *testing.T) {
 				Length: 1024,
 				Days:   3650,
 			},
-			Metadata{
-				Name:     "root",
-				CertType: CertTypeRoot,
+			Cert{
+				Name: "root",
+				Type: CertTypeRoot,
 			},
 			Config{},
-			Metadata{},
+			Cert{},
 			nil,
 		},
 		{
@@ -325,18 +325,18 @@ func TestSignCSRError(t *testing.T) {
 				Length: 1024,
 				Days:   3650,
 			},
-			Metadata{
-				Name:     "root",
-				CertType: CertTypeRoot,
+			Cert{
+				Name: "root",
+				Type: CertTypeRoot,
 			},
 			Config{
 				Serial: 1000,
 				Length: 1024,
 				Days:   375,
 			},
-			Metadata{
-				Name:     "interm",
-				CertType: CertTypeInterm,
+			Cert{
+				Name: "interm",
+				Type: CertTypeInterm,
 			},
 			func(*x509.Certificate, *x509.CertificateRequest) bool {
 				return false
@@ -354,18 +354,18 @@ func TestSignCSRError(t *testing.T) {
 			manager := NewX509Manager()
 
 			if !reflect.DeepEqual(test.configCA, Config{}) {
-				manager.GenCert(test.configCA, Claim{}, test.mdCA)
+				manager.GenCert(test.configCA, Claim{}, test.cCA)
 				assert.NoError(t, err)
-				files = append(files, test.mdCA.KeyPath(), test.mdCA.CertPath())
+				files = append(files, test.cCA.KeyPath(), test.cCA.CertPath())
 			}
 
 			if !reflect.DeepEqual(test.configCSR, Config{}) {
-				manager.GenCSR(test.configCSR, Claim{}, test.mdCSR)
+				manager.GenCSR(test.configCSR, Claim{}, test.cCSR)
 				assert.NoError(t, err)
-				files = append(files, test.mdCSR.KeyPath(), test.mdCSR.CSRPath(), test.mdCSR.CertPath())
+				files = append(files, test.cCSR.KeyPath(), test.cCSR.CSRPath(), test.cCSR.CertPath())
 			}
 
-			err := manager.SignCSR(test.configCA, test.mdCA, test.configCSR, test.mdCSR, test.trust)
+			err := manager.SignCSR(test.configCA, test.cCA, test.configCSR, test.cCSR, test.trust)
 			assert.Error(t, err)
 
 			err = util.DeleteAll("", files...)
@@ -377,38 +377,38 @@ func TestSignCSRError(t *testing.T) {
 func TestVerifyCertError(t *testing.T) {
 	tests := []struct {
 		title   string
-		mdCA    Metadata
-		md      Metadata
+		cCA     Cert
+		c       Cert
 		dnsName string
 	}{
 		{
 			"InvalidCA",
-			Metadata{CertType: CertTypeServer},
-			Metadata{},
+			Cert{Type: CertTypeServer},
+			Cert{},
 			"",
 		},
 		{
 			"CANotExist",
-			Metadata{CertType: CertTypeInterm},
-			Metadata{Name: "sre", CertType: CertTypeInterm},
+			Cert{Type: CertTypeInterm},
+			Cert{Name: "sre", Type: CertTypeInterm},
 			"",
 		},
 		{
 			"CertNotExist",
-			Metadata{Name: "root", CertType: CertTypeRoot},
-			Metadata{},
+			Cert{Name: "root", Type: CertTypeRoot},
+			Cert{},
 			"",
 		},
 		{
 			"CannotVerify",
-			Metadata{Name: "root", CertType: CertTypeRoot},
-			Metadata{Name: "rd", CertType: CertTypeInterm},
+			Cert{Name: "root", Type: CertTypeRoot},
+			Cert{Name: "rd", Type: CertTypeInterm},
 			"",
 		},
 		{
 			"CannotVerifyDNS",
-			Metadata{Name: "root", CertType: CertTypeRoot},
-			Metadata{Name: "sre", CertType: CertTypeInterm},
+			Cert{Name: "root", Type: CertTypeRoot},
+			Cert{Name: "sre", Type: CertTypeInterm},
 			"example.com",
 		},
 	}
@@ -420,7 +420,7 @@ func TestVerifyCertError(t *testing.T) {
 		t.Run(test.title, func(t *testing.T) {
 			manager := NewX509Manager()
 
-			err := manager.VerifyCert(test.mdCA, test.md, test.dnsName)
+			err := manager.VerifyCert(test.cCA, test.c, test.dnsName)
 			assert.Error(t, err)
 		})
 	}
@@ -431,10 +431,10 @@ func TestX509Manager(t *testing.T) {
 		title     string
 		state     *State
 		spec      *Spec
-		mdRoot    Metadata
-		mdInterm  Metadata
-		mdServer  Metadata
-		mdClient  Metadata
+		cRoot     Cert
+		cInterm   Cert
+		cServer   Cert
+		cClient   Cert
 		dnsServer string
 		dnsClient string
 	}{
@@ -470,16 +470,16 @@ func TestX509Manager(t *testing.T) {
 					Supplied: []string{"CommonName"},
 				},
 			},
-			Metadata{
-				Name:     "root",
-				CertType: CertTypeRoot,
+			Cert{
+				Name: "root",
+				Type: CertTypeRoot,
 			},
-			Metadata{
-				Name:     "ops",
-				CertType: CertTypeInterm,
+			Cert{
+				Name: "ops",
+				Type: CertTypeInterm,
 			},
-			Metadata{},
-			Metadata{},
+			Cert{},
+			Cert{},
 			"",
 			"",
 		},
@@ -535,19 +535,19 @@ func TestX509Manager(t *testing.T) {
 					Supplied: []string{"CommonName", "DNSName"},
 				},
 			},
-			Metadata{
-				Name:     "root",
-				CertType: CertTypeRoot,
+			Cert{
+				Name: "root",
+				Type: CertTypeRoot,
 			},
-			Metadata{
-				Name:     "ops",
-				CertType: CertTypeInterm,
+			Cert{
+				Name: "ops",
+				Type: CertTypeInterm,
 			},
-			Metadata{
-				Name:     "milad.io",
-				CertType: CertTypeServer,
+			Cert{
+				Name: "milad.io",
+				Type: CertTypeServer,
 			},
-			Metadata{},
+			Cert{},
 			"milad.io",
 			"",
 		},
@@ -616,21 +616,21 @@ func TestX509Manager(t *testing.T) {
 					Supplied: []string{"CommonName", "DNSName"},
 				},
 			},
-			Metadata{
-				Name:     "root",
-				CertType: CertTypeRoot,
+			Cert{
+				Name: "root",
+				Type: CertTypeRoot,
 			},
-			Metadata{
-				Name:     "ops",
-				CertType: CertTypeInterm,
+			Cert{
+				Name: "ops",
+				Type: CertTypeInterm,
 			},
-			Metadata{
-				Name:     "milad.io",
-				CertType: CertTypeServer,
+			Cert{
+				Name: "milad.io",
+				Type: CertTypeServer,
 			},
-			Metadata{
-				Name:     "auth.service",
-				CertType: CertTypeClient,
+			Cert{
+				Name: "auth.service",
+				Type: CertTypeClient,
 			},
 			"milad.io",
 			"auth.milad.io",
@@ -645,63 +645,63 @@ func TestX509Manager(t *testing.T) {
 			manager := NewX509Manager()
 
 			// Generate Root CA
-			if !reflect.DeepEqual(test.state.Root, &Config{}) && !reflect.DeepEqual(test.spec.Root, &Claim{}) && !reflect.DeepEqual(test.mdRoot, &Metadata{}) {
-				err = manager.GenCert(test.state.Root, test.spec.Root, test.mdRoot)
+			if !reflect.DeepEqual(test.state.Root, &Config{}) && !reflect.DeepEqual(test.spec.Root, &Claim{}) && !reflect.DeepEqual(test.cRoot, &Cert{}) {
+				err = manager.GenCert(test.state.Root, test.spec.Root, test.cRoot)
 				assert.NoError(t, err)
 
-				parseKey(t, test.state.Root.Password, test.mdRoot.KeyPath())
-				parseCert(t, test.mdRoot.CertPath())
+				parseKey(t, test.state.Root.Password, test.cRoot.KeyPath())
+				parseCert(t, test.cRoot.CertPath())
 
-				err = manager.VerifyCert(test.mdRoot, test.mdRoot, "")
+				err = manager.VerifyCert(test.cRoot, test.cRoot, "")
 				assert.NoError(t, err)
 			}
 
 			// Generate Intermediate CSR and sign it by Root CA
-			if !reflect.DeepEqual(test.state.Interm, Config{}) && !reflect.DeepEqual(test.spec.Interm, Claim{}) && !reflect.DeepEqual(test.mdInterm, Metadata{}) {
-				err = manager.GenCSR(test.state.Interm, test.spec.Interm, test.mdInterm)
+			if !reflect.DeepEqual(test.state.Interm, Config{}) && !reflect.DeepEqual(test.spec.Interm, Claim{}) && !reflect.DeepEqual(test.cInterm, Cert{}) {
+				err = manager.GenCSR(test.state.Interm, test.spec.Interm, test.cInterm)
 				assert.NoError(t, err)
 
-				err = manager.SignCSR(test.state.Root, test.mdRoot, test.state.Interm, test.mdInterm, PolicyTrustFunc(test.spec.RootPolicy))
+				err = manager.SignCSR(test.state.Root, test.cRoot, test.state.Interm, test.cInterm, PolicyTrustFunc(test.spec.RootPolicy))
 				assert.NoError(t, err)
 
-				parseKey(t, test.state.Interm.Password, test.mdInterm.KeyPath())
-				parseCSR(t, test.mdInterm.CSRPath())
-				parseCert(t, test.mdInterm.CertPath())
-				parseChain(t, test.mdInterm.ChainPath())
+				parseKey(t, test.state.Interm.Password, test.cInterm.KeyPath())
+				parseCSR(t, test.cInterm.CSRPath())
+				parseCert(t, test.cInterm.CertPath())
+				parseChain(t, test.cInterm.ChainPath())
 
-				err = manager.VerifyCert(test.mdRoot, test.mdInterm, "")
+				err = manager.VerifyCert(test.cRoot, test.cInterm, "")
 				assert.NoError(t, err)
 			}
 
 			// Generate Server CSR and it by Intermediate CA
-			if !reflect.DeepEqual(test.state.Server, Config{}) && !reflect.DeepEqual(test.spec.Server, Claim{}) && !reflect.DeepEqual(test.mdServer, Metadata{}) {
-				err = manager.GenCSR(test.state.Server, test.spec.Server, test.mdServer)
+			if !reflect.DeepEqual(test.state.Server, Config{}) && !reflect.DeepEqual(test.spec.Server, Claim{}) && !reflect.DeepEqual(test.cServer, Cert{}) {
+				err = manager.GenCSR(test.state.Server, test.spec.Server, test.cServer)
 				assert.NoError(t, err)
 
-				err = manager.SignCSR(test.state.Interm, test.mdInterm, test.state.Server, test.mdServer, PolicyTrustFunc(test.spec.IntermPolicy))
+				err = manager.SignCSR(test.state.Interm, test.cInterm, test.state.Server, test.cServer, PolicyTrustFunc(test.spec.IntermPolicy))
 				assert.NoError(t, err)
 
-				parseKey(t, "", test.mdServer.KeyPath())
-				parseCSR(t, test.mdServer.CSRPath())
-				parseCert(t, test.mdServer.CertPath())
+				parseKey(t, "", test.cServer.KeyPath())
+				parseCSR(t, test.cServer.CSRPath())
+				parseCert(t, test.cServer.CertPath())
 
-				err = manager.VerifyCert(test.mdInterm, test.mdServer, test.dnsServer)
+				err = manager.VerifyCert(test.cInterm, test.cServer, test.dnsServer)
 				assert.NoError(t, err)
 			}
 
 			// Generate Client CSR and sign it by Intermediate CA
-			if !reflect.DeepEqual(test.state.Client, Config{}) && !reflect.DeepEqual(test.spec.Client, Claim{}) && !reflect.DeepEqual(test.mdClient, Metadata{}) {
-				err = manager.GenCSR(test.state.Client, test.spec.Client, test.mdClient)
+			if !reflect.DeepEqual(test.state.Client, Config{}) && !reflect.DeepEqual(test.spec.Client, Claim{}) && !reflect.DeepEqual(test.cClient, Cert{}) {
+				err = manager.GenCSR(test.state.Client, test.spec.Client, test.cClient)
 				assert.NoError(t, err)
 
-				err = manager.SignCSR(test.state.Interm, test.mdInterm, test.state.Client, test.mdClient, PolicyTrustFunc(test.spec.IntermPolicy))
+				err = manager.SignCSR(test.state.Interm, test.cInterm, test.state.Client, test.cClient, PolicyTrustFunc(test.spec.IntermPolicy))
 				assert.NoError(t, err)
 
-				parseKey(t, "", test.mdClient.KeyPath())
-				parseCSR(t, test.mdClient.CSRPath())
-				parseCert(t, test.mdClient.CertPath())
+				parseKey(t, "", test.cClient.KeyPath())
+				parseCSR(t, test.cClient.CSRPath())
+				parseCert(t, test.cClient.CertPath())
 
-				err = manager.VerifyCert(test.mdInterm, test.mdClient, test.dnsClient)
+				err = manager.VerifyCert(test.cInterm, test.cClient, test.dnsClient)
 				assert.NoError(t, err)
 			}
 

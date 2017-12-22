@@ -15,10 +15,10 @@ func TestNewInitCommand(t *testing.T) {
 		expectedSynopsis string
 	}{
 		{
-			"Initializes a new workspace with desired configurations and specifications.",
+			"Initializes a new workspace with desired configs and specs.",
 		},
 		{
-			"Initializes a new workspace with desired configurations and specifications.",
+			"Initializes a new workspace with desired configs and specs.",
 		},
 	}
 

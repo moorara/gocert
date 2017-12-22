@@ -288,9 +288,9 @@ func TestClaim(t *testing.T) {
 	}
 }
 
-func TestMetadata(t *testing.T) {
+func TestCert(t *testing.T) {
 	tests := []struct {
-		md                Metadata
+		c                 Cert
 		expectedTitle     string
 		expectedCertPath  string
 		expectedKeyPath   string
@@ -298,7 +298,7 @@ func TestMetadata(t *testing.T) {
 		expectedChainPath string
 	}{
 		{
-			Metadata{},
+			Cert{},
 			"",
 			"",
 			"",
@@ -306,7 +306,7 @@ func TestMetadata(t *testing.T) {
 			"",
 		},
 		{
-			Metadata{Name: "root"},
+			Cert{Name: "root"},
 			"",
 			"",
 			"",
@@ -314,9 +314,9 @@ func TestMetadata(t *testing.T) {
 			"",
 		},
 		{
-			Metadata{
-				Name:     "root",
-				CertType: CertTypeRoot,
+			Cert{
+				Name: "root",
+				Type: CertTypeRoot,
 			},
 			titleRoot,
 			path.Join(DirRoot, "root"+extCACert),
@@ -325,9 +325,9 @@ func TestMetadata(t *testing.T) {
 			path.Join(DirRoot, "root"+extCACert),
 		},
 		{
-			Metadata{
-				Name:     "ops",
-				CertType: CertTypeInterm,
+			Cert{
+				Name: "ops",
+				Type: CertTypeInterm,
 			},
 			titleInterm,
 			path.Join(DirInterm, "ops"+extCACert),
@@ -336,9 +336,9 @@ func TestMetadata(t *testing.T) {
 			path.Join(DirInterm, "ops"+extCAChain),
 		},
 		{
-			Metadata{
-				Name:     "webapp",
-				CertType: CertTypeServer,
+			Cert{
+				Name: "webapp",
+				Type: CertTypeServer,
 			},
 			titleServer,
 			path.Join(DirServer, "webapp"+extCert),
@@ -347,9 +347,9 @@ func TestMetadata(t *testing.T) {
 			"",
 		},
 		{
-			Metadata{
-				Name:     "service",
-				CertType: CertTypeClient,
+			Cert{
+				Name: "service",
+				Type: CertTypeClient,
 			},
 			titleClient,
 			path.Join(DirClient, "service"+extCert),
@@ -360,10 +360,10 @@ func TestMetadata(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		assert.Equal(t, test.expectedTitle, test.md.Title())
-		assert.Equal(t, test.expectedCertPath, test.md.CertPath())
-		assert.Equal(t, test.expectedKeyPath, test.md.KeyPath())
-		assert.Equal(t, test.expectedCSRPath, test.md.CSRPath())
-		assert.Equal(t, test.expectedChainPath, test.md.ChainPath())
+		assert.Equal(t, test.expectedTitle, test.c.Title())
+		assert.Equal(t, test.expectedCertPath, test.c.CertPath())
+		assert.Equal(t, test.expectedKeyPath, test.c.KeyPath())
+		assert.Equal(t, test.expectedCSRPath, test.c.CSRPath())
+		assert.Equal(t, test.expectedChainPath, test.c.ChainPath())
 	}
 }

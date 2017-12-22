@@ -17,10 +17,10 @@ import (
 type (
 	// Manager provides methods for managing certificates
 	Manager interface {
-		GenCert(Config, Claim, Metadata) error
-		GenCSR(Config, Claim, Metadata) error
-		SignCSR(Config, Metadata, Config, Metadata, TrustFunc) error
-		VerifyCert(Metadata, Metadata, string) error
+		GenCert(Config, Claim, Cert) error
+		GenCSR(Config, Claim, Cert) error
+		SignCSR(Config, Cert, Config, Cert, TrustFunc) error
+		VerifyCert(Cert, Cert, string) error
 	}
 
 	// x509Manager provides methods for managing x509 certificates
@@ -47,8 +47,8 @@ func checkName(name string) error {
 }
 
 // GenCert generates a new certificate
-func (m *x509Manager) GenCert(config Config, claim Claim, md Metadata) error {
-	if err := checkName(md.Name); err != nil {
+func (m *x509Manager) GenCert(config Config, claim Claim, c Cert) error {
+	if err := checkName(c.Name); err != nil {
 		return err
 	}
 
@@ -110,13 +110,13 @@ func (m *x509Manager) GenCert(config Config, claim Claim, md Metadata) error {
 	}
 
 	// Write certificate key file
-	err = writePrivateKey(privateKey, config.Password, md.KeyPath())
+	err = writePrivateKey(privateKey, config.Password, c.KeyPath())
 	if err != nil {
 		return err
 	}
 
 	// Write certificate file
-	err = writePemFile(pemTypeCert, certData, md.CertPath())
+	err = writePemFile(pemTypeCert, certData, c.CertPath())
 	if err != nil {
 		return err
 	}
@@ -125,8 +125,8 @@ func (m *x509Manager) GenCert(config Config, claim Claim, md Metadata) error {
 }
 
 // GenCSR generates a certificate signing request
-func (m *x509Manager) GenCSR(config Config, claim Claim, md Metadata) error {
-	if err := checkName(md.Name); err != nil {
+func (m *x509Manager) GenCSR(config Config, claim Claim, c Cert) error {
+	if err := checkName(c.Name); err != nil {
 		return err
 	}
 
@@ -166,13 +166,13 @@ func (m *x509Manager) GenCSR(config Config, claim Claim, md Metadata) error {
 	}
 
 	/* Write certificate key file */
-	err = writePrivateKey(privateKey, config.Password, md.KeyPath())
+	err = writePrivateKey(privateKey, config.Password, c.KeyPath())
 	if err != nil {
 		return err
 	}
 
 	/* Write certificate request file */
-	err = writePemFile(pemTypeCSR, csr, md.CSRPath())
+	err = writePemFile(pemTypeCSR, csr, c.CSRPath())
 	if err != nil {
 		return err
 	}
@@ -181,18 +181,18 @@ func (m *x509Manager) GenCSR(config Config, claim Claim, md Metadata) error {
 }
 
 // SignCSR signs a certificate signing request using a certificate authority
-func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, mdCSR Metadata, trust TrustFunc) error {
-	keyCA, err := readPrivateKey(configCA.Password, mdCA.KeyPath())
+func (m *x509Manager) SignCSR(configCA Config, cCA Cert, configCSR Config, cCSR Cert, trust TrustFunc) error {
+	keyCA, err := readPrivateKey(configCA.Password, cCA.KeyPath())
 	if err != nil {
 		return err
 	}
 
-	certCA, err := readCertificate(mdCA.CertPath())
+	certCA, err := readCertificate(cCA.CertPath())
 	if err != nil {
 		return err
 	}
 
-	csr, err := readCertificateRequest(mdCSR.CSRPath())
+	csr, err := readCertificateRequest(cCSR.CSRPath())
 	if err != nil {
 		return err
 	}
@@ -235,7 +235,7 @@ func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, 
 		AuthorityKeyId: certCA.SubjectKeyId,
 	}
 
-	switch mdCSR.CertType {
+	switch cCSR.Type {
 	case CertTypeInterm:
 		cert.BasicConstraintsValid = true
 		cert.IsCA = true
@@ -265,14 +265,14 @@ func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, 
 	}
 
 	// Write certificate file
-	err = writePemFile(pemTypeCert, certData, mdCSR.CertPath())
+	err = writePemFile(pemTypeCert, certData, cCSR.CertPath())
 	if err != nil {
 		return err
 	}
 
 	// Write certificate chain
-	if mdCSR.CertType == CertTypeInterm {
-		err = writeCertificateChain(mdCSR, mdCA)
+	if cCSR.Type == CertTypeInterm {
+		err = writeCertificateChain(cCSR, cCA)
 		if err != nil {
 			return err
 		}
@@ -282,17 +282,17 @@ func (m *x509Manager) SignCSR(configCA Config, mdCA Metadata, configCSR Config, 
 }
 
 // VerifyCert verifies a certificate using a ceritifcate authority
-func (m *x509Manager) VerifyCert(mdCA, md Metadata, dnsName string) error {
-	if mdCA.CertType != CertTypeRoot && mdCA.CertType != CertTypeInterm {
+func (m *x509Manager) VerifyCert(cCA, c Cert, dnsName string) error {
+	if cCA.Type != CertTypeRoot && cCA.Type != CertTypeInterm {
 		return errors.New("Certificate authority is invalid")
 	}
 
-	chain, err := readCertificateChain(mdCA.ChainPath())
+	chain, err := readCertificateChain(cCA.ChainPath())
 	if err != nil {
 		return err
 	}
 
-	cert, err := readCertificate(md.CertPath())
+	cert, err := readCertificate(c.CertPath())
 	if err != nil {
 		return err
 	}

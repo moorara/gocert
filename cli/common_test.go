@@ -26,22 +26,22 @@ type mockedManager struct {
 	VerifyCertCalled bool
 }
 
-func (m *mockedManager) GenCert(pki.Config, pki.Claim, pki.Metadata) error {
+func (m *mockedManager) GenCert(pki.Config, pki.Claim, pki.Cert) error {
 	m.GenCertCalled = true
 	return m.GenCertError
 }
 
-func (m *mockedManager) GenCSR(pki.Config, pki.Claim, pki.Metadata) error {
+func (m *mockedManager) GenCSR(pki.Config, pki.Claim, pki.Cert) error {
 	m.GenCSRCalled = true
 	return m.GenCSRError
 }
 
-func (m *mockedManager) SignCSR(pki.Config, pki.Metadata, pki.Config, pki.Metadata, pki.TrustFunc) error {
+func (m *mockedManager) SignCSR(pki.Config, pki.Cert, pki.Config, pki.Cert, pki.TrustFunc) error {
 	m.SignCSRCalled = true
 	return m.SignCSRError
 }
 
-func (m *mockedManager) VerifyCert(pki.Metadata, pki.Metadata, string) error {
+func (m *mockedManager) VerifyCert(pki.Cert, pki.Cert, string) error {
 	m.VerifyCertCalled = true
 	return m.VerifyCertError
 }
@@ -497,46 +497,46 @@ func TestSaveWorkspace(t *testing.T) {
 
 func TestResolveByName(t *testing.T) {
 	tests := []struct {
-		title            string
-		keyFile          string
-		name             string
-		expectedMetadata pki.Metadata
+		title        string
+		keyFile      string
+		name         string
+		expectedCert pki.Cert
 	}{
 		{
 			"Empty",
 			"",
 			"",
-			pki.Metadata{},
+			pki.Cert{},
 		},
 		{
 			"InvalidRootName",
 			path.Join(pki.DirRoot, "top.ca.key"),
 			"top",
-			pki.Metadata{},
+			pki.Cert{},
 		},
 		{
 			"ResolveRoot",
 			path.Join(pki.DirRoot, "root.ca.key"),
 			"root",
-			pki.Metadata{Name: "root", CertType: pki.CertTypeRoot},
+			pki.Cert{Name: "root", Type: pki.CertTypeRoot},
 		},
 		{
 			"ResolveIntermediate",
 			path.Join(pki.DirInterm, "interm.ca.key"),
 			"interm",
-			pki.Metadata{Name: "interm", CertType: pki.CertTypeInterm},
+			pki.Cert{Name: "interm", Type: pki.CertTypeInterm},
 		},
 		{
 			"ResolveServer",
 			path.Join(pki.DirServer, "server.key"),
 			"server",
-			pki.Metadata{Name: "server", CertType: pki.CertTypeServer},
+			pki.Cert{Name: "server", Type: pki.CertTypeServer},
 		},
 		{
 			"ResolveClient",
 			path.Join(pki.DirClient, "client.key"),
 			"client",
-			pki.Metadata{Name: "client", CertType: pki.CertTypeClient},
+			pki.Cert{Name: "client", Type: pki.CertTypeClient},
 		},
 	}
 
@@ -548,8 +548,8 @@ func TestResolveByName(t *testing.T) {
 		t.Run(test.title, func(t *testing.T) {
 			ioutil.WriteFile(test.keyFile, []byte("mocked cert"), 0644)
 
-			md := resolveByName(test.name)
-			assert.Equal(t, test.expectedMetadata, md)
+			c := resolveByName(test.name)
+			assert.Equal(t, test.expectedCert, c)
 
 			os.Remove(test.keyFile)
 		})

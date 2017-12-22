@@ -91,10 +91,10 @@ type (
 		Supplied []string `toml:"supplied"`
 	}
 
-	// Metadata represents the type for metadata about a certificate
-	Metadata struct {
-		Name     string
-		CertType int
+	// Cert represents the type for a certificate
+	Cert struct {
+		Type int
+		Name string
 	}
 )
 
@@ -204,8 +204,8 @@ func (c Claim) Clone() Claim {
 }
 
 // Title returns a descriptive title
-func (md Metadata) Title() string {
-	switch md.CertType {
+func (c Cert) Title() string {
+	switch c.Type {
 	case CertTypeRoot:
 		return titleRoot
 	case CertTypeInterm:
@@ -219,75 +219,75 @@ func (md Metadata) Title() string {
 	}
 }
 
-// KeyPath returns key file path
-func (md Metadata) KeyPath() string {
-	if md.Name == "" {
+// KeyPath returns path to key file
+func (c Cert) KeyPath() string {
+	if c.Name == "" {
 		return ""
 	}
 
-	switch md.CertType {
+	switch c.Type {
 	case CertTypeRoot:
-		return path.Join(DirRoot, md.Name+extCAKey)
+		return path.Join(DirRoot, c.Name+extCAKey)
 	case CertTypeInterm:
-		return path.Join(DirInterm, md.Name+extCAKey)
+		return path.Join(DirInterm, c.Name+extCAKey)
 	case CertTypeServer:
-		return path.Join(DirServer, md.Name+extKey)
+		return path.Join(DirServer, c.Name+extKey)
 	case CertTypeClient:
-		return path.Join(DirClient, md.Name+extKey)
+		return path.Join(DirClient, c.Name+extKey)
 	default:
 		return ""
 	}
 }
 
-// CertPath returns cert file path
-func (md Metadata) CertPath() string {
-	if md.Name == "" {
+// CertPath returns path to cert file
+func (c Cert) CertPath() string {
+	if c.Name == "" {
 		return ""
 	}
 
-	switch md.CertType {
+	switch c.Type {
 	case CertTypeRoot:
-		return path.Join(DirRoot, md.Name+extCACert)
+		return path.Join(DirRoot, c.Name+extCACert)
 	case CertTypeInterm:
-		return path.Join(DirInterm, md.Name+extCACert)
+		return path.Join(DirInterm, c.Name+extCACert)
 	case CertTypeServer:
-		return path.Join(DirServer, md.Name+extCert)
+		return path.Join(DirServer, c.Name+extCert)
 	case CertTypeClient:
-		return path.Join(DirClient, md.Name+extCert)
+		return path.Join(DirClient, c.Name+extCert)
 	default:
 		return ""
 	}
 }
 
-// CSRPath returns certificate signing request file path
-func (md Metadata) CSRPath() string {
-	if md.Name == "" {
+// CSRPath returns path to csr file
+func (c Cert) CSRPath() string {
+	if c.Name == "" {
 		return ""
 	}
 
-	switch md.CertType {
+	switch c.Type {
 	case CertTypeInterm:
-		return path.Join(DirCSR, md.Name+extCACSR)
+		return path.Join(DirCSR, c.Name+extCACSR)
 	case CertTypeServer:
-		return path.Join(DirCSR, md.Name+extCSR)
+		return path.Join(DirCSR, c.Name+extCSR)
 	case CertTypeClient:
-		return path.Join(DirCSR, md.Name+extCSR)
+		return path.Join(DirCSR, c.Name+extCSR)
 	default:
 		return ""
 	}
 }
 
-// ChainPath returns certificate chain file path
-func (md Metadata) ChainPath() string {
-	if md.Name == "" {
+// ChainPath returns path to cert chain file
+func (c Cert) ChainPath() string {
+	if c.Name == "" {
 		return ""
 	}
 
-	switch md.CertType {
+	switch c.Type {
 	case CertTypeRoot:
-		return path.Join(DirRoot, md.Name+extCACert)
+		return path.Join(DirRoot, c.Name+extCACert)
 	case CertTypeInterm:
-		return path.Join(DirInterm, md.Name+extCAChain)
+		return path.Join(DirInterm, c.Name+extCAChain)
 	default:
 		return ""
 	}

@@ -11,14 +11,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func writeSignMocks(t *testing.T, mocks []pki.Metadata) {
-	for _, md := range mocks {
-		err := ioutil.WriteFile(md.KeyPath(), []byte(""), 0644)
+func writeSignMocks(t *testing.T, mocks []pki.Cert) {
+	for _, c := range mocks {
+		err := ioutil.WriteFile(c.KeyPath(), []byte(""), 0644)
 		assert.NoError(t, err)
-		err = ioutil.WriteFile(md.CertPath(), []byte(""), 0644)
+		err = ioutil.WriteFile(c.CertPath(), []byte(""), 0644)
 		assert.NoError(t, err)
-		if md.CSRPath() != "" {
-			err = ioutil.WriteFile(md.CSRPath(), []byte(""), 0644)
+		if c.CSRPath() != "" {
+			err = ioutil.WriteFile(c.CSRPath(), []byte(""), 0644)
 			assert.NoError(t, err)
 		}
 	}
@@ -52,7 +52,7 @@ func TestSignCommand(t *testing.T) {
 		title string
 		state *pki.State
 		spec  *pki.Spec
-		mocks []pki.Metadata
+		mocks []pki.Cert
 		args  []string
 		input string
 	}{
@@ -60,9 +60,9 @@ func TestSignCommand(t *testing.T) {
 			"RootSignsIntermediate",
 			pki.NewState(),
 			pki.NewSpec(),
-			[]pki.Metadata{
-				pki.Metadata{Name: rootName, CertType: pki.CertTypeRoot},
-				pki.Metadata{Name: "ops", CertType: pki.CertTypeInterm},
+			[]pki.Cert{
+				pki.Cert{Name: rootName, Type: pki.CertTypeRoot},
+				pki.Cert{Name: "ops", Type: pki.CertTypeInterm},
 			},
 			[]string{"-ca=root", "-name=ops"},
 			``,
@@ -71,9 +71,9 @@ func TestSignCommand(t *testing.T) {
 			"IntermediateSignsServer",
 			pki.NewState(),
 			pki.NewSpec(),
-			[]pki.Metadata{
-				pki.Metadata{Name: "ops", CertType: pki.CertTypeInterm},
-				pki.Metadata{Name: "server", CertType: pki.CertTypeServer},
+			[]pki.Cert{
+				pki.Cert{Name: "ops", Type: pki.CertTypeInterm},
+				pki.Cert{Name: "server", Type: pki.CertTypeServer},
 			},
 			[]string{"-ca=ops"},
 			`server
@@ -83,9 +83,9 @@ func TestSignCommand(t *testing.T) {
 			"IntermediateSignsClient",
 			pki.NewState(),
 			pki.NewSpec(),
-			[]pki.Metadata{
-				pki.Metadata{Name: "ops", CertType: pki.CertTypeInterm},
-				pki.Metadata{Name: "client", CertType: pki.CertTypeClient},
+			[]pki.Cert{
+				pki.Cert{Name: "ops", Type: pki.CertTypeInterm},
+				pki.Cert{Name: "client", Type: pki.CertTypeClient},
 			},
 			[]string{},
 			`ops
@@ -96,10 +96,10 @@ func TestSignCommand(t *testing.T) {
 			"IntermediateSignsServerClient",
 			pki.NewState(),
 			pki.NewSpec(),
-			[]pki.Metadata{
-				pki.Metadata{Name: "ops", CertType: pki.CertTypeInterm},
-				pki.Metadata{Name: "server", CertType: pki.CertTypeServer},
-				pki.Metadata{Name: "client", CertType: pki.CertTypeClient},
+			[]pki.Cert{
+				pki.Cert{Name: "ops", Type: pki.CertTypeInterm},
+				pki.Cert{Name: "server", Type: pki.CertTypeServer},
+				pki.Cert{Name: "client", Type: pki.CertTypeClient},
 			},
 			[]string{"-ca=ops", "-name=server,client"},
 			``,
@@ -135,7 +135,7 @@ func TestSignCommandError(t *testing.T) {
 		title        string
 		state        *pki.State
 		spec         *pki.Spec
-		mocks        []pki.Metadata
+		mocks        []pki.Cert
 		args         []string
 		input        string
 		SignCSRError error
@@ -228,8 +228,8 @@ func TestSignCommandError(t *testing.T) {
 			"CertNotExist",
 			pki.NewState(),
 			pki.NewSpec(),
-			[]pki.Metadata{
-				pki.Metadata{Name: rootName, CertType: pki.CertTypeRoot},
+			[]pki.Cert{
+				pki.Cert{Name: rootName, Type: pki.CertTypeRoot},
 			},
 			[]string{"-ca=root", "-name=ops"},
 			``,
@@ -240,8 +240,8 @@ func TestSignCommandError(t *testing.T) {
 			"CertNotExist",
 			pki.NewState(),
 			pki.NewSpec(),
-			[]pki.Metadata{
-				pki.Metadata{Name: "ops", CertType: pki.CertTypeInterm},
+			[]pki.Cert{
+				pki.Cert{Name: "ops", Type: pki.CertTypeInterm},
 			},
 			[]string{"-ca=ops", "-name=server"},
 			``,
@@ -252,9 +252,9 @@ func TestSignCommandError(t *testing.T) {
 			"RootCannotSignIntermediate",
 			pki.NewState(),
 			pki.NewSpec(),
-			[]pki.Metadata{
-				pki.Metadata{Name: rootName, CertType: pki.CertTypeRoot},
-				pki.Metadata{Name: "server", CertType: pki.CertTypeServer},
+			[]pki.Cert{
+				pki.Cert{Name: rootName, Type: pki.CertTypeRoot},
+				pki.Cert{Name: "server", Type: pki.CertTypeServer},
 			},
 			[]string{"-ca=root", "-name=server"},
 			``,
@@ -265,9 +265,9 @@ func TestSignCommandError(t *testing.T) {
 			"IntermediateCannotSignRoot",
 			pki.NewState(),
 			pki.NewSpec(),
-			[]pki.Metadata{
-				pki.Metadata{Name: "interm", CertType: pki.CertTypeInterm},
-				pki.Metadata{Name: rootName, CertType: pki.CertTypeRoot},
+			[]pki.Cert{
+				pki.Cert{Name: "interm", Type: pki.CertTypeInterm},
+				pki.Cert{Name: rootName, Type: pki.CertTypeRoot},
 			},
 			[]string{"-ca=interm", "-name=root"},
 			``,
@@ -278,9 +278,9 @@ func TestSignCommandError(t *testing.T) {
 			"SignCSRError",
 			pki.NewState(),
 			pki.NewSpec(),
-			[]pki.Metadata{
-				pki.Metadata{Name: rootName, CertType: pki.CertTypeRoot},
-				pki.Metadata{Name: "ops", CertType: pki.CertTypeInterm},
+			[]pki.Cert{
+				pki.Cert{Name: rootName, Type: pki.CertTypeRoot},
+				pki.Cert{Name: "ops", Type: pki.CertTypeInterm},
 			},
 			[]string{"-ca=root", "-name=ops"},
 			``,

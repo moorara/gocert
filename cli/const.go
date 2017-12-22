@@ -22,8 +22,8 @@ const (
 	ErrorInvalidCA = 23
 	// ErrorInvalidCSR is returned when an invalid csr name is set
 	ErrorInvalidCSR = 24
-	// ErrorInvalidMetadata is returned when an invalid metadata is set
-	ErrorInvalidMetadata = 25
+	// ErrorInvalidCert is returned when an invalid cert is set
+	ErrorInvalidCert = 25
 
 	// ErrorCert is returned when generating root ca fails
 	ErrorCert = 31
