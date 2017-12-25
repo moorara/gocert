@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/mitchellh/cli"
+	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 )
 
@@ -97,7 +98,7 @@ func (c *ReqCommand) Run(args []string) int {
 
 	if c.c.Name == "" {
 		c.output(reqEnterName)
-		c.c.Name, err = c.ui.Ask(fmt.Sprintf(askTemplate, "Name", "string"))
+		c.c.Name, err = c.ui.Ask(fmt.Sprintf(help.AskTemplate, "Name", "string"))
 		if err != nil {
 			return ErrorInvalidName
 		}
@@ -120,10 +121,21 @@ func (c *ReqCommand) Run(args []string) int {
 	}
 
 	c.output(reqEnterConfig)
-	askForConfig(&config, c.ui)
-	config.Password = ""
+	err = askForConfig(&config, c.ui)
+	if err != nil {
+		return ErrorEnterConfig
+	}
+
+	// User certificates should not have a password
+	if c.c.Type == pki.CertTypeServer || c.c.Type == pki.CertTypeClient {
+		config.Password = ""
+	}
+
 	c.output(reqEnterClaim)
-	askForClaim(&claim, c.ui)
+	err = askForClaim(&claim, c.ui)
+	if err != nil {
+		return ErrorEnterClaim
+	}
 
 	if c.c.Type == pki.CertTypeRoot {
 		err = c.pki.GenCert(config, claim, c.c)

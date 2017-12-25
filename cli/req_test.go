@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 	"github.com/stretchr/testify/assert"
 )
@@ -55,44 +55,16 @@ func TestReqCommand(t *testing.T) {
 		input string
 	}{
 		{
-			"GenSimpleRootCA",
+			"GenerateRootCA",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Cert{Type: pki.CertTypeRoot},
 			[]string{},
-			`RootCA
-			`,
+			"password\npassword\n" +
+				"RootCA\n\n\n\n\n\n\n\n\n\n\n",
 		},
 		{
-			"GenSimpleIntermediateCA",
-			pki.NewState(),
-			pki.NewSpec(),
-			pki.Cert{Type: pki.CertTypeInterm},
-			[]string{"-name=ops"},
-			`OpsCA
-			`,
-		},
-		{
-			"GenSimpleServerCert",
-			pki.NewState(),
-			pki.NewSpec(),
-			pki.Cert{Type: pki.CertTypeServer},
-			[]string{"-name", "webapp"},
-			`WebApp
-			`,
-		},
-		{
-			"GenSimpleClientCert",
-			pki.NewState(),
-			pki.NewSpec(),
-			pki.Cert{Type: pki.CertTypeClient},
-			[]string{},
-			`myservice
-			MyService
-			`,
-		},
-		{
-			"GenRootCA",
+			"GenerateRootCA",
 			pki.NewState(),
 			&pki.Spec{
 				Root: pki.Claim{
@@ -103,11 +75,21 @@ func TestReqCommand(t *testing.T) {
 			},
 			pki.Cert{Type: pki.CertTypeRoot},
 			[]string{},
-			`RootCA
-			`,
+			"password\npassword\n" +
+				"RootCA\n\n\n\n\n\n\n\n\n",
 		},
 		{
-			"GenIntermediateCA",
+			"GenerateIntermediateCA",
+			pki.NewState(),
+			pki.NewSpec(),
+			pki.Cert{Type: pki.CertTypeInterm},
+			[]string{},
+			"sre\n" +
+				"password\npassword\n" +
+				"SRE CA\n\n\n\n\n\n\n\n\n\n\n",
+		},
+		{
+			"GenerateIntermediateCA",
 			pki.NewState(),
 			&pki.Spec{
 				Interm: pki.Claim{
@@ -117,14 +99,21 @@ func TestReqCommand(t *testing.T) {
 				},
 			},
 			pki.Cert{Type: pki.CertTypeInterm},
-			[]string{"-name=ops"},
-			`IntermediateCA
-			Ottawa
-			R&D
-			`,
+			[]string{"-name=sre"},
+			"password\npassword\n" +
+				"SRE CA\nOttawa\nSRE\n\n\n\n\n\n",
 		},
 		{
-			"GenServerCert",
+			"GenerateServerCert",
+			pki.NewState(),
+			pki.NewSpec(),
+			pki.Cert{Type: pki.CertTypeServer},
+			[]string{},
+			"webapp\n" +
+				"webapp.com\n\n\n\n\n\n\n\n\n\n\n",
+		},
+		{
+			"GenerateServerCert",
 			pki.NewState(),
 			&pki.Spec{
 				Server: pki.Claim{
@@ -135,12 +124,20 @@ func TestReqCommand(t *testing.T) {
 				},
 			},
 			pki.Cert{Type: pki.CertTypeServer},
-			[]string{"-name", "webapp"},
-			`WebApp
-			`,
+			[]string{"-name=webapp"},
+			"webapp.com\nR&D\nwebapp.com\n\n\n\n\n",
 		},
 		{
-			"GenClientCert",
+			"GenerateClientCert",
+			pki.NewState(),
+			pki.NewSpec(),
+			pki.Cert{Type: pki.CertTypeClient},
+			[]string{},
+			"myservice\n" +
+				"MyService\n\n\n\n\n\n\n\n\n\n\n",
+		},
+		{
+			"GenerateClientCert",
 			pki.NewState(),
 			&pki.Spec{
 				Client: pki.Claim{
@@ -151,10 +148,8 @@ func TestReqCommand(t *testing.T) {
 				},
 			},
 			pki.Cert{Type: pki.CertTypeClient},
-			[]string{},
-			`myservice
-			MyService
-			`,
+			[]string{"-name=myservice"},
+			"MyService\nR&D\n\n\n\n\n\n",
 		},
 	}
 
@@ -163,12 +158,11 @@ func TestReqCommand(t *testing.T) {
 			err := pki.NewWorkspace(test.state, test.spec)
 			assert.NoError(t, err)
 
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-
+			r := strings.NewReader(test.input)
+			mockUI := help.NewMockUI(r)
 			cmd := &ReqCommand{
 				ui:  mockUI,
-				pki: &mockedManager{},
+				pki: &help.MockManager{},
 				c:   test.c,
 			}
 
@@ -199,7 +193,7 @@ func TestReqCommandError(t *testing.T) {
 			pki.NewSpec(),
 			pki.Cert{Type: pki.CertTypeRoot},
 			[]string{"-invalid"},
-			``,
+			"",
 			nil,
 			nil,
 			ErrorInvalidFlag,
@@ -210,7 +204,7 @@ func TestReqCommandError(t *testing.T) {
 			pki.NewSpec(),
 			pki.Cert{},
 			[]string{},
-			``,
+			"",
 			nil,
 			nil,
 			ErrorInvalidName,
@@ -221,8 +215,7 @@ func TestReqCommandError(t *testing.T) {
 			nil,
 			pki.Cert{},
 			[]string{},
-			`sre
-			`,
+			"sre\n",
 			nil,
 			nil,
 			ErrorReadState,
@@ -233,7 +226,7 @@ func TestReqCommandError(t *testing.T) {
 			nil,
 			pki.Cert{},
 			[]string{"-name=sre"},
-			``,
+			"",
 			nil,
 			nil,
 			ErrorReadSpec,
@@ -244,52 +237,75 @@ func TestReqCommandError(t *testing.T) {
 			pki.NewSpec(),
 			pki.Cert{},
 			[]string{"-name", "sre"},
-			``,
+			"",
 			nil,
 			nil,
 			ErrorInvalidCert,
 		},
 		{
-			"GenCertError",
+			"NoPasswordForCA",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Cert{Type: pki.CertTypeRoot},
 			[]string{},
-			``,
+			"",
+			errors.New("error"),
+			nil,
+			ErrorEnterConfig,
+		},
+		{
+			"NoClaimEntered",
+			pki.NewState(),
+			pki.NewSpec(),
+			pki.Cert{Type: pki.CertTypeRoot},
+			[]string{},
+			"password\npassword\n",
+			errors.New("error"),
+			nil,
+			ErrorEnterClaim,
+		},
+		{
+			"GenCertFails",
+			pki.NewState(),
+			pki.NewSpec(),
+			pki.Cert{Type: pki.CertTypeRoot},
+			[]string{},
+			"password\npassword\n" +
+				"\n\n\n\n\n\n\n\n\n\n\n",
 			errors.New("error"),
 			nil,
 			ErrorCert,
 		},
 		{
-			"GenCSRError",
+			"GenCSRFails",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Cert{Type: pki.CertTypeInterm},
-			[]string{"-name=ops"},
-			``,
+			[]string{"-name=sre"},
+			"password\npassword\n" +
+				"\n\n\n\n\n\n\n\n\n\n\n",
 			nil,
 			errors.New("error"),
 			ErrorCSR,
 		},
 		{
-			"GenCSRError",
+			"GenCSRFails",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Cert{Type: pki.CertTypeServer},
-			[]string{"-name", "webapp"},
-			``,
+			[]string{"-name=webapp"},
+			"\n\n\n\n\n\n\n\n\n\n\n",
 			nil,
 			errors.New("error"),
 			ErrorCSR,
 		},
 		{
-			"GenCSRError",
+			"GenCSRFails",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Cert{Type: pki.CertTypeClient},
-			[]string{"-name=ops"},
-			`myservice
-			`,
+			[]string{"-name", "myservice"},
+			"\n\n\n\n\n\n\n\n\n\n\n",
 			nil,
 			errors.New("error"),
 			ErrorCSR,
@@ -301,12 +317,11 @@ func TestReqCommandError(t *testing.T) {
 			err := pki.NewWorkspace(test.state, test.spec)
 			assert.NoError(t, err)
 
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-
+			r := strings.NewReader(test.input)
+			mockUI := help.NewMockUI(r)
 			cmd := &ReqCommand{
 				ui: mockUI,
-				pki: &mockedManager{
+				pki: &help.MockManager{
 					GenCertError: test.GenCertError,
 					GenCSRError:  test.GenCSRError,
 				},

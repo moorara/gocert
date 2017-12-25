@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 	"github.com/stretchr/testify/assert"
 )
@@ -65,7 +65,9 @@ func TestSignCommand(t *testing.T) {
 				pki.Cert{Name: "ops", Type: pki.CertTypeInterm},
 			},
 			[]string{"-ca=root", "-name=ops"},
-			``,
+			`password
+			password
+			`,
 		},
 		{
 			"IntermediateSignsServer",
@@ -77,6 +79,8 @@ func TestSignCommand(t *testing.T) {
 			},
 			[]string{"-ca=ops"},
 			`server
+			password
+			password
 			`,
 		},
 		{
@@ -90,6 +94,8 @@ func TestSignCommand(t *testing.T) {
 			[]string{},
 			`ops
 			client
+			password
+			password
 			`,
 		},
 		{
@@ -102,7 +108,9 @@ func TestSignCommand(t *testing.T) {
 				pki.Cert{Name: "client", Type: pki.CertTypeClient},
 			},
 			[]string{"-ca=ops", "-name=server,client"},
-			``,
+			`password
+			password
+			`,
 		},
 	}
 
@@ -113,12 +121,11 @@ func TestSignCommand(t *testing.T) {
 
 			writeSignMocks(t, test.mocks)
 
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-
+			r := strings.NewReader(test.input)
+			mockUI := help.NewMockUI(r)
 			cmd := &SignCommand{
 				ui:  mockUI,
-				pki: &mockedManager{},
+				pki: &help.MockManager{},
 			}
 
 			exit := cmd.Run(test.args)
@@ -190,7 +197,8 @@ func TestSignCommandError(t *testing.T) {
 			nil,
 			[]string{},
 			`root
-			interm`,
+			interm
+			`,
 			nil,
 			ErrorReadState,
 		},
@@ -225,6 +233,49 @@ func TestSignCommandError(t *testing.T) {
 			ErrorInvalidCA,
 		},
 		{
+			"EnterNoPassword",
+			pki.NewState(),
+			pki.NewSpec(),
+			[]pki.Cert{
+				pki.Cert{Name: rootName, Type: pki.CertTypeRoot},
+				pki.Cert{Name: "server", Type: pki.CertTypeServer},
+			},
+			[]string{"-ca=root", "-name=server"},
+			``,
+			nil,
+			ErrorEnterConfig,
+		},
+		{
+			"EnterInvalidPassword",
+			pki.NewState(),
+			pki.NewSpec(),
+			[]pki.Cert{
+				pki.Cert{Name: rootName, Type: pki.CertTypeRoot},
+				pki.Cert{Name: "server", Type: pki.CertTypeServer},
+			},
+			[]string{"-ca=root", "-name=server"},
+			`pass
+			pass
+			`,
+			nil,
+			ErrorEnterConfig,
+		},
+		{
+			"EnterNotMatchingPassword",
+			pki.NewState(),
+			pki.NewSpec(),
+			[]pki.Cert{
+				pki.Cert{Name: rootName, Type: pki.CertTypeRoot},
+				pki.Cert{Name: "server", Type: pki.CertTypeServer},
+			},
+			[]string{"-ca=root", "-name=server"},
+			`secret
+			password
+			`,
+			nil,
+			ErrorEnterConfig,
+		},
+		{
 			"CertNotExist",
 			pki.NewState(),
 			pki.NewSpec(),
@@ -232,7 +283,9 @@ func TestSignCommandError(t *testing.T) {
 				pki.Cert{Name: rootName, Type: pki.CertTypeRoot},
 			},
 			[]string{"-ca=root", "-name=ops"},
-			``,
+			`password
+			password
+			`,
 			nil,
 			ErrorInvalidCSR,
 		},
@@ -244,7 +297,9 @@ func TestSignCommandError(t *testing.T) {
 				pki.Cert{Name: "ops", Type: pki.CertTypeInterm},
 			},
 			[]string{"-ca=ops", "-name=server"},
-			``,
+			`password
+			password
+			`,
 			nil,
 			ErrorInvalidCSR,
 		},
@@ -257,7 +312,9 @@ func TestSignCommandError(t *testing.T) {
 				pki.Cert{Name: "server", Type: pki.CertTypeServer},
 			},
 			[]string{"-ca=root", "-name=server"},
-			``,
+			`password
+			password
+			`,
 			nil,
 			ErrorInvalidCSR,
 		},
@@ -270,12 +327,14 @@ func TestSignCommandError(t *testing.T) {
 				pki.Cert{Name: rootName, Type: pki.CertTypeRoot},
 			},
 			[]string{"-ca=interm", "-name=root"},
-			``,
+			`password
+			password
+			`,
 			nil,
 			ErrorInvalidCSR,
 		},
 		{
-			"SignCSRError",
+			"SignCSRFails",
 			pki.NewState(),
 			pki.NewSpec(),
 			[]pki.Cert{
@@ -283,7 +342,9 @@ func TestSignCommandError(t *testing.T) {
 				pki.Cert{Name: "ops", Type: pki.CertTypeInterm},
 			},
 			[]string{"-ca=root", "-name=ops"},
-			``,
+			`password
+			password
+			`,
 			errors.New("error"),
 			ErrorSign,
 		},
@@ -296,12 +357,11 @@ func TestSignCommandError(t *testing.T) {
 
 			writeSignMocks(t, test.mocks)
 
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-
+			r := strings.NewReader(test.input)
+			mockUI := help.NewMockUI(r)
 			cmd := &SignCommand{
 				ui: mockUI,
-				pki: &mockedManager{
+				pki: &help.MockManager{
 					SignCSRError: test.SignCSRError,
 				},
 			}

@@ -9,6 +9,8 @@ import (
 )
 
 const (
+	initSuccess = "\n ✓ Workspace \n"
+
 	initSynopsis = `Initializes a new workspace with desired configs and specs.`
 	initHelp     = `
 	You can use this command to initialize a new workspace with desired configs and specs.
@@ -56,26 +58,29 @@ func (c *InitCommand) Run(args []string) int {
 		return ErrorInvalidFlag
 	}
 
-	// Make sub-directories
 	_, err = util.MkDirs("", pki.DirRoot, pki.DirInterm, pki.DirServer, pki.DirClient, pki.DirCSR)
 	if err != nil {
 		return ErrorMakeDir
 	}
 
-	// Write default state file
 	state := pki.NewState()
 	err = pki.SaveState(state, pki.FileState)
 	if err != nil {
 		return ErrorWriteState
 	}
 
-	// Write default spec file
-	spec := askForNewSpec(c.ui)
+	// Ask user to enter values for spec
+	spec, err := askForNewSpec(c.ui)
+	if err != nil {
+		return ErrorEnterSpec
+	}
+
 	err = pki.SaveSpec(spec, pki.FileSpec)
 	if err != nil {
 		return ErrorWriteSpec
 	}
 
-	c.ui.Output("")
+	c.ui.Info(initSuccess)
+
 	return 0
 }

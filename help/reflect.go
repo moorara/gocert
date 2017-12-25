@@ -1,4 +1,4 @@
-package cli
+package help
 
 import (
 	"errors"
@@ -16,7 +16,8 @@ const (
 	tagSecret     = "secret"
 	defaultMinLen = 8
 
-	askTemplate = "%s (%s):"
+	// AskTemplate is used when asking for a value
+	AskTemplate = "%s (%s):"
 )
 
 type askFunc func(query string) (string, error)
@@ -29,7 +30,7 @@ func secretOK(pass string, minLen int) bool {
 	return true
 }
 
-func getAskSecret(tag string, ui cli.Ui) askFunc {
+func getAskFunc(tag string, ui cli.Ui) askFunc {
 	tagOpts := strings.Split(tag, ",")
 	obligation := tagOpts[0]
 
@@ -48,14 +49,14 @@ func getAskSecret(tag string, ui cli.Ui) askFunc {
 	return func(query string) (string, error) {
 		secret, err := ui.AskSecret(query)
 		if err != nil || !secretOK(secret, minLen) {
-			ui.Error("Secret not valid (ignored).")
-			return "", errors.New("secret is not valid")
+			ui.Error("Secret not valid.")
+			return "", errors.New("secret not valid")
 		}
 
 		confirm, err := ui.AskSecret("CONFIRM " + query)
 		if err != nil || secret != confirm {
-			ui.Error("Secrets not matching (ignored).")
-			return "", errors.New("secrets not matching")
+			ui.Error("Secrets not matched.")
+			return "", errors.New("secrets not matched")
 		}
 
 		return secret, nil
@@ -129,7 +130,7 @@ func toNetIPSlice(list string) []net.IP {
 	return netIPSlice
 }
 
-func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) {
+func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) error {
 	// v: reflect.Value --> v.Kind()
 	t := v.Type() // reflect.Type --> t.Kind(), t.Name()
 
@@ -154,101 +155,132 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui
 		}
 
 		secretTag := tField.Tag.Get(tagSecret)
-		ask := getAskSecret(secretTag, ui)
+		ask := getAskFunc(secretTag, ui)
 
 		if kind == reflect.Struct {
-			askForStructV(vField, tagKey, ignoreOmitted, ui)
+			err := askForStructV(vField, tagKey, ignoreOmitted, ui)
+			if err != nil {
+				return err
+			}
 		} else if kind == reflect.Bool && vField.Bool() == false {
-			str, err := ask(fmt.Sprintf(askTemplate, name, "boolean"))
+			str, err := ask(fmt.Sprintf(AskTemplate, name, "boolean"))
+			if err != nil {
+				return err
+			}
+			b, err := strconv.ParseBool(str)
 			if err == nil {
-				b, err := strconv.ParseBool(str)
-				if err == nil {
-					vField.SetBool(b)
-				}
+				vField.SetBool(b)
 			}
 		} else if kind == reflect.Int && vField.Int() == 0 {
-			str, err := ask(fmt.Sprintf(askTemplate, name, "integer number"))
+			str, err := ask(fmt.Sprintf(AskTemplate, name, "integer number"))
+			if err != nil {
+				return err
+			}
+			n, err := strconv.ParseInt(str, 10, 32)
 			if err == nil {
-				n, err := strconv.ParseInt(str, 10, 32)
-				if err == nil {
-					vField.SetInt(n)
-				}
+				vField.SetInt(n)
 			}
 		} else if kind == reflect.Int64 && vField.Int() == 0 {
-			str, err := ask(fmt.Sprintf(askTemplate, name, "integer number"))
+			str, err := ask(fmt.Sprintf(AskTemplate, name, "integer number"))
+			if err != nil {
+				return err
+			}
+			n, err := strconv.ParseInt(str, 10, 64)
 			if err == nil {
-				n, err := strconv.ParseInt(str, 10, 64)
-				if err == nil {
-					vField.SetInt(n)
-				}
+				vField.SetInt(n)
 			}
 		} else if kind == reflect.Float32 && vField.Float() == 0 {
-			str, err := ask(fmt.Sprintf(askTemplate, name, "real number"))
+			str, err := ask(fmt.Sprintf(AskTemplate, name, "real number"))
+			if err != nil {
+				return err
+			}
+			n, err := strconv.ParseFloat(str, 32)
 			if err == nil {
-				n, err := strconv.ParseFloat(str, 32)
-				if err == nil {
-					vField.SetFloat(n)
-				}
+				vField.SetFloat(n)
 			}
 		} else if kind == reflect.Float64 && vField.Float() == 0 {
-			str, err := ask(fmt.Sprintf(askTemplate, name, "real number"))
+			str, err := ask(fmt.Sprintf(AskTemplate, name, "real number"))
+			if err != nil {
+				return err
+			}
+			n, err := strconv.ParseFloat(str, 64)
 			if err == nil {
-				n, err := strconv.ParseFloat(str, 64)
-				if err == nil {
-					vField.SetFloat(n)
-				}
+				vField.SetFloat(n)
 			}
 		} else if kind == reflect.String && vField.String() == "" {
-			str, err := ask(fmt.Sprintf(askTemplate, name, "string"))
-			if err == nil && str != "" {
+			str, err := ask(fmt.Sprintf(AskTemplate, name, "string"))
+			if err != nil {
+				return err
+			}
+			if str != "" {
 				vField.SetString(str)
 			}
 		} else if kind == reflect.Slice && vField.Len() == 0 {
 			sliceType := reflect.TypeOf(value).Elem()
 			sliceKind := sliceType.Kind()
 			if sliceKind == reflect.Int {
-				list, err := ask(fmt.Sprintf(askTemplate, name, "integer numbers"))
-				if err == nil && list != "" {
+				list, err := ask(fmt.Sprintf(AskTemplate, name, "integer numbers"))
+				if err != nil {
+					return err
+				}
+				if list != "" {
 					intSlice := toIntSlice(list)
 					vField.Set(reflect.ValueOf(intSlice))
 				}
 			} else if sliceKind == reflect.Int64 {
-				list, err := ask(fmt.Sprintf(askTemplate, name, "integer numbers"))
-				if err == nil && list != "" {
+				list, err := ask(fmt.Sprintf(AskTemplate, name, "integer numbers"))
+				if err != nil {
+					return err
+				}
+				if list != "" {
 					int64Slice := toInt64Slice(list)
 					vField.Set(reflect.ValueOf(int64Slice))
 				}
 			} else if sliceKind == reflect.Float32 {
-				list, err := ask(fmt.Sprintf(askTemplate, name, "real numbers"))
-				if err == nil && list != "" {
+				list, err := ask(fmt.Sprintf(AskTemplate, name, "real numbers"))
+				if err != nil {
+					return err
+				}
+				if list != "" {
 					float32Slice := toFloat32Slice(list)
 					vField.Set(reflect.ValueOf(float32Slice))
 				}
 			} else if sliceKind == reflect.Float64 {
-				list, err := ask(fmt.Sprintf(askTemplate, name, "real numbers"))
-				if err == nil && list != "" {
+				list, err := ask(fmt.Sprintf(AskTemplate, name, "real numbers"))
+				if err != nil {
+					return err
+				}
+				if list != "" {
 					float64Slice := toFloat64Slice(list)
 					vField.Set(reflect.ValueOf(float64Slice))
 				}
 			} else if sliceKind == reflect.String {
-				list, err := ask(fmt.Sprintf(askTemplate, name, "string list"))
-				if err == nil && list != "" {
+				list, err := ask(fmt.Sprintf(AskTemplate, name, "string list"))
+				if err != nil {
+					return err
+				}
+				if list != "" {
 					slice := strings.Split(list, ",")
 					vField.Set(reflect.ValueOf(slice))
 				}
 			} else if sliceType.String() == "net.IP" {
-				list, err := ask(fmt.Sprintf(askTemplate, name, "string list"))
-				if err == nil && list != "" {
+				list, err := ask(fmt.Sprintf(AskTemplate, name, "string list"))
+				if err != nil {
+					return err
+				}
+				if list != "" {
 					netIPSlice := toNetIPSlice(list)
 					vField.Set(reflect.ValueOf(netIPSlice))
 				}
 			}
 		}
 	}
+
+	return nil
 }
 
-func askForStruct(target interface{}, tagKey string, ignoreOmitted bool, ui cli.Ui) {
+func AskForStruct(target interface{}, tagKey string, ignoreOmitted bool, ui cli.Ui) error {
 	// Get into top-level struct
 	v := reflect.ValueOf(target).Elem()
-	askForStructV(v, tagKey, ignoreOmitted, ui)
+	return askForStructV(v, tagKey, ignoreOmitted, ui)
 }

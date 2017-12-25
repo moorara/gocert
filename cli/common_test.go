@@ -10,41 +10,10 @@ import (
 
 	"github.com/mitchellh/cli"
 	"github.com/moorara/go-box/util"
+	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 	"github.com/stretchr/testify/assert"
 )
-
-type mockedManager struct {
-	GenCertError    error
-	GenCSRError     error
-	SignCSRError    error
-	VerifyCertError error
-
-	GenCertCalled    bool
-	GenCSRCalled     bool
-	SignCSRCalled    bool
-	VerifyCertCalled bool
-}
-
-func (m *mockedManager) GenCert(pki.Config, pki.Claim, pki.Cert) error {
-	m.GenCertCalled = true
-	return m.GenCertError
-}
-
-func (m *mockedManager) GenCSR(pki.Config, pki.Claim, pki.Cert) error {
-	m.GenCSRCalled = true
-	return m.GenCSRError
-}
-
-func (m *mockedManager) SignCSR(pki.Config, pki.Cert, pki.Config, pki.Cert, pki.TrustFunc) error {
-	m.SignCSRCalled = true
-	return m.SignCSRError
-}
-
-func (m *mockedManager) VerifyCert(pki.Cert, pki.Cert, string) error {
-	m.VerifyCertCalled = true
-	return m.VerifyCertError
-}
 
 func TestNewColoredUi(t *testing.T) {
 	tests := []struct {
@@ -301,7 +270,7 @@ func TestLoadWorkspace(t *testing.T) {
 			err = ioutil.WriteFile(pki.FileSpec, []byte(test.specTOML), 0644)
 			assert.NoError(t, err)
 
-			mockUI := cli.NewMockUi()
+			mockUI := help.NewMockUI(nil)
 			state, spec, status := loadWorkspace(mockUI)
 
 			assert.Equal(t, test.expectedStatus, status)
@@ -471,7 +440,7 @@ func TestSaveWorkspace(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			mockUI := cli.NewMockUi()
+			mockUI := help.NewMockUI(nil)
 			status := saveWorkspace(test.state, test.spec, mockUI)
 
 			assert.Equal(t, test.expectedStatus, status)
@@ -560,15 +529,82 @@ func TestAskForNewState(t *testing.T) {
 	tests := []struct {
 		title         string
 		input         string
-		expectedState pki.State
+		expectError   bool
+		expectedState *pki.State
 	}{
 		{
-			"Empty",
+			"ErrorNoInputForRoot",
 			``,
-			pki.State{},
+			true,
+			nil,
 		},
 		{
-			"Simple",
+			"ErrorNoInputForInterm",
+			`10
+			4096
+			7300
+				`,
+			true,
+			nil,
+		},
+		{
+			"ErrorNoInputForServer",
+			`10
+			4096
+			7300
+			100
+			4096
+			3650
+			`,
+			true,
+			nil,
+		},
+		{
+			"ErrorNoInputForClient",
+			`10
+			4096
+			7300
+			100
+			4096
+			3650
+			1000
+			2048
+			375
+			`,
+			true,
+			nil,
+		},
+		{
+			"SuccessEnterSome",
+			`10
+			4096
+			7300
+			100
+			4096
+			3650
+
+
+
+
+
+
+			`,
+			false,
+			&pki.State{
+				Root: pki.Config{
+					Serial: 10,
+					Length: 4096,
+					Days:   7300,
+				},
+				Interm: pki.Config{
+					Serial: 100,
+					Length: 4096,
+					Days:   3650,
+				},
+			},
+		},
+		{
+			"SuccessEnterAll",
 			`10
 			4096
 			7300
@@ -582,7 +618,8 @@ func TestAskForNewState(t *testing.T) {
 			2048
 			40
 			`,
-			pki.State{
+			false,
+			&pki.State{
 				Root: pki.Config{
 					Serial: 10,
 					Length: 4096,
@@ -608,11 +645,17 @@ func TestAskForNewState(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-			state := askForNewState(mockUI)
+			r := strings.NewReader(test.input)
+			mockUI := help.NewMockUI(r)
+			state, err := askForNewState(mockUI)
 
-			assert.Equal(t, test.expectedState, *state)
+			if test.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, state)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.expectedState, state)
+			}
 		})
 	}
 }
@@ -621,21 +664,24 @@ func TestAskForNewSpec(t *testing.T) {
 	tests := []struct {
 		title        string
 		input        string
-		expectedSpec pki.Spec
+		expectError  bool
+		expectedSpec *pki.Spec
 	}{
 		{
-			"Empty",
-			``,
-			pki.Spec{},
+			"ErrorNoInput",
+			"",
+			true,
+			nil,
 		},
 		{
-			"Simple",
-			`CA
-
-
-			Milad
-			`,
-			pki.Spec{
+			"SuccessEnterCommon",
+			"CA\n\n\nMilad\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n",
+			false,
+			&pki.Spec{
 				Root: pki.Claim{
 					Country:      []string{"CA"},
 					Organization: []string{"Milad"},
@@ -655,51 +701,16 @@ func TestAskForNewSpec(t *testing.T) {
 			},
 		},
 		{
-			"Complex",
-			`CA
-			Ontario
-
-			Milad
-
-
-
-
-
-
-
-
-
-
-
-
-
-			Ottawa
-			R&D
-
-
-
-
-
-			Toronto,Montreal
-
-			example.com
-			127.0.0.1
-
-
-
-			Ottawa
-
-
-
-			milad@example.com
-
-
-			Country,Organization
-      CommonName
-      Organization
-      CommonName
-			`,
-			pki.Spec{
+			"SuccessEnterMore",
+			"CA\nOntario\n\nMilad\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n" +
+				"Ottawa\nR&D\n\n\n\n\n\n" +
+				"Toronto,Montreal\n\nexample.com\n127.0.0.1\n\n\n\n" +
+				"Ottawa\n\n\n\nmilad@example.com\n\n\n" +
+				"Country,Organization\nCommonName\n" +
+				"Organization\nCommonName\n",
+			false,
+			&pki.Spec{
 				Root: pki.Claim{
 					Country:      []string{"CA"},
 					Province:     []string{"Ontario"},
@@ -741,11 +752,17 @@ func TestAskForNewSpec(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-			spec := askForNewSpec(mockUI)
+			r := strings.NewReader(test.input)
+			mockUI := help.NewMockUI(r)
+			spec, err := askForNewSpec(mockUI)
 
-			assert.Equal(t, test.expectedSpec, *spec)
+			if test.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, spec)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.expectedSpec, spec)
+			}
 		})
 	}
 }
@@ -753,40 +770,46 @@ func TestAskForNewSpec(t *testing.T) {
 func TestAskForConfig(t *testing.T) {
 	tests := []struct {
 		title          string
-		config         pki.Config
+		config         *pki.Config
 		input          string
-		expectedConfig pki.Config
+		expectError    bool
+		expectedConfig *pki.Config
 	}{
 		{
-			"Empty",
-			pki.Config{},
+			"ErrorNoInput",
+			&pki.Config{},
 			``,
-			pki.Config{},
+			true,
+			nil,
 		},
 		{
-			"Simple",
-			pki.Config{
-				Length: 4096,
+			"SuccessWithoutPassword",
+			&pki.Config{
+				Password: "dummy",
 			},
 			`100
+			4096
 			3650
 			`,
-			pki.Config{
-				Serial: 100,
-				Length: 4096,
-				Days:   3650,
+			false,
+			&pki.Config{
+				Serial:   100,
+				Length:   4096,
+				Days:     3650,
+				Password: "dummy",
 			},
 		},
 		{
-			"Complex",
-			pki.Config{},
+			"SucessWithPassword",
+			&pki.Config{},
 			`100
 			4096
 			3650
 			secret
 			secret
 			`,
-			pki.Config{
+			false,
+			&pki.Config{
 				Serial:   100,
 				Length:   4096,
 				Days:     3650,
@@ -797,11 +820,16 @@ func TestAskForConfig(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-			askForConfig(&test.config, mockUI)
+			r := strings.NewReader(test.input)
+			mockUI := help.NewMockUI(r)
+			err := askForConfig(test.config, mockUI)
 
-			assert.Equal(t, test.expectedConfig, test.config)
+			if test.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.expectedConfig, test.config)
+			}
 		})
 	}
 }
@@ -809,44 +837,39 @@ func TestAskForConfig(t *testing.T) {
 func TestAskForClaim(t *testing.T) {
 	tests := []struct {
 		title         string
-		claim         pki.Claim
+		claim         *pki.Claim
 		input         string
-		expectedClaim pki.Claim
+		expectError   bool
+		expectedClaim *pki.Claim
 	}{
 		{
-			"Empty",
-			pki.Claim{},
-			``,
-			pki.Claim{},
+			"ErrorNoInput",
+			&pki.Claim{},
+			"",
+			true,
+			nil,
 		},
 		{
-			"Simple",
-			pki.Claim{},
-			`RootCA
-			CA
-
-
-			Milad
-			`,
-			pki.Claim{
+			"SuccessSimple",
+			&pki.Claim{},
+			"RootCA\nCA\n\n\nMilad\n\n\n\n\n\n\n",
+			false,
+			&pki.Claim{
 				CommonName:   "RootCA",
 				Country:      []string{"CA"},
 				Organization: []string{"Milad"},
 			},
 		},
 		{
-			"Complex",
-			pki.Claim{
+			"SuccessComplex",
+			&pki.Claim{
 				Country:  []string{"CA"},
 				Province: []string{"Ontario"},
 				Locality: []string{"Ottawa"},
 			},
-			`IntermediateCA
-			Milad
-			SRE
-			example.com
-			`,
-			pki.Claim{
+			"IntermediateCA\nMilad\nSRE\nexample.com\n8.8.8.8,127.0.0.1\n\n\n\n",
+			false,
+			&pki.Claim{
 				CommonName:         "IntermediateCA",
 				Country:            []string{"CA"},
 				Province:           []string{"Ontario"},
@@ -854,17 +877,23 @@ func TestAskForClaim(t *testing.T) {
 				Organization:       []string{"Milad"},
 				OrganizationalUnit: []string{"SRE"},
 				DNSName:            []string{"example.com"},
+				IPAddress:          []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("127.0.0.1")},
 			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-			askForClaim(&test.claim, mockUI)
+			r := strings.NewReader(test.input)
+			mockUI := help.NewMockUI(r)
+			err := askForClaim(test.claim, mockUI)
 
-			assert.Equal(t, test.expectedClaim, test.claim)
+			if test.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, test.expectedClaim, test.claim)
+			}
 		})
 	}
 }

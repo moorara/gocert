@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/mitchellh/cli"
+	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 	"github.com/stretchr/testify/assert"
 )
@@ -42,7 +42,13 @@ func TestInitCommand(t *testing.T) {
 		{
 			"DefaultStateSpec",
 			[]string{},
-			``,
+			"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n" +
+				"\n\n",
 			`root:
 				serial: 10
 				length: 4096
@@ -76,45 +82,13 @@ func TestInitCommand(t *testing.T) {
 		{
 			"CustomStateSpec",
 			[]string{},
-			`CA
-			Ontario
-			Ottawa
-			Milad
-
-
-
-
-
-
-
-
-
-
-
-
-			Ops
-			example.com
-
-
-
-
-			R&D
-			example.org
-
-
-
-
-			SRE
-
-
-
-
-
-			Organization
-			CommonName,OrganizationalUnit
-			Organization
-			CommonName
-			`,
+			"CA\nOntario\nOttawa\nMilad\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n" +
+				"SRE\nexample.com\n\n\n\n\n" +
+				"R&D\nexample.org\n\n\n\n\n" +
+				"QE\n\n\n\n\n\n" +
+				"Organization\nCommonName,OrganizationalUnit\n" +
+				"Organization\nCommonName\n",
 			`root:
 				serial: 10
 				length: 4096
@@ -143,7 +117,7 @@ func TestInitCommand(t *testing.T) {
 				province = ["Ontario"]
 				locality = ["Ottawa"]
 				organization = ["Milad"]
-				organizational_unit = ["Ops"]
+				organizational_unit = ["SRE"]
 				dns_name = ["example.com"]
 
 			[server]
@@ -159,7 +133,7 @@ func TestInitCommand(t *testing.T) {
 				province = ["Ontario"]
 				locality = ["Ottawa"]
 				organization = ["Milad"]
-				organizational_unit = ["SRE"]
+				organizational_unit = ["QE"]
 
 			[root_policy]
 				match = ["Organization"]
@@ -174,9 +148,8 @@ func TestInitCommand(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-
+			r := strings.NewReader(test.input)
+			mockUI := help.NewMockUI(r)
 			cmd := &InitCommand{
 				ui: mockUI,
 			}
@@ -217,13 +190,18 @@ func TestInitCommandError(t *testing.T) {
 			``,
 			ErrorInvalidFlag,
 		},
+		{
+			"NoInputForSpec",
+			[]string{""},
+			``,
+			ErrorEnterSpec,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			mockUI := cli.NewMockUi()
-			mockUI.InputReader = strings.NewReader(test.input)
-
+			r := strings.NewReader(test.input)
+			mockUI := help.NewMockUI(r)
 			cmd := &InitCommand{
 				ui: mockUI,
 			}
