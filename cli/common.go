@@ -4,6 +4,8 @@ import (
 	"os"
 
 	"github.com/mitchellh/cli"
+	"github.com/moorara/go-box/util"
+	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 )
 
@@ -95,62 +97,97 @@ func resolveByName(name string) pki.Cert {
 	return pki.Cert{}
 }
 
-func askForNewState(ui cli.Ui) *pki.State {
+func askForNewState(ui cli.Ui) (*pki.State, error) {
 	root := pki.Config{}
 	ui.Output(textRootEnterConfig)
-	askForStruct(&root, "yaml", true, ui)
+	err := help.AskForStruct(&root, "yaml", true, ui)
+	if err != nil {
+		return nil, err
+	}
 
 	interm := pki.Config{}
 	ui.Output(textIntermEnterConfig)
-	askForStruct(&interm, "yaml", true, ui)
+	err = help.AskForStruct(&interm, "yaml", true, ui)
+	if err != nil {
+		return nil, err
+	}
 
 	server := pki.Config{}
 	ui.Output(textServerEnterConfig)
-	askForStruct(&server, "yaml", true, ui)
+	err = help.AskForStruct(&server, "yaml", true, ui)
+	if err != nil {
+		return nil, err
+	}
 
 	client := pki.Config{}
 	ui.Output(textClientEnterConfig)
-	askForStruct(&client, "yaml", true, ui)
+	err = help.AskForStruct(&client, "yaml", true, ui)
+	if err != nil {
+		return nil, err
+	}
 
-	return &pki.State{
+	state := &pki.State{
 		Root:   root,
 		Interm: interm,
 		Server: server,
 		Client: client,
 	}
+
+	return state, nil
 }
 
-func askForNewSpec(ui cli.Ui) *pki.Spec {
+func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 	// Common specs
 	common := pki.Claim{}
 	ui.Output(textCommonEnterClaim)
-	askForStruct(&common, "toml", true, ui)
+	err := help.AskForStruct(&common, "toml", true, ui)
+	if err != nil && !util.IsStringIn(err.Error(), "EOF", "unexpected newline ") {
+		return nil, err
+	}
 
 	root := common.Clone()
 	ui.Output(textRootEnterClaim)
-	askForStruct(&root, "toml", true, ui)
+	err = help.AskForStruct(&root, "toml", true, ui)
+	if err != nil {
+		return nil, err
+	}
 
 	interm := common.Clone()
 	ui.Output(textIntermEnterClaim)
-	askForStruct(&interm, "toml", true, ui)
+	err = help.AskForStruct(&interm, "toml", true, ui)
+	if err != nil {
+		return nil, err
+	}
 
 	server := common.Clone()
 	ui.Output(textServerEnterClaim)
-	askForStruct(&server, "toml", true, ui)
+	err = help.AskForStruct(&server, "toml", true, ui)
+	if err != nil {
+		return nil, err
+	}
 
 	client := common.Clone()
 	ui.Output(textClientEnterClaim)
-	askForStruct(&client, "toml", true, ui)
+	err = help.AskForStruct(&client, "toml", true, ui)
+	if err != nil {
+		return nil, err
+	}
 
 	rootPolicy := pki.Policy{}
 	ui.Output(textRootEnterPolicy)
-	askForStruct(&rootPolicy, "toml", true, ui)
+	err = help.AskForStruct(&rootPolicy, "toml", true, ui)
+	if err != nil {
+		return nil, err
+	}
 
 	intermPolicy := pki.Policy{}
 	ui.Output(textIntermEnterPolicy)
-	askForStruct(&intermPolicy, "toml", true, ui)
+	err = help.AskForStruct(&intermPolicy, "toml", true, ui)
+	if err != nil {
+		return nil, err
+	}
 
-	return &pki.Spec{
+	spec := &pki.Spec{
 		Root:         root,
 		Interm:       interm,
 		Server:       server,
@@ -158,12 +195,14 @@ func askForNewSpec(ui cli.Ui) *pki.Spec {
 		RootPolicy:   rootPolicy,
 		IntermPolicy: intermPolicy,
 	}
+
+	return spec, nil
 }
 
-func askForConfig(config *pki.Config, ui cli.Ui) {
-	askForStruct(config, "yaml", false, ui)
+func askForConfig(config *pki.Config, ui cli.Ui) error {
+	return help.AskForStruct(config, "yaml", false, ui)
 }
 
-func askForClaim(claim *pki.Claim, ui cli.Ui) {
-	askForStruct(claim, "toml", false, ui)
+func askForClaim(claim *pki.Claim, ui cli.Ui) error {
+	return help.AskForStruct(claim, "toml", false, ui)
 }

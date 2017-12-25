@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/mitchellh/cli"
+	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 )
 
@@ -101,7 +102,7 @@ func (c *SignCommand) Run(args []string) (exit int) {
 
 	if fCA == "" {
 		c.ui.Output(signEnterNameCA)
-		fCA, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CA Name", "string"))
+		fCA, err = c.ui.Ask(fmt.Sprintf(help.AskTemplate, "CA Name", "string"))
 		if err != nil {
 			return ErrorInvalidCA
 		}
@@ -109,7 +110,7 @@ func (c *SignCommand) Run(args []string) (exit int) {
 
 	if fName == "" {
 		c.ui.Output(signEnterNameCSR)
-		fName, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CSR Name", "string list"))
+		fName, err = c.ui.Ask(fmt.Sprintf(help.AskTemplate, "CSR Name", "string list"))
 		if err != nil {
 			return ErrorInvalidCSR
 		}
@@ -131,11 +132,15 @@ func (c *SignCommand) Run(args []string) (exit int) {
 	}
 
 	c.ui.Output(signEnterConfigCA)
-	askForConfig(&configCA, c.ui)
-	c.ui.Output("")
+	err = askForConfig(&configCA, c.ui)
+	if err != nil {
+		return ErrorEnterConfig
+	}
 
 	trustFunc := pki.PolicyTrustFunc(policyCA)
 	csrNames := strings.Split(fName, ",")
+
+	c.ui.Output("")
 
 	for _, csrName := range csrNames {
 		configCSR, cCSR, status := c.resolveCSR(state, spec, csrName)

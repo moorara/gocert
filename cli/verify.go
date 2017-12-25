@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/mitchellh/cli"
+	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 )
 
@@ -67,7 +68,7 @@ func (c *VerifyCommand) Run(args []string) (exit int) {
 
 	if fCA == "" {
 		c.ui.Output(verifyEnterNameCA)
-		fCA, err = c.ui.Ask(fmt.Sprintf(askTemplate, "CA Name", "string"))
+		fCA, err = c.ui.Ask(fmt.Sprintf(help.AskTemplate, "CA Name", "string"))
 		if err != nil {
 			return ErrorInvalidName
 		}
@@ -75,7 +76,7 @@ func (c *VerifyCommand) Run(args []string) (exit int) {
 
 	if fName == "" {
 		c.ui.Output(verifyEnterNameCert)
-		fName, err = c.ui.Ask(fmt.Sprintf(askTemplate, "Cert Name", "string list"))
+		fName, err = c.ui.Ask(fmt.Sprintf(help.AskTemplate, "Cert Name", "string list"))
 		if err != nil {
 			return ErrorInvalidName
 		}
