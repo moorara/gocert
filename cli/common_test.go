@@ -771,6 +771,7 @@ func TestAskForConfig(t *testing.T) {
 	tests := []struct {
 		title          string
 		config         *pki.Config
+		c              pki.Cert
 		input          string
 		expectError    bool
 		expectedConfig *pki.Config
@@ -778,15 +779,39 @@ func TestAskForConfig(t *testing.T) {
 		{
 			"ErrorNoInput",
 			&pki.Config{},
+			pki.Cert{},
 			``,
 			true,
 			nil,
+		},
+		{
+			"SucessWithPassword",
+			&pki.Config{},
+			pki.Cert{
+				Type: pki.CertTypeRoot,
+			},
+			`10
+			4096
+			7300
+			secret
+			secret
+			`,
+			false,
+			&pki.Config{
+				Serial:   10,
+				Length:   4096,
+				Days:     7300,
+				Password: "secret",
+			},
 		},
 		{
 			"SuccessWithoutPassword",
 			&pki.Config{
 				Password: "dummy",
 			},
+			pki.Cert{
+				Type: pki.CertTypeInterm,
+			},
 			`100
 			4096
 			3650
@@ -800,20 +825,20 @@ func TestAskForConfig(t *testing.T) {
 			},
 		},
 		{
-			"SucessWithPassword",
+			"SuccessWithoutPassword",
 			&pki.Config{},
-			`100
-			4096
-			3650
-			secret
-			secret
+			pki.Cert{
+				Type: pki.CertTypeServer,
+			},
+			`1000
+			2048
+			375
 			`,
 			false,
 			&pki.Config{
-				Serial:   100,
-				Length:   4096,
-				Days:     3650,
-				Password: "secret",
+				Serial: 1000,
+				Length: 2048,
+				Days:   375,
 			},
 		},
 	}
@@ -822,7 +847,7 @@ func TestAskForConfig(t *testing.T) {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
 			mockUI := help.NewMockUI(r)
-			err := askForConfig(test.config, mockUI)
+			err := askForConfig(test.config, test.c, mockUI)
 
 			if test.expectError {
 				assert.Error(t, err)
@@ -838,6 +863,7 @@ func TestAskForClaim(t *testing.T) {
 	tests := []struct {
 		title         string
 		claim         *pki.Claim
+		c             pki.Cert
 		input         string
 		expectError   bool
 		expectedClaim *pki.Claim
@@ -845,6 +871,7 @@ func TestAskForClaim(t *testing.T) {
 		{
 			"ErrorNoInput",
 			&pki.Claim{},
+			pki.Cert{},
 			"",
 			true,
 			nil,
@@ -852,6 +879,9 @@ func TestAskForClaim(t *testing.T) {
 		{
 			"SuccessSimple",
 			&pki.Claim{},
+			pki.Cert{
+				Type: pki.CertTypeRoot,
+			},
 			"RootCA\nCA\n\n\nMilad\n\n\n\n\n\n\n",
 			false,
 			&pki.Claim{
@@ -866,6 +896,9 @@ func TestAskForClaim(t *testing.T) {
 				Country:  []string{"CA"},
 				Province: []string{"Ontario"},
 				Locality: []string{"Ottawa"},
+			},
+			pki.Cert{
+				Type: pki.CertTypeInterm,
 			},
 			"IntermediateCA\nMilad\nSRE\nexample.com\n8.8.8.8,127.0.0.1\n\n\n\n",
 			false,
@@ -886,7 +919,7 @@ func TestAskForClaim(t *testing.T) {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
 			mockUI := help.NewMockUI(r)
-			err := askForClaim(test.claim, mockUI)
+			err := askForClaim(test.claim, test.c, mockUI)
 
 			if test.expectError {
 				assert.Error(t, err)

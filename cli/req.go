@@ -13,11 +13,9 @@ import (
 )
 
 const (
+	reqEnterName    = "\nENTER NAME FOR %s ..."
 	reqMessageRoot  = "\n ✓ Created %s\n"
 	reqMessageOther = "\n ✓ Requested %s\n"
-	reqEnterName    = "\nENTER NAME FOR %s ..."
-	reqEnterConfig  = "\nENTER CONFIGURATIONS FOR %s ..."
-	reqEnterClaim   = "\nENTER SPECIFICATIONS FOR %s ..."
 
 	reqSynopsis = `Creates a new {{if eq .Type 1}}root certificate authority{{- else}}certificate signing request{{- end}}.`
 	reqHelp     = `{{if eq .Type 1}}
@@ -115,24 +113,12 @@ func (c *ReqCommand) Run(args []string) int {
 		return ErrorInvalidCert
 	}
 
-	// User certificates should not have a password
-	if c.c.Type == pki.CertTypeServer || c.c.Type == pki.CertTypeClient {
-		config.Password = "bypass"
-	}
-
-	c.output(reqEnterConfig)
-	err = askForConfig(&config, c.ui)
+	err = askForConfig(&config, c.c, c.ui)
 	if err != nil {
 		return ErrorEnterConfig
 	}
 
-	// User certificates should not have a password
-	if c.c.Type == pki.CertTypeServer || c.c.Type == pki.CertTypeClient {
-		config.Password = ""
-	}
-
-	c.output(reqEnterClaim)
-	err = askForClaim(&claim, c.ui)
+	err = askForClaim(&claim, c.c, c.ui)
 	if err != nil {
 		return ErrorEnterClaim
 	}
