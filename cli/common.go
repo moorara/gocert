@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/mitchellh/cli"
 	"github.com/moorara/go-box/util"
@@ -23,6 +25,24 @@ const (
 
 	textRootEnterPolicy   = "\nTRUST POLICY RULES FOR ROOT CERTIFICATE AUTHORITIES ..."
 	textIntermEnterPolicy = "\nTRUST POLICY RULES FOR INTERMEDIATE CERTIFICATE AUTHORITIES ..."
+
+	textEnterConfig = "\nENTER CONFIGURATIONS FOR %s ..."
+	textEnterClaim  = "\nENTER SPECIFICATIONS FOR %s ..."
+
+	textEnterStateTips = ``
+	textEnterSpecTips  = `
+	You can enter a list by comma-separating values.
+	If you don't want to use any of the specs, leave it empty.
+	You can later change these specs by editing "spec.toml" file.`
+	textEnterPolicyTips = `
+	You can specify the signing policy for certificate authorities.
+	Enter the name of each spec you want be matched/supplied as appeared in specs.`
+	textEnterConfigTips = `
+	Using passwords for certificate authorities is mandatory.
+	The password length should be at least 6 characters.`
+	textEnterClaimTips = `
+	You can enter a list by comma-separating values.
+	If you don't want to use any of the specs, leave it empty.`
 )
 
 func newColoredUI() *cli.ColoredUi {
@@ -98,6 +118,8 @@ func resolveByName(name string) pki.Cert {
 }
 
 func askForNewState(ui cli.Ui) (*pki.State, error) {
+	ui.Info(textEnterStateTips)
+
 	root := pki.Config{}
 	ui.Output(textRootEnterConfig)
 	err := help.AskForStruct(&root, "yaml", true, ui)
@@ -137,6 +159,8 @@ func askForNewState(ui cli.Ui) (*pki.State, error) {
 }
 
 func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
+	ui.Info(textEnterSpecTips)
+
 	// Common specs
 	common := pki.Claim{}
 	ui.Output(textCommonEnterClaim)
@@ -173,6 +197,8 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 		return nil, err
 	}
 
+	ui.Info(textEnterPolicyTips)
+
 	rootPolicy := pki.Policy{}
 	ui.Output(textRootEnterPolicy)
 	err = help.AskForStruct(&rootPolicy, "toml", true, ui)
@@ -199,10 +225,32 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 	return spec, nil
 }
 
-func askForConfig(config *pki.Config, ui cli.Ui) error {
+func askForConfig(config *pki.Config, c pki.Cert, ui cli.Ui) error {
+	if c.Type == pki.CertTypeRoot || c.Type == pki.CertTypeInterm {
+		ui.Info(textEnterConfigTips)
+	}
+
+	// User certificates should not have a password
+	if c.Type == pki.CertTypeServer || c.Type == pki.CertTypeClient {
+		config.Password = "bypass"
+		defer func() {
+			config.Password = ""
+		}()
+	}
+
+	title := fmt.Sprintf(textEnterConfig, strings.ToUpper(c.Title()))
+	ui.Output(title)
+
 	return help.AskForStruct(config, "yaml", false, ui)
 }
 
-func askForClaim(claim *pki.Claim, ui cli.Ui) error {
+func askForClaim(claim *pki.Claim, c pki.Cert, ui cli.Ui) error {
+	if c.Type == pki.CertTypeRoot || c.Type == pki.CertTypeInterm {
+		ui.Info(textEnterClaimTips)
+	}
+
+	title := fmt.Sprintf(textEnterClaim, strings.ToUpper(c.Title()))
+	ui.Output(title)
+
 	return help.AskForStruct(claim, "toml", false, ui)
 }

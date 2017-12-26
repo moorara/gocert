@@ -132,7 +132,7 @@ func (c *SignCommand) Run(args []string) (exit int) {
 	}
 
 	c.ui.Output(signEnterConfigCA)
-	err = askForConfig(&configCA, c.ui)
+	err = askForConfig(&configCA, cCA, c.ui)
 	if err != nil {
 		return ErrorEnterConfig
 	}
