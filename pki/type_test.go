@@ -3,7 +3,6 @@ package pki
 import (
 	"net"
 	"path"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,39 +31,40 @@ func TestNewState(t *testing.T) {
 func TestNewSpec(t *testing.T) {
 	spec := NewSpec()
 
-	expectedClaim := Claim{}
-	expectedRootPolicy := Policy{
-		Match:    strings.Split(defaultRootPolicyMatch, ","),
-		Supplied: strings.Split(defaultRootPolicySupplied, ","),
-	}
-	expectedIntermPolicy := Policy{
-		Match:    strings.Split(defaultIntermPolicyMatch, ","),
-		Supplied: strings.Split(defaultIntermPolicySupplied, ","),
+	expectedSpec := &Spec{
+		Root:   Claim{},
+		Interm: Claim{},
+		Server: Claim{},
+		Client: Claim{},
+		RootPolicy: Policy{
+			Match:    defaultRootPolicyMatch,
+			Supplied: defaultRootPolicySupplied,
+		},
+		IntermPolicy: Policy{
+			Match:    defaultIntermPolicyMatch,
+			Supplied: defaultIntermPolicySupplied,
+		},
+		Metadata: Metadata{},
 	}
 
-	assert.Equal(t, expectedClaim, spec.Root)
-	assert.Equal(t, expectedClaim, spec.Interm)
-	assert.Equal(t, expectedClaim, spec.Server)
-	assert.Equal(t, expectedClaim, spec.Client)
-	assert.Equal(t, expectedRootPolicy, spec.RootPolicy)
-	assert.Equal(t, expectedIntermPolicy, spec.IntermPolicy)
+	assert.Equal(t, expectedSpec, spec)
 }
 
 func TestState(t *testing.T) {
 	tests := []struct {
-		state            State
+		state            *State
 		certType         int
 		expectedConfig   Config
 		expectedConfigOK bool
 	}{
 		{
-			*NewState(),
+			NewState(),
 			-1,
 			Config{},
 			false,
 		},
 		{
-			*NewState(),
+			NewState(),
 			CertTypeRoot,
 			Config{
 				Serial: defaultRootCASerial,
@@ -74,7 +74,7 @@ func TestState(t *testing.T) {
 			true,
 		},
 		{
-			*NewState(),
+			NewState(),
 			CertTypeInterm,
 			Config{
 				Serial: defaultIntermCASerial,
@@ -84,7 +84,7 @@ func TestState(t *testing.T) {
 			true,
 		},
 		{
-			*NewState(),
+			NewState(),
 			CertTypeServer,
 			Config{
 				Serial: defaultServerCertSerial,
@@ -94,7 +94,7 @@ func TestState(t *testing.T) {
 			true,
 		},
 		{
-			*NewState(),
+			NewState(),
 			CertTypeClient,
 			Config{
 				Serial: defaultClientCertSerial,
@@ -114,7 +114,7 @@ func TestState(t *testing.T) {
 }
 
 func TestSpec(t *testing.T) {
-	spec := Spec{
+	spec := &Spec{
 		Root: Claim{
 			Country:      []string{"CA"},
 			Province:     []string{"Ontario"},
@@ -153,7 +153,7 @@ func TestSpec(t *testing.T) {
 	}
 
 	tests := []struct {
-		spec             Spec
+		spec             *Spec
 		certType         int
 		expectedClaim    Claim
 		expectedClaimOK  bool

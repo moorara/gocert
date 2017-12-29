@@ -64,70 +64,70 @@ func getAskFunc(tag string, ui cli.Ui) askFunc {
 }
 
 func toIntSlice(list string) []int {
-	slice := strings.Split(list, ",")
-	intSlice := make([]int, len(slice))
+	vals := strings.Split(list, ",")
+	intVals := make([]int, len(vals))
 
-	for i, str := range slice {
+	for i, str := range vals {
 		n, err := strconv.ParseInt(str, 10, 32)
 		if err == nil {
-			intSlice[i] = int(n)
+			intVals[i] = int(n)
 		}
 	}
 
-	return intSlice
+	return intVals
 }
 
 func toInt64Slice(list string) []int64 {
-	slice := strings.Split(list, ",")
-	int64Slice := make([]int64, len(slice))
+	vals := strings.Split(list, ",")
+	int64Vals := make([]int64, len(vals))
 
-	for i, str := range slice {
+	for i, str := range vals {
 		n, err := strconv.ParseInt(str, 10, 64)
 		if err == nil {
-			int64Slice[i] = n
+			int64Vals[i] = n
 		}
 	}
 
-	return int64Slice
+	return int64Vals
 }
 
 func toFloat32Slice(list string) []float32 {
-	slice := strings.Split(list, ",")
-	float32Slice := make([]float32, len(slice))
+	vals := strings.Split(list, ",")
+	float32Vals := make([]float32, len(vals))
 
-	for i, str := range slice {
+	for i, str := range vals {
 		n, err := strconv.ParseFloat(str, 32)
 		if err == nil {
-			float32Slice[i] = float32(n)
+			float32Vals[i] = float32(n)
 		}
 	}
 
-	return float32Slice
+	return float32Vals
 }
 
 func toFloat64Slice(list string) []float64 {
-	slice := strings.Split(list, ",")
-	float64Slice := make([]float64, len(slice))
+	vals := strings.Split(list, ",")
+	float64Vals := make([]float64, len(vals))
 
-	for i, str := range slice {
+	for i, str := range vals {
 		n, err := strconv.ParseFloat(str, 64)
 		if err == nil {
-			float64Slice[i] = n
+			float64Vals[i] = n
 		}
 	}
 
-	return float64Slice
+	return float64Vals
 }
 
 func toNetIPSlice(list string) []net.IP {
-	slice := strings.Split(list, ",")
-	netIPSlice := make([]net.IP, len(slice))
+	vals := strings.Split(list, ",")
+	netIPVals := make([]net.IP, len(vals))
 
-	for i, str := range slice {
-		netIPSlice[i] = net.ParseIP(str)
+	for i, str := range vals {
+		netIPVals[i] = net.ParseIP(str)
 	}
 
-	return netIPSlice
+	return netIPVals
 }
 
 func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) error {
@@ -279,6 +279,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui
 	return nil
 }
 
+// AskForStruct reads values from stdin for empty fields of a struct
 func AskForStruct(target interface{}, tagKey string, ignoreOmitted bool, ui cli.Ui) error {
 	// Get into top-level struct
 	v := reflect.ValueOf(target).Elem()
