@@ -43,12 +43,12 @@ var (
 			stateLoadTest{
 				`invalid yaml`,
 				true,
-				&State{},
+				nil,
 			},
 			specLoadTest{
 				`invalid toml`,
 				true,
-				&Spec{},
+				nil,
 			},
 		},
 		{
@@ -78,41 +78,40 @@ var (
 				false,
 				&State{
 					Root: Config{
-						Serial: int64(10),
+						Serial: 10,
 						Length: 4096,
 						Days:   7300,
 					},
 					Interm: Config{
-						Serial: int64(100),
+						Serial: 100,
 						Length: 4096,
 						Days:   3650,
 					},
 				},
 			},
 			specLoadTest{
-				`[root]
-					locality = [ "Ottawa" ]
+				`
+				[root]
+					country = [ "CA" ]
 					organization = [ "Moorara" ]
 				[server]
 					country = [ "US" ]
-					organization = [ "AWS" ]
+					organization = [ "Milad" ]
 					dns_name = [ "example.com" ]
-					email_address = [ "moorara@example.com" ]
+					email_address = [ "milad@example.com" ]
 				`,
 				false,
 				&Spec{
 					Root: Claim{
-						Locality:     []string{"Ottawa"},
+						Country:      []string{"CA"},
 						Organization: []string{"Moorara"},
 					},
-					Interm: Claim{},
 					Server: Claim{
 						Country:      []string{"US"},
-						Organization: []string{"AWS"},
+						Organization: []string{"Milad"},
 						DNSName:      []string{"example.com"},
-						EmailAddress: []string{"moorara@example.com"},
+						EmailAddress: []string{"milad@example.com"},
 					},
-					Client: Claim{},
 				},
 			},
 		},
@@ -139,29 +138,30 @@ var (
 				false,
 				&State{
 					Root: Config{
-						Serial: int64(10),
+						Serial: 10,
 						Length: 4096,
 						Days:   7300,
 					},
 					Interm: Config{
-						Serial: int64(100),
+						Serial: 100,
 						Length: 4096,
 						Days:   3650,
 					},
 					Server: Config{
-						Serial: int64(1000),
+						Serial: 1000,
 						Length: 2048,
 						Days:   375,
 					},
 					Client: Config{
-						Serial: int64(10000),
+						Serial: 10000,
 						Length: 2048,
 						Days:   40,
 					},
 				},
 			},
 			specLoadTest{
-				`[root]
+				`
+				[root]
 					country = [ "CA", "US" ]
 					province = [ "Ontario", "Massachusetts" ]
 					locality = [ "Ottawa", "Boston" ]
@@ -191,6 +191,11 @@ var (
 				[intermediate_policy]
 					match = ["Organization"]
 					supplied = ["CommonName"]
+				[metadata]
+					RootSkip = ["IPAddress", "StreetAddress", "PostalCode"]
+					IntermSkip = ["IPAddress", "StreetAddress", "PostalCode"]
+					ServerSkip = ["StreetAddress", "PostalCode"]
+					ClientSkip = ["StreetAddress", "PostalCode"]
 				`,
 				false,
 				&Spec{
@@ -229,6 +234,12 @@ var (
 					IntermPolicy: Policy{
 						Match:    []string{"Organization"},
 						Supplied: []string{"CommonName"},
+					},
+					Metadata: Metadata{
+						"RootSkip":   []string{"IPAddress", "StreetAddress", "PostalCode"},
+						"IntermSkip": []string{"IPAddress", "StreetAddress", "PostalCode"},
+						"ServerSkip": []string{"StreetAddress", "PostalCode"},
+						"ClientSkip": []string{"StreetAddress", "PostalCode"},
 					},
 				},
 			},
@@ -288,6 +299,49 @@ var (
 		},
 		{
 			stateSaveTest{
+				NewState(),
+				`root:
+					serial: 10
+					length: 4096
+					days: 7300
+				intermediate:
+					serial: 100
+					length: 4096
+					days: 3650
+				server:
+					serial: 1000
+					length: 2048
+					days: 375
+				client:
+					serial: 10000
+					length: 2048
+					days: 40
+				`,
+			},
+			specSaveTest{
+				NewSpec(),
+				`[root]
+
+				[intermediate]
+
+				[server]
+
+				[client]
+
+				[root_policy]
+					match = []
+					supplied = ["CommonName"]
+
+				[intermediate_policy]
+					match = []
+					supplied = ["CommonName"]
+
+				[metadata]
+				`,
+			},
+		},
+		{
+			stateSaveTest{
 				&State{
 					Root: Config{
 						Serial: 10,
@@ -327,12 +381,13 @@ var (
 					Interm: Claim{},
 					Server: Claim{
 						Country:      []string{"US"},
-						Organization: []string{"AWS"}},
+						Organization: []string{"Milad"}},
 					Client: Claim{},
 					RootPolicy: Policy{
 						Match:    []string{"Organization"},
 						Supplied: []string{"CommonName"},
 					},
+					Metadata: Metadata{},
 				},
 				`[root]
 					locality = ["Ottawa"]
@@ -342,7 +397,7 @@ var (
 
 				[server]
 					country = ["US"]
-					organization = ["AWS"]
+					organization = ["Milad"]
 
 				[client]
 
@@ -351,6 +406,8 @@ var (
 					supplied = ["CommonName"]
 
 				[intermediate_policy]
+
+				[metadata]
 				`,
 			},
 		},
@@ -429,6 +486,12 @@ var (
 						Match:    []string{"Organization"},
 						Supplied: []string{"CommonName"},
 					},
+					Metadata: Metadata{
+						"RootSkip":   []string{"IPAddress", "StreetAddress", "PostalCode"},
+						"IntermSkip": []string{"IPAddress", "StreetAddress", "PostalCode"},
+						"ServerSkip": []string{"StreetAddress", "PostalCode"},
+						"ClientSkip": []string{"StreetAddress", "PostalCode"},
+					},
 				},
 				`[root]
 					country = ["CA", "US"]
@@ -460,6 +523,12 @@ var (
 				[intermediate_policy]
 					match = ["Organization"]
 					supplied = ["CommonName"]
+
+				[metadata]
+					ClientSkip = ["StreetAddress", "PostalCode"]
+					IntermSkip = ["IPAddress", "StreetAddress", "PostalCode"]
+					RootSkip = ["IPAddress", "StreetAddress", "PostalCode"]
+					ServerSkip = ["StreetAddress", "PostalCode"]
 				`,
 			},
 		},

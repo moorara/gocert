@@ -3,7 +3,6 @@ package pki
 import (
 	"net"
 	"path"
-	"strings"
 )
 
 const (
@@ -31,16 +30,18 @@ const (
 	defaultClientCertLength = 2048
 	defaultClientCertDays   = 10 + 30
 
-	defaultRootPolicyMatch    = ""
-	defaultRootPolicySupplied = "CommonName"
-
-	defaultIntermPolicyMatch    = ""
-	defaultIntermPolicySupplied = "CommonName"
-
 	titleRoot   = "Root Certificate Authority"
 	titleInterm = "Intermediate Certificate Authority"
 	titleServer = "Server Certificate Authority"
 	titleClient = "Client Certificate Authority"
+)
+
+var (
+	defaultRootPolicyMatch    = []string{}
+	defaultRootPolicySupplied = []string{"CommonName"}
+
+	defaultIntermPolicyMatch    = []string{}
+	defaultIntermPolicySupplied = []string{"CommonName"}
 )
 
 type (
@@ -62,12 +63,13 @@ type (
 
 	// Spec represents the type for specs
 	Spec struct {
-		Root         Claim  `toml:"root"`
-		Interm       Claim  `toml:"intermediate"`
-		Server       Claim  `toml:"server"`
-		Client       Claim  `toml:"client"`
-		RootPolicy   Policy `toml:"root_policy"`
-		IntermPolicy Policy `toml:"intermediate_policy"`
+		Root         Claim    `toml:"root"`
+		Interm       Claim    `toml:"intermediate"`
+		Server       Claim    `toml:"server"`
+		Client       Claim    `toml:"client"`
+		RootPolicy   Policy   `toml:"root_policy"`
+		IntermPolicy Policy   `toml:"intermediate_policy"`
+		Metadata     Metadata `toml:"metadata"`
 	}
 
 	// Claim represents the subtype for an identity claim
@@ -90,6 +92,9 @@ type (
 		Match    []string `toml:"match"`
 		Supplied []string `toml:"supplied"`
 	}
+
+	// Metadata represents the subtyoe for metadata
+	Metadata map[string][]string
 
 	// Cert represents the type for a certificate
 	Cert struct {
@@ -132,13 +137,14 @@ func NewSpec() *Spec {
 		Server: Claim{},
 		Client: Claim{},
 		RootPolicy: Policy{
-			Match:    strings.Split(defaultRootPolicyMatch, ","),
-			Supplied: strings.Split(defaultRootPolicySupplied, ","),
+			Match:    defaultRootPolicyMatch,
+			Supplied: defaultRootPolicySupplied,
 		},
 		IntermPolicy: Policy{
-			Match:    strings.Split(defaultIntermPolicyMatch, ","),
-			Supplied: strings.Split(defaultIntermPolicySupplied, ","),
+			Match:    defaultIntermPolicyMatch,
+			Supplied: defaultIntermPolicySupplied,
 		},
+		Metadata: Metadata{},
 	}
 }
 

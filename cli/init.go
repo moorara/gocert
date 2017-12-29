@@ -18,10 +18,6 @@ const (
 	You will be first asked for entering common specs which all of your certificates share. So, you enter them once.
 	Next, you will be asked for entering more-specific specs for Root, Intermediate, Server, and Client certificates.
 
-	You can enter a list by comma-separating values.
-	If you don't want to use any of the specs, leave it empty.
-	You can later change these specs by editing "spec.toml" file.
-
 	Best-practice configs are provided by default.
 	You can customize these configs by editing "state.yaml" file.
 	`
@@ -60,12 +56,14 @@ func (c *InitCommand) Run(args []string) int {
 
 	_, err = util.MkDirs("", pki.DirRoot, pki.DirInterm, pki.DirServer, pki.DirClient, pki.DirCSR)
 	if err != nil {
+		c.ui.Error("Failed to create directories. Error: " + err.Error())
 		return ErrorMakeDir
 	}
 
 	state := pki.NewState()
 	err = pki.SaveState(state, pki.FileState)
 	if err != nil {
+		c.ui.Error("Failed to save configs. Error: " + err.Error())
 		return ErrorWriteState
 	}
 
@@ -77,6 +75,7 @@ func (c *InitCommand) Run(args []string) int {
 
 	err = pki.SaveSpec(spec, pki.FileSpec)
 	if err != nil {
+		c.ui.Error("Failed to save specs. Error: " + err.Error())
 		return ErrorWriteSpec
 	}
 
