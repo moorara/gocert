@@ -90,7 +90,7 @@ type (
 	// Policy represents the subtype for a policy
 	Policy struct {
 		Match    []string `toml:"match"`
-		Supplied []string `toml:"supplied"`
+		Supplied []string `toml:"supplied" default:"CommonName"`
 	}
 
 	// Metadata represents the subtyoe for metadata

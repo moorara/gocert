@@ -8,6 +8,8 @@ const (
 	mdServerSkip = "serverSkip"
 	mdClientSkip = "clientSkip"
 
+	promptTemplate = "%s (type: %s):"
+
 	// ErrorEnterState is returned when entering state fails
 	ErrorEnterState = 11
 	// ErrorEnterSpec is returned when entering spec fails

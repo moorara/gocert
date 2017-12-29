@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 )
 
@@ -102,7 +101,7 @@ func (c *SignCommand) Run(args []string) (exit int) {
 
 	if fCA == "" {
 		c.ui.Output(signEnterNameCA)
-		fCA, err = c.ui.Ask(fmt.Sprintf(help.AskTemplate, "CA Name", "string"))
+		fCA, err = c.ui.Ask(fmt.Sprintf(promptTemplate, "CA Name", "string"))
 		if err != nil {
 			return ErrorInvalidCA
 		}
@@ -110,7 +109,7 @@ func (c *SignCommand) Run(args []string) (exit int) {
 
 	if fName == "" {
 		c.ui.Output(signEnterNameCSR)
-		fName, err = c.ui.Ask(fmt.Sprintf(help.AskTemplate, "CSR Name", "string list"))
+		fName, err = c.ui.Ask(fmt.Sprintf(promptTemplate, "CSR Name", "string list"))
 		if err != nil {
 			return ErrorInvalidCSR
 		}

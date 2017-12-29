@@ -815,9 +815,13 @@ func TestAskForNewSpec(t *testing.T) {
 					Country:      []string{"CA"},
 					Organization: []string{"Milad"},
 				},
-				RootPolicy:   pki.Policy{},
-				IntermPolicy: pki.Policy{},
-				Metadata:     pki.Metadata{},
+				RootPolicy: pki.Policy{
+					Supplied: []string{"CommonName"},
+				},
+				IntermPolicy: pki.Policy{
+					Supplied: []string{"CommonName"},
+				},
+				Metadata: pki.Metadata{},
 			},
 		},
 		{

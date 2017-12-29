@@ -13,17 +13,27 @@ import (
 )
 
 const (
-	tagSecret       = "secret"
-	defaultMinLen   = 8
 	placeholderSkip = "-"
 
-	// AskTemplate is used when asking for a value
-	AskTemplate = "%s (%s):"
+	defaultMinLen = 8
+	tagSecret     = "secret"
+	tagDefault    = "default"
+
+	promptTemplate        = "%s (type: %s):"
+	promptDefaultTemplate = "%s (type: %s, default: %s):"
 )
 
 type (
 	askFunc func(query string) (string, error)
 )
+
+func getPrompt(name, typeHint, defaultTag string) string {
+	if defaultTag == "" {
+		return fmt.Sprintf(promptTemplate, name, typeHint)
+	} else {
+		return fmt.Sprintf(promptDefaultTemplate, name, typeHint, defaultTag)
+	}
+}
 
 func updateSkipList(skipList *[]string, field, value string) bool {
 	if skipList != nil && *skipList != nil && value == placeholderSkip {
@@ -41,22 +51,35 @@ func secretOK(pass string, minLen int) bool {
 	return true
 }
 
-func getAskFunc(tag string, ui cli.Ui) askFunc {
-	tagOpts := strings.Split(tag, ",")
-	obligation := tagOpts[0]
+func getAskFunc(secretTag, defaultTag string, ui cli.Ui) askFunc {
+	secretTagOpts := strings.Split(secretTag, ",")
+	secretObligation := secretTagOpts[0]
 
-	if !util.IsStringIn(obligation, "required", "optional") {
-		return ui.Ask
+	if !util.IsStringIn(secretObligation, "required", "optional") {
+		// Ask function for non-secret values
+		return func(query string) (string, error) {
+			val, err := ui.Ask(query)
+			if err != nil {
+				return "", err
+			}
+
+			if val == "" {
+				val = defaultTag
+			}
+			return val, nil
+		}
 	}
 
 	minLen := defaultMinLen
-	if len(tagOpts) > 1 {
-		n, err := strconv.ParseInt(tagOpts[1], 10, 32)
+	if len(secretTagOpts) > 1 {
+		secretMinLen := secretTagOpts[1]
+		n, err := strconv.ParseInt(secretMinLen, 10, 32)
 		if err == nil {
 			minLen = int(n)
 		}
 	}
 
+	// Ask funtion for seccret values
 	return func(query string) (string, error) {
 		secret, err := ui.AskSecret(query)
 		if err != nil || !secretOK(secret, minLen) {
@@ -172,7 +195,8 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 		}
 
 		secretTag := tField.Tag.Get(tagSecret)
-		ask := getAskFunc(secretTag, ui)
+		defaultTag := tField.Tag.Get(tagDefault)
+		ask := getAskFunc(secretTag, defaultTag, ui)
 
 		var err error
 		var str string
@@ -185,7 +209,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 				return err
 			}
 		} else if kind == reflect.Bool && vField.Bool() == false {
-			if str, err = ask(fmt.Sprintf(AskTemplate, name, "boolean")); err != nil {
+			if str, err = ask(getPrompt(name, "boolean", defaultTag)); err != nil {
 				return err
 			}
 			if skipped := updateSkipList(skipList, fullName, str); !skipped {
@@ -194,7 +218,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 				}
 			}
 		} else if kind == reflect.Int && vField.Int() == 0 {
-			if str, err = ask(fmt.Sprintf(AskTemplate, name, "integer number")); err != nil {
+			if str, err = ask(getPrompt(name, "integer number", defaultTag)); err != nil {
 				return err
 			}
 			if skipped := updateSkipList(skipList, fullName, str); !skipped {
@@ -203,7 +227,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 				}
 			}
 		} else if kind == reflect.Int64 && vField.Int() == 0 {
-			if str, err = ask(fmt.Sprintf(AskTemplate, name, "integer number")); err != nil {
+			if str, err = ask(getPrompt(name, "integer number", defaultTag)); err != nil {
 				return err
 			}
 			if skipped := updateSkipList(skipList, fullName, str); !skipped {
@@ -212,7 +236,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 				}
 			}
 		} else if kind == reflect.Float32 && vField.Float() == 0 {
-			if str, err = ask(fmt.Sprintf(AskTemplate, name, "real number")); err != nil {
+			if str, err = ask(getPrompt(name, "real number", defaultTag)); err != nil {
 				return err
 			}
 			if skipped := updateSkipList(skipList, fullName, str); !skipped {
@@ -221,7 +245,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 				}
 			}
 		} else if kind == reflect.Float64 && vField.Float() == 0 {
-			if str, err = ask(fmt.Sprintf(AskTemplate, name, "real number")); err != nil {
+			if str, err = ask(getPrompt(name, "real number", defaultTag)); err != nil {
 				return err
 			}
 			if skipped := updateSkipList(skipList, fullName, str); !skipped {
@@ -230,7 +254,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 				}
 			}
 		} else if kind == reflect.String && vField.String() == "" {
-			if str, err = ask(fmt.Sprintf(AskTemplate, name, "string")); err != nil {
+			if str, err = ask(getPrompt(name, "string", defaultTag)); err != nil {
 				return err
 			}
 			if skipped := updateSkipList(skipList, fullName, str); !skipped {
@@ -242,7 +266,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 			sliceType := reflect.TypeOf(value).Elem()
 			sliceKind := sliceType.Kind()
 			if sliceKind == reflect.Int {
-				if str, err = ask(fmt.Sprintf(AskTemplate, name, "integer numbers")); err != nil {
+				if str, err = ask(getPrompt(name, "integer numbers", defaultTag)); err != nil {
 					return err
 				}
 				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
@@ -250,7 +274,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 					vField.Set(reflect.ValueOf(intSlice))
 				}
 			} else if sliceKind == reflect.Int64 {
-				if str, err = ask(fmt.Sprintf(AskTemplate, name, "integer numbers")); err != nil {
+				if str, err = ask(getPrompt(name, "integer numbers", defaultTag)); err != nil {
 					return err
 				}
 				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
@@ -258,7 +282,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 					vField.Set(reflect.ValueOf(int64Slice))
 				}
 			} else if sliceKind == reflect.Float32 {
-				if str, err = ask(fmt.Sprintf(AskTemplate, name, "real numbers")); err != nil {
+				if str, err = ask(getPrompt(name, "real numbers", defaultTag)); err != nil {
 					return err
 				}
 				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
@@ -266,7 +290,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 					vField.Set(reflect.ValueOf(float32Slice))
 				}
 			} else if sliceKind == reflect.Float64 {
-				if str, err = ask(fmt.Sprintf(AskTemplate, name, "real numbers")); err != nil {
+				if str, err = ask(getPrompt(name, "real numbers", defaultTag)); err != nil {
 					return err
 				}
 				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
@@ -274,7 +298,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 					vField.Set(reflect.ValueOf(float64Slice))
 				}
 			} else if sliceKind == reflect.String {
-				if str, err = ask(fmt.Sprintf(AskTemplate, name, "string list")); err != nil {
+				if str, err = ask(getPrompt(name, "string list", defaultTag)); err != nil {
 					return err
 				}
 				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
@@ -282,7 +306,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 					vField.Set(reflect.ValueOf(slice))
 				}
 			} else if sliceType.String() == "net.IP" {
-				if str, err = ask(fmt.Sprintf(AskTemplate, name, "string list")); err != nil {
+				if str, err = ask(getPrompt(name, "string list", defaultTag)); err != nil {
 					return err
 				}
 				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
