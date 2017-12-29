@@ -1,5 +1,30 @@
 # Change Log
 
+## [v0.1.2](https://github.com/moorara/gocert/tree/v0.1.2) (2017-12-28)
+[Full Changelog](https://github.com/moorara/gocert/compare/v0.1.1...v0.1.2)
+
+**Implemented enhancements:**
+
+- Add short form feature [\#6](https://github.com/moorara/gocert/issues/6)
+
+**Fixed bugs:**
+
+- Process should exit on ctrl+c [\#14](https://github.com/moorara/gocert/issues/14)
+- Setting a password for certificate authorities should be mandatory [\#13](https://github.com/moorara/gocert/issues/13)
+- signing should fail if password for certificate authority is invalid! [\#12](https://github.com/moorara/gocert/issues/12)
+
+**Merged pull requests:**
+
+- Add default values feature [\#19](https://github.com/moorara/gocert/pull/19) ([moorara](https://github.com/moorara))
+- Add skip feature for claim fields [\#18](https://github.com/moorara/gocert/pull/18) ([moorara](https://github.com/moorara))
+- Add Metadata to Spec [\#17](https://github.com/moorara/gocert/pull/17) ([moorara](https://github.com/moorara))
+- Better UI experience [\#16](https://github.com/moorara/gocert/pull/16) ([moorara](https://github.com/moorara))
+- Refactoring [\#15](https://github.com/moorara/gocert/pull/15) ([moorara](https://github.com/moorara))
+- Update vendor and prune [\#11](https://github.com/moorara/gocert/pull/11) ([moorara](https://github.com/moorara))
+- Rename metadata [\#10](https://github.com/moorara/gocert/pull/10) ([moorara](https://github.com/moorara))
+- Fix broken badge [\#9](https://github.com/moorara/gocert/pull/9) ([moorara](https://github.com/moorara))
+- Small Refactoring [\#8](https://github.com/moorara/gocert/pull/8) ([moorara](https://github.com/moorara))
+
 ## [v0.1.1](https://github.com/moorara/gocert/tree/v0.1.1) (2017-12-20)
 [Full Changelog](https://github.com/moorara/gocert/compare/v0.1.0...v0.1.1)
 
