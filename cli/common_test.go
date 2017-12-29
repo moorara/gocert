@@ -197,6 +197,11 @@ func TestLoadWorkspace(t *testing.T) {
 			[intermediate_policy]
 				match = ["Organization"]
 				supplied = ["CommonName"]
+			[metadata]
+				RootSkip = ["IPAddress", "StreetAddress", "PostalCode"]
+				IntermSkip = ["IPAddress", "StreetAddress", "PostalCode"]
+				ServerSkip = ["StreetAddress", "PostalCode"]
+				ClientSkip = ["StreetAddress", "PostalCode"]
 			`,
 			0,
 			&pki.State{
@@ -258,6 +263,12 @@ func TestLoadWorkspace(t *testing.T) {
 					Match:    []string{"Organization"},
 					Supplied: []string{"CommonName"},
 				},
+				Metadata: pki.Metadata{
+					"RootSkip":   []string{"IPAddress", "StreetAddress", "PostalCode"},
+					"IntermSkip": []string{"IPAddress", "StreetAddress", "PostalCode"},
+					"ServerSkip": []string{"StreetAddress", "PostalCode"},
+					"ClientSkip": []string{"StreetAddress", "PostalCode"},
+				},
 			},
 		},
 	}
@@ -295,7 +306,7 @@ func TestSaveWorkspace(t *testing.T) {
 		expectedSpecTOML  string
 	}{
 		{
-			"Simple",
+			"EmptyStateSpec",
 			&pki.State{},
 			&pki.Spec{},
 			0,
@@ -330,7 +341,48 @@ func TestSaveWorkspace(t *testing.T) {
 			`,
 		},
 		{
-			"Complex",
+			"DefaultStateSpec",
+			pki.NewState(),
+			pki.NewSpec(),
+			0,
+			`root:
+				serial: 10
+				length: 4096
+				days: 7300
+			intermediate:
+				serial: 100
+				length: 4096
+				days: 3650
+			server:
+				serial: 1000
+				length: 2048
+				days: 375
+			client:
+				serial: 10000
+				length: 2048
+				days: 40
+			`,
+			`[root]
+
+			[intermediate]
+
+			[server]
+
+			[client]
+
+			[root_policy]
+				match = []
+				supplied = ["CommonName"]
+
+			[intermediate_policy]
+				match = []
+				supplied = ["CommonName"]
+
+			[metadata]
+			`,
+		},
+		{
+			"CustomStateSpec",
 			&pki.State{
 				Root: pki.Config{
 					Serial: 10,
@@ -385,6 +437,12 @@ func TestSaveWorkspace(t *testing.T) {
 					Match:    []string{"Organization"},
 					Supplied: []string{"CommonName"},
 				},
+				Metadata: pki.Metadata{
+					"RootSkip":   []string{"IPAddress", "StreetAddress", "PostalCode"},
+					"IntermSkip": []string{"IPAddress", "StreetAddress", "PostalCode"},
+					"ServerSkip": []string{"StreetAddress", "PostalCode"},
+					"ClientSkip": []string{"StreetAddress", "PostalCode"},
+				},
 			},
 			0,
 			`root:
@@ -434,6 +492,12 @@ func TestSaveWorkspace(t *testing.T) {
 			[intermediate_policy]
 				match = ["Organization"]
 				supplied = ["CommonName"]
+
+			[metadata]
+				ClientSkip = ["StreetAddress", "PostalCode"]
+				IntermSkip = ["IPAddress", "StreetAddress", "PostalCode"]
+				RootSkip = ["IPAddress", "StreetAddress", "PostalCode"]
+				ServerSkip = ["StreetAddress", "PostalCode"]
 			`,
 		},
 	}
@@ -543,7 +607,7 @@ func TestAskForNewState(t *testing.T) {
 			`10
 			4096
 			7300
-				`,
+			`,
 			true,
 			nil,
 		},
@@ -668,18 +732,71 @@ func TestAskForNewSpec(t *testing.T) {
 		expectedSpec *pki.Spec
 	}{
 		{
-			"ErrorNoInput",
+			"ErrorNoInputForCommon",
 			"",
 			true,
 			nil,
 		},
 		{
-			"SuccessEnterCommon",
-			"CA\n\n\nMilad\n\n\n\n\n\n\n" +
+			"ErrorNoInputForRoot",
+			"\n\n\n\n\n\n\n\n\n\n",
+			true,
+			nil,
+		},
+		{
+			"ErrorNoInputForInterm",
+			"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n",
+			true,
+			nil,
+		},
+		{
+			"ErrorNoInputForServer",
+			"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n",
+			true,
+			nil,
+		},
+		{
+			"ErrorNoInputForClient",
+			"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n",
+			true,
+			nil,
+		},
+		{
+			"ErrorNoInputForRootPolicy",
+			"\n\n\n\n\n\n\n\n\n\n" +
 				"\n\n\n\n\n\n\n\n\n\n" +
 				"\n\n\n\n\n\n\n\n\n\n" +
 				"\n\n\n\n\n\n\n\n\n\n" +
 				"\n\n\n\n\n\n\n\n\n\n",
+			true,
+			nil,
+		},
+		{
+			"ErrorNoInputForIntermPolicy",
+			"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n\n\n" +
+				"\n\n",
+			true,
+			nil,
+		},
+		{
+			"SuccessSimple",
+			"CA\n\n\nMilad\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n" +
+				"\n\n\n\n\n\n\n\n" +
+				"\n\n" +
+				"\n\n",
 			false,
 			&pki.Spec{
 				Root: pki.Claim{
@@ -698,14 +815,17 @@ func TestAskForNewSpec(t *testing.T) {
 					Country:      []string{"CA"},
 					Organization: []string{"Milad"},
 				},
+				RootPolicy:   pki.Policy{},
+				IntermPolicy: pki.Policy{},
+				Metadata:     pki.Metadata{},
 			},
 		},
 		{
-			"SuccessEnterMore",
+			"SuccessComplex",
 			"CA\nOntario\n\nMilad\n\n\n\n\n\n\n" +
 				"\n\n\n\n\n\n\n" +
-				"Ottawa\nR&D\n\n\n\n\n\n" +
-				"Toronto,Montreal\n\nexample.com\n127.0.0.1\n\n\n\n" +
+				"Ottawa\nSRE\n\n\n\n\n\n" +
+				"Toronto,Montreal\nR&D\nexample.com\n127.0.0.1\n\n\n\n" +
 				"Ottawa\n\n\n\nmilad@example.com\n\n\n" +
 				"Country,Organization\nCommonName\n" +
 				"Organization\nCommonName\n",
@@ -721,15 +841,16 @@ func TestAskForNewSpec(t *testing.T) {
 					Province:           []string{"Ontario"},
 					Locality:           []string{"Ottawa"},
 					Organization:       []string{"Milad"},
-					OrganizationalUnit: []string{"R&D"},
+					OrganizationalUnit: []string{"SRE"},
 				},
 				Server: pki.Claim{
-					Country:      []string{"CA"},
-					Province:     []string{"Ontario"},
-					Locality:     []string{"Toronto", "Montreal"},
-					Organization: []string{"Milad"},
-					DNSName:      []string{"example.com"},
-					IPAddress:    []net.IP{net.ParseIP("127.0.0.1")},
+					Country:            []string{"CA"},
+					Province:           []string{"Ontario"},
+					Locality:           []string{"Toronto", "Montreal"},
+					Organization:       []string{"Milad"},
+					OrganizationalUnit: []string{"R&D"},
+					DNSName:            []string{"example.com"},
+					IPAddress:          []net.IP{net.ParseIP("127.0.0.1")},
 				},
 				Client: pki.Claim{
 					Country:      []string{"CA"},
@@ -745,6 +866,57 @@ func TestAskForNewSpec(t *testing.T) {
 				IntermPolicy: pki.Policy{
 					Match:    []string{"Organization"},
 					Supplied: []string{"CommonName"},
+				},
+				Metadata: pki.Metadata{},
+			},
+		},
+		{
+			"SuccessWithSkip",
+			"CA\n\n\nMilad\n\n\n\n\n-\n-\n" +
+				"\n\n\n-\n-\n\n" +
+				"\n\nSRE\n-\n-\n\n" +
+				"\nToronto,Montreal\nR&D\nexample.com\n127.0.0.1\n\n" +
+				"\nOttawa\n\n\n\nmilad@example.com\n" +
+				"Country,Organization\nCommonName\n" +
+				"Organization\nCommonName\n",
+			false,
+			&pki.Spec{
+				Root: pki.Claim{
+					Country:      []string{"CA"},
+					Organization: []string{"Milad"},
+				},
+				Interm: pki.Claim{
+					Country:            []string{"CA"},
+					Organization:       []string{"Milad"},
+					OrganizationalUnit: []string{"SRE"},
+				},
+				Server: pki.Claim{
+					Country:            []string{"CA"},
+					Locality:           []string{"Toronto", "Montreal"},
+					Organization:       []string{"Milad"},
+					OrganizationalUnit: []string{"R&D"},
+					DNSName:            []string{"example.com"},
+					IPAddress:          []net.IP{net.ParseIP("127.0.0.1")},
+				},
+				Client: pki.Claim{
+					Country:      []string{"CA"},
+					Locality:     []string{"Ottawa"},
+					Organization: []string{"Milad"},
+					EmailAddress: []string{"milad@example.com"},
+				},
+				RootPolicy: pki.Policy{
+					Match:    []string{"Country", "Organization"},
+					Supplied: []string{"CommonName"},
+				},
+				IntermPolicy: pki.Policy{
+					Match:    []string{"Organization"},
+					Supplied: []string{"CommonName"},
+				},
+				Metadata: pki.Metadata{
+					mdRootSkip:   []string{"Claim.StreetAddress", "Claim.PostalCode", "Claim.DNSName", "Claim.IPAddress"},
+					mdIntermSkip: []string{"Claim.StreetAddress", "Claim.PostalCode", "Claim.DNSName", "Claim.IPAddress"},
+					mdServerSkip: []string{"Claim.StreetAddress", "Claim.PostalCode"},
+					mdClientSkip: []string{"Claim.StreetAddress", "Claim.PostalCode"},
 				},
 			},
 		},
@@ -772,6 +944,7 @@ func TestAskForConfig(t *testing.T) {
 		title          string
 		config         *pki.Config
 		c              pki.Cert
+		skipList       []string
 		input          string
 		expectError    bool
 		expectedConfig *pki.Config
@@ -780,16 +953,18 @@ func TestAskForConfig(t *testing.T) {
 			"ErrorNoInput",
 			&pki.Config{},
 			pki.Cert{},
+			nil,
 			``,
 			true,
 			nil,
 		},
 		{
-			"SucessWithPassword",
+			"SucessAskForRoot",
 			&pki.Config{},
 			pki.Cert{
 				Type: pki.CertTypeRoot,
 			},
+			nil,
 			`10
 			4096
 			7300
@@ -805,13 +980,14 @@ func TestAskForConfig(t *testing.T) {
 			},
 		},
 		{
-			"SuccessWithoutPassword",
+			"SuccessAskForInterm",
 			&pki.Config{
-				Password: "dummy",
+				Password: "password",
 			},
 			pki.Cert{
 				Type: pki.CertTypeInterm,
 			},
+			nil,
 			`100
 			4096
 			3650
@@ -821,15 +997,16 @@ func TestAskForConfig(t *testing.T) {
 				Serial:   100,
 				Length:   4096,
 				Days:     3650,
-				Password: "dummy",
+				Password: "password",
 			},
 		},
 		{
-			"SuccessWithoutPassword",
+			"SuccessAskForServer",
 			&pki.Config{},
 			pki.Cert{
 				Type: pki.CertTypeServer,
 			},
+			nil,
 			`1000
 			2048
 			375
@@ -841,13 +1018,45 @@ func TestAskForConfig(t *testing.T) {
 				Days:   375,
 			},
 		},
+		{
+			"SuccessAskForClient",
+			&pki.Config{},
+			pki.Cert{
+				Type: pki.CertTypeClient,
+			},
+			nil,
+			`10000
+			2048
+			40
+			`,
+			false,
+			&pki.Config{
+				Serial: 10000,
+				Length: 2048,
+				Days:   40,
+			},
+		},
+		{
+			"SuccessWithSkip",
+			&pki.Config{},
+			pki.Cert{},
+			[]string{"Config.Serial", "Config.Password"},
+			`2048
+			365
+			`,
+			false,
+			&pki.Config{
+				Length: 2048,
+				Days:   365,
+			},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
 			mockUI := help.NewMockUI(r)
-			err := askForConfig(test.config, test.c, mockUI)
+			err := askForConfig(test.config, test.c, &test.skipList, mockUI)
 
 			if test.expectError {
 				assert.Error(t, err)
@@ -864,6 +1073,7 @@ func TestAskForClaim(t *testing.T) {
 		title         string
 		claim         *pki.Claim
 		c             pki.Cert
+		skipList      []string
 		input         string
 		expectError   bool
 		expectedClaim *pki.Claim
@@ -872,17 +1082,22 @@ func TestAskForClaim(t *testing.T) {
 			"ErrorNoInput",
 			&pki.Claim{},
 			pki.Cert{},
+			nil,
 			"",
 			true,
 			nil,
 		},
 		{
-			"SuccessSimple",
-			&pki.Claim{},
+			"SuccessAskForRoot",
+			&pki.Claim{
+				Country:      []string{"CA"},
+				Organization: []string{"Milad"},
+			},
 			pki.Cert{
 				Type: pki.CertTypeRoot,
 			},
-			"RootCA\nCA\n\n\nMilad\n\n\n\n\n\n\n",
+			[]string{"Claim.StreetAddress", "Claim.PostalCode"},
+			"RootCA\n\n\n\n\n\n\n",
 			false,
 			&pki.Claim{
 				CommonName:   "RootCA",
@@ -891,26 +1106,64 @@ func TestAskForClaim(t *testing.T) {
 			},
 		},
 		{
-			"SuccessComplex",
+			"SuccessAskForInterm",
 			&pki.Claim{
-				Country:  []string{"CA"},
-				Province: []string{"Ontario"},
-				Locality: []string{"Ottawa"},
+				Country:      []string{"CA"},
+				Organization: []string{"Milad"},
 			},
 			pki.Cert{
 				Type: pki.CertTypeInterm,
 			},
-			"IntermediateCA\nMilad\nSRE\nexample.com\n8.8.8.8,127.0.0.1\n\n\n\n",
+			[]string{"Claim.StreetAddress", "Claim.PostalCode"},
+			"IntermediateCA\n\n\nSRE\n\n\n\n",
 			false,
 			&pki.Claim{
 				CommonName:         "IntermediateCA",
 				Country:            []string{"CA"},
+				Organization:       []string{"Milad"},
+				OrganizationalUnit: []string{"SRE"},
+			},
+		},
+		{
+			"SuccessAskForServer",
+			&pki.Claim{
+				Country:      []string{"CA"},
+				Organization: []string{"Milad"},
+			},
+			pki.Cert{
+				Type: pki.CertTypeServer,
+			},
+			[]string{"Claim.StreetAddress", "Claim.PostalCode"},
+			"Server\n\n\nR&D\nexample.com\n127.0.0.1,8.8.8.8\n\n",
+			false,
+			&pki.Claim{
+				CommonName:         "Server",
+				Country:            []string{"CA"},
+				Organization:       []string{"Milad"},
+				OrganizationalUnit: []string{"R&D"},
+				DNSName:            []string{"example.com"},
+				IPAddress:          []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("8.8.8.8")},
+			},
+		},
+		{
+			"SuccessAskForClient",
+			&pki.Claim{
+				Country:      []string{"CA"},
+				Organization: []string{"Milad"},
+			},
+			pki.Cert{
+				Type: pki.CertTypeClient,
+			},
+			[]string{"Claim.StreetAddress", "Claim.PostalCode"},
+			"Client\nOntario\nOttawa\nQE\n\n\n\n",
+			false,
+			&pki.Claim{
+				CommonName:         "Client",
+				Country:            []string{"CA"},
 				Province:           []string{"Ontario"},
 				Locality:           []string{"Ottawa"},
 				Organization:       []string{"Milad"},
-				OrganizationalUnit: []string{"SRE"},
-				DNSName:            []string{"example.com"},
-				IPAddress:          []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("127.0.0.1")},
+				OrganizationalUnit: []string{"QE"},
 			},
 		},
 	}
@@ -919,7 +1172,7 @@ func TestAskForClaim(t *testing.T) {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
 			mockUI := help.NewMockUI(r)
-			err := askForClaim(test.claim, test.c, mockUI)
+			err := askForClaim(test.claim, test.c, &test.skipList, mockUI)
 
 			if test.expectError {
 				assert.Error(t, err)

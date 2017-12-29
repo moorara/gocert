@@ -13,14 +13,25 @@ import (
 )
 
 const (
-	tagSecret     = "secret"
-	defaultMinLen = 8
+	tagSecret       = "secret"
+	defaultMinLen   = 8
+	placeholderSkip = "-"
 
 	// AskTemplate is used when asking for a value
 	AskTemplate = "%s (%s):"
 )
 
-type askFunc func(query string) (string, error)
+type (
+	askFunc func(query string) (string, error)
+)
+
+func updateSkipList(skipList *[]string, field, value string) bool {
+	if skipList != nil && *skipList != nil && value == placeholderSkip {
+		*skipList = append(*skipList, field)
+		return true
+	}
+	return false
+}
 
 func secretOK(pass string, minLen int) bool {
 	if len(pass) < minLen {
@@ -130,7 +141,7 @@ func toNetIPSlice(list string) []net.IP {
 	return netIPVals
 }
 
-func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui) error {
+func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList *[]string, ui cli.Ui) error {
 	// v: reflect.Value --> v.Kind()
 	t := v.Type() // reflect.Type --> t.Kind(), t.Name()
 
@@ -154,122 +165,128 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui
 			continue
 		}
 
+		// Check if the field set to be skipped
+		fullName := t.Name() + "." + name
+		if skipList != nil && *skipList != nil && util.IsStringIn(fullName, *skipList...) {
+			continue
+		}
+
 		secretTag := tField.Tag.Get(tagSecret)
 		ask := getAskFunc(secretTag, ui)
 
+		var err error
+		var str string
+		var b bool
+		var i int64
+		var f float64
+
 		if kind == reflect.Struct {
-			err := askForStructV(vField, tagKey, ignoreOmitted, ui)
-			if err != nil {
+			if err = askForStructV(vField, tagKey, ignoreOmitted, skipList, ui); err != nil {
 				return err
 			}
 		} else if kind == reflect.Bool && vField.Bool() == false {
-			str, err := ask(fmt.Sprintf(AskTemplate, name, "boolean"))
-			if err != nil {
+			if str, err = ask(fmt.Sprintf(AskTemplate, name, "boolean")); err != nil {
 				return err
 			}
-			b, err := strconv.ParseBool(str)
-			if err == nil {
-				vField.SetBool(b)
+			if skipped := updateSkipList(skipList, fullName, str); !skipped {
+				if b, err = strconv.ParseBool(str); err == nil {
+					vField.SetBool(b)
+				}
 			}
 		} else if kind == reflect.Int && vField.Int() == 0 {
-			str, err := ask(fmt.Sprintf(AskTemplate, name, "integer number"))
-			if err != nil {
+			if str, err = ask(fmt.Sprintf(AskTemplate, name, "integer number")); err != nil {
 				return err
 			}
-			n, err := strconv.ParseInt(str, 10, 32)
-			if err == nil {
-				vField.SetInt(n)
+			if skipped := updateSkipList(skipList, fullName, str); !skipped {
+				if i, err = strconv.ParseInt(str, 10, 32); err == nil {
+					vField.SetInt(i)
+				}
 			}
 		} else if kind == reflect.Int64 && vField.Int() == 0 {
-			str, err := ask(fmt.Sprintf(AskTemplate, name, "integer number"))
-			if err != nil {
+			if str, err = ask(fmt.Sprintf(AskTemplate, name, "integer number")); err != nil {
 				return err
 			}
-			n, err := strconv.ParseInt(str, 10, 64)
-			if err == nil {
-				vField.SetInt(n)
+			if skipped := updateSkipList(skipList, fullName, str); !skipped {
+				if i, err = strconv.ParseInt(str, 10, 64); err == nil {
+					vField.SetInt(i)
+				}
 			}
 		} else if kind == reflect.Float32 && vField.Float() == 0 {
-			str, err := ask(fmt.Sprintf(AskTemplate, name, "real number"))
-			if err != nil {
+			if str, err = ask(fmt.Sprintf(AskTemplate, name, "real number")); err != nil {
 				return err
 			}
-			n, err := strconv.ParseFloat(str, 32)
-			if err == nil {
-				vField.SetFloat(n)
+			if skipped := updateSkipList(skipList, fullName, str); !skipped {
+				if f, err = strconv.ParseFloat(str, 32); err == nil {
+					vField.SetFloat(f)
+				}
 			}
 		} else if kind == reflect.Float64 && vField.Float() == 0 {
-			str, err := ask(fmt.Sprintf(AskTemplate, name, "real number"))
-			if err != nil {
+			if str, err = ask(fmt.Sprintf(AskTemplate, name, "real number")); err != nil {
 				return err
 			}
-			n, err := strconv.ParseFloat(str, 64)
-			if err == nil {
-				vField.SetFloat(n)
+			if skipped := updateSkipList(skipList, fullName, str); !skipped {
+				if f, err = strconv.ParseFloat(str, 64); err == nil {
+					vField.SetFloat(f)
+				}
 			}
 		} else if kind == reflect.String && vField.String() == "" {
-			str, err := ask(fmt.Sprintf(AskTemplate, name, "string"))
-			if err != nil {
+			if str, err = ask(fmt.Sprintf(AskTemplate, name, "string")); err != nil {
 				return err
 			}
-			if str != "" {
-				vField.SetString(str)
+			if skipped := updateSkipList(skipList, fullName, str); !skipped {
+				if str != "" {
+					vField.SetString(str)
+				}
 			}
 		} else if kind == reflect.Slice && vField.Len() == 0 {
 			sliceType := reflect.TypeOf(value).Elem()
 			sliceKind := sliceType.Kind()
 			if sliceKind == reflect.Int {
-				list, err := ask(fmt.Sprintf(AskTemplate, name, "integer numbers"))
-				if err != nil {
+				if str, err = ask(fmt.Sprintf(AskTemplate, name, "integer numbers")); err != nil {
 					return err
 				}
-				if list != "" {
-					intSlice := toIntSlice(list)
+				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
+					intSlice := toIntSlice(str)
 					vField.Set(reflect.ValueOf(intSlice))
 				}
 			} else if sliceKind == reflect.Int64 {
-				list, err := ask(fmt.Sprintf(AskTemplate, name, "integer numbers"))
-				if err != nil {
+				if str, err = ask(fmt.Sprintf(AskTemplate, name, "integer numbers")); err != nil {
 					return err
 				}
-				if list != "" {
-					int64Slice := toInt64Slice(list)
+				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
+					int64Slice := toInt64Slice(str)
 					vField.Set(reflect.ValueOf(int64Slice))
 				}
 			} else if sliceKind == reflect.Float32 {
-				list, err := ask(fmt.Sprintf(AskTemplate, name, "real numbers"))
-				if err != nil {
+				if str, err = ask(fmt.Sprintf(AskTemplate, name, "real numbers")); err != nil {
 					return err
 				}
-				if list != "" {
-					float32Slice := toFloat32Slice(list)
+				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
+					float32Slice := toFloat32Slice(str)
 					vField.Set(reflect.ValueOf(float32Slice))
 				}
 			} else if sliceKind == reflect.Float64 {
-				list, err := ask(fmt.Sprintf(AskTemplate, name, "real numbers"))
-				if err != nil {
+				if str, err = ask(fmt.Sprintf(AskTemplate, name, "real numbers")); err != nil {
 					return err
 				}
-				if list != "" {
-					float64Slice := toFloat64Slice(list)
+				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
+					float64Slice := toFloat64Slice(str)
 					vField.Set(reflect.ValueOf(float64Slice))
 				}
 			} else if sliceKind == reflect.String {
-				list, err := ask(fmt.Sprintf(AskTemplate, name, "string list"))
-				if err != nil {
+				if str, err = ask(fmt.Sprintf(AskTemplate, name, "string list")); err != nil {
 					return err
 				}
-				if list != "" {
-					slice := strings.Split(list, ",")
+				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
+					slice := strings.Split(str, ",")
 					vField.Set(reflect.ValueOf(slice))
 				}
 			} else if sliceType.String() == "net.IP" {
-				list, err := ask(fmt.Sprintf(AskTemplate, name, "string list"))
-				if err != nil {
+				if str, err = ask(fmt.Sprintf(AskTemplate, name, "string list")); err != nil {
 					return err
 				}
-				if list != "" {
-					netIPSlice := toNetIPSlice(list)
+				if skipped := updateSkipList(skipList, fullName, str); !skipped && str != "" {
+					netIPSlice := toNetIPSlice(str)
 					vField.Set(reflect.ValueOf(netIPSlice))
 				}
 			}
@@ -280,8 +297,8 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, ui cli.Ui
 }
 
 // AskForStruct reads values from stdin for empty fields of a struct
-func AskForStruct(target interface{}, tagKey string, ignoreOmitted bool, ui cli.Ui) error {
+func AskForStruct(target interface{}, tagKey string, ignoreOmitted bool, skipList *[]string, ui cli.Ui) error {
 	// Get into top-level struct
 	v := reflect.ValueOf(target).Elem()
-	return askForStructV(v, tagKey, ignoreOmitted, ui)
+	return askForStructV(v, tagKey, ignoreOmitted, skipList, ui)
 }

@@ -55,7 +55,7 @@ func TestReqCommand(t *testing.T) {
 		input string
 	}{
 		{
-			"GenerateRootCA",
+			"GenerateRootCAWithDefaultSpec",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Cert{Type: pki.CertTypeRoot},
@@ -64,7 +64,7 @@ func TestReqCommand(t *testing.T) {
 				"RootCA\n\n\n\n\n\n\n\n\n\n\n",
 		},
 		{
-			"GenerateRootCA",
+			"GenerateRootCAWithCustomSpec",
 			pki.NewState(),
 			&pki.Spec{
 				Root: pki.Claim{
@@ -79,7 +79,25 @@ func TestReqCommand(t *testing.T) {
 				"RootCA\n\n\n\n\n\n\n\n\n",
 		},
 		{
-			"GenerateIntermediateCA",
+			"GenerateRootCAWithCustomSpecAndSkip",
+			pki.NewState(),
+			&pki.Spec{
+				Root: pki.Claim{
+					Country:      []string{"CA"},
+					Province:     []string{"Ontario"},
+					Organization: []string{"Milad"},
+				},
+				Metadata: pki.Metadata{
+					mdRootSkip: []string{"Claim.DNSName", "Claim.IPAddress", "Claim.EmailAddress", "Claim.StreetAddress", "Claim.PostalCode"},
+				},
+			},
+			pki.Cert{Type: pki.CertTypeRoot},
+			[]string{},
+			"password\npassword\n" +
+				"RootCA\n\n\n\n",
+		},
+		{
+			"GenerateIntermediateCAWithDefaultSpec",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Cert{Type: pki.CertTypeInterm},
@@ -89,7 +107,7 @@ func TestReqCommand(t *testing.T) {
 				"SRE CA\n\n\n\n\n\n\n\n\n\n\n",
 		},
 		{
-			"GenerateIntermediateCA",
+			"GenerateIntermediateCAWithCustomSpec",
 			pki.NewState(),
 			&pki.Spec{
 				Interm: pki.Claim{
@@ -104,7 +122,25 @@ func TestReqCommand(t *testing.T) {
 				"SRE CA\nOttawa\nSRE\n\n\n\n\n\n",
 		},
 		{
-			"GenerateServerCert",
+			"GenerateIntermediateCAWithCustomSpecAndSkip",
+			pki.NewState(),
+			&pki.Spec{
+				Interm: pki.Claim{
+					Country:      []string{"CA"},
+					Province:     []string{"Ontario"},
+					Organization: []string{"Milad"},
+				},
+				Metadata: pki.Metadata{
+					mdIntermSkip: []string{"Claim.DNSName", "Claim.IPAddress", "Claim.EmailAddress", "Claim.StreetAddress", "Claim.PostalCode"},
+				},
+			},
+			pki.Cert{Type: pki.CertTypeInterm},
+			[]string{"-name=sre"},
+			"password\npassword\n" +
+				"SRE CA\nOttawa\nSRE\n",
+		},
+		{
+			"GenerateServerCertWithDefaultSpec",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Cert{Type: pki.CertTypeServer},
@@ -113,7 +149,7 @@ func TestReqCommand(t *testing.T) {
 				"webapp.com\n\n\n\n\n\n\n\n\n\n\n",
 		},
 		{
-			"GenerateServerCert",
+			"GenerateServerCertWithCustomSpec",
 			pki.NewState(),
 			&pki.Spec{
 				Server: pki.Claim{
@@ -128,7 +164,25 @@ func TestReqCommand(t *testing.T) {
 			"webapp.com\nR&D\nwebapp.com\n\n\n\n\n",
 		},
 		{
-			"GenerateClientCert",
+			"GenerateServerCertWithCustomSpecAndSkip",
+			pki.NewState(),
+			&pki.Spec{
+				Server: pki.Claim{
+					Country:      []string{"CA"},
+					Province:     []string{"Ontario"},
+					Locality:     []string{"Toronto"},
+					Organization: []string{"Milad"},
+				},
+				Metadata: pki.Metadata{
+					mdServerSkip: []string{"Claim.StreetAddress", "Claim.PostalCode"},
+				},
+			},
+			pki.Cert{Type: pki.CertTypeServer},
+			[]string{"-name=webapp"},
+			"webapp.com\nR&D\nwebapp.com\n127.0.0.1\n\n",
+		},
+		{
+			"GenerateClientCertWithDefaultSpec",
 			pki.NewState(),
 			pki.NewSpec(),
 			pki.Cert{Type: pki.CertTypeClient},
@@ -137,7 +191,7 @@ func TestReqCommand(t *testing.T) {
 				"MyService\n\n\n\n\n\n\n\n\n\n\n",
 		},
 		{
-			"GenerateClientCert",
+			"GenerateClientCertWithCustomSpec",
 			pki.NewState(),
 			&pki.Spec{
 				Client: pki.Claim{
@@ -150,6 +204,24 @@ func TestReqCommand(t *testing.T) {
 			pki.Cert{Type: pki.CertTypeClient},
 			[]string{"-name=myservice"},
 			"MyService\nR&D\n\n\n\n\n\n",
+		},
+		{
+			"GenerateClientCertWithCustomSpecAndSkip",
+			pki.NewState(),
+			&pki.Spec{
+				Client: pki.Claim{
+					Country:      []string{"CA"},
+					Province:     []string{"Ontario"},
+					Locality:     []string{"Montreal"},
+					Organization: []string{"Milad"},
+				},
+				Metadata: pki.Metadata{
+					mdClientSkip: []string{"Claim.StreetAddress", "Claim.PostalCode"},
+				},
+			},
+			pki.Cert{Type: pki.CertTypeClient},
+			[]string{"-name=myservice"},
+			"MyService\nQE\n\n\n\n",
 		},
 	}
 

@@ -77,16 +77,18 @@ func TestInitCommand(t *testing.T) {
 			[root_policy]
 
 			[intermediate_policy]
+
+			[metadata]
 			`,
 		},
 		{
 			"CustomStateSpec",
 			[]string{},
-			"CA\nOntario\nOttawa\nMilad\n\n\n\n\n\n\n" +
-				"\n\n\n\n\n\n" +
-				"SRE\nexample.com\n\n\n\n\n" +
-				"R&D\nexample.org\n\n\n\n\n" +
-				"QE\n\n\n\n\n\n" +
+			"CA\n\n\nMilad\n\n\n\n\n-\n-\n" +
+				"\n\n\n-\n-\n-\n" +
+				"\n\nSRE\n-\n-\n-\n" +
+				"Ontario\nOttawa\nR&D\nexample.org\n127.0.0.1\n\n" +
+				"Ontario\nOttawa\nQE\n\n\n\n" +
 				"Organization\nCommonName,OrganizationalUnit\n" +
 				"Organization\nCommonName\n",
 			`root:
@@ -108,17 +110,12 @@ func TestInitCommand(t *testing.T) {
 			`,
 			`[root]
 				country = ["CA"]
-				province = ["Ontario"]
-				locality = ["Ottawa"]
 				organization = ["Milad"]
 
 			[intermediate]
 				country = ["CA"]
-				province = ["Ontario"]
-				locality = ["Ottawa"]
 				organization = ["Milad"]
 				organizational_unit = ["SRE"]
-				dns_name = ["example.com"]
 
 			[server]
 				country = ["CA"]
@@ -127,6 +124,7 @@ func TestInitCommand(t *testing.T) {
 				organization = ["Milad"]
 				organizational_unit = ["R&D"]
 				dns_name = ["example.org"]
+				ip_address = ["127.0.0.1"]
 
 			[client]
 				country = ["CA"]
@@ -142,6 +140,12 @@ func TestInitCommand(t *testing.T) {
 			[intermediate_policy]
 				match = ["Organization"]
 				supplied = ["CommonName"]
+
+			[metadata]
+				clientSkip = ["Claim.StreetAddress", "Claim.PostalCode"]
+				intermSkip = ["Claim.StreetAddress", "Claim.PostalCode", "Claim.DNSName", "Claim.IPAddress", "Claim.EmailAddress"]
+				rootSkip = ["Claim.StreetAddress", "Claim.PostalCode", "Claim.DNSName", "Claim.IPAddress", "Claim.EmailAddress"]
+				serverSkip = ["Claim.StreetAddress", "Claim.PostalCode"]
 			`,
 		},
 	}

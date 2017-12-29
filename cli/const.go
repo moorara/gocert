@@ -3,6 +3,11 @@ package cli
 const (
 	rootName = "root"
 
+	mdRootSkip   = "rootSkip"
+	mdIntermSkip = "intermSkip"
+	mdServerSkip = "serverSkip"
+	mdClientSkip = "clientSkip"
+
 	// ErrorEnterState is returned when entering state fails
 	ErrorEnterState = 11
 	// ErrorEnterSpec is returned when entering spec fails
