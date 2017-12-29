@@ -58,6 +58,21 @@ func NewReqCommand(c pki.Cert) *ReqCommand {
 	}
 }
 
+func (c *ReqCommand) getSkipList(spec *pki.Spec) []string {
+	switch c.c.Type {
+	case pki.CertTypeRoot:
+		return spec.Metadata[mdRootSkip]
+	case pki.CertTypeInterm:
+		return spec.Metadata[mdIntermSkip]
+	case pki.CertTypeServer:
+		return spec.Metadata[mdServerSkip]
+	case pki.CertTypeClient:
+		return spec.Metadata[mdClientSkip]
+	default:
+		return nil
+	}
+}
+
 func (c *ReqCommand) output(text string) {
 	text = fmt.Sprintf(text, strings.ToUpper(c.c.Title()))
 	c.ui.Output(text)
@@ -113,12 +128,13 @@ func (c *ReqCommand) Run(args []string) int {
 		return ErrorInvalidCert
 	}
 
-	err = askForConfig(&config, c.c, c.ui)
+	err = askForConfig(&config, c.c, nil, c.ui)
 	if err != nil {
 		return ErrorEnterConfig
 	}
 
-	err = askForClaim(&claim, c.c, c.ui)
+	skipList := c.getSkipList(spec)
+	err = askForClaim(&claim, c.c, &skipList, c.ui)
 	if err != nil {
 		return ErrorEnterClaim
 	}

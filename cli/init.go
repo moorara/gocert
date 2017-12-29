@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	initSuccess = "\n ✓ Workspace \n"
+	initSuccess = "\n ✓ Workspace Setup \n"
 
 	initSynopsis = `Initializes a new workspace with desired configs and specs.`
 	initHelp     = `

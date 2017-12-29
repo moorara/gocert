@@ -33,44 +33,53 @@ type example struct {
 
 func TestAskForStruct(t *testing.T) {
 	tests := []struct {
-		title           string
-		tagKey          string
-		ignoreOmitted   bool
-		example         *example
-		input           string
-		expectError     bool
-		expectedExample *example
+		title            string
+		tagKey           string
+		ignoreOmitted    bool
+		skipList         []string
+		example          *example
+		input            string
+		expectError      bool
+		expectedExample  *example
+		expectedSkipList []string
 	}{
 		{
 			"ErrorNoBoolInput",
 			"custom", false,
+			nil,
 			&example{},
 			``,
 			true,
+			nil,
 			nil,
 		},
 		{
 			"ErrorNoIntInput",
 			"custom", false,
+			nil,
 			&example{},
 			`true
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoInt64Input",
 			"custom", false,
+			nil,
 			&example{},
 			`true
 			27
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoFloat32Input",
 			"custom", false,
+			nil,
 			&example{},
 			`true
 			27
@@ -78,10 +87,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoFloat64Input",
 			"custom", false,
+			nil,
 			&example{},
 			`true
 			27
@@ -90,10 +101,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoStringInput",
 			"custom", false,
+			nil,
 			&example{},
 			`true
 			27
@@ -103,10 +116,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorSecretInvalid",
 			"custom", false,
+			nil,
 			&example{
 				Bool:    true,
 				Int:     27,
@@ -118,10 +133,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorSecretNotConfirmed",
 			"custom", false,
+			nil,
 			&example{
 				Bool:    true,
 				Int:     27,
@@ -133,10 +150,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorSecretNotMatching",
 			"custom", false,
+			nil,
 			&example{
 				Bool:    true,
 				Int:     27,
@@ -149,10 +168,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoIntListInput",
 			"custom", false,
+			nil,
 			&example{
 				Bool:    true,
 				Int:     27,
@@ -165,10 +186,12 @@ func TestAskForStruct(t *testing.T) {
 			``,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoInt64ListInput",
 			"custom", false,
+			nil,
 			&example{
 				Bool:    true,
 				Int:     27,
@@ -182,10 +205,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoFloat32ListInput",
 			"custom", false,
+			nil,
 			&example{
 				Bool:    true,
 				Int:     27,
@@ -200,10 +225,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoFloat64ListInput",
 			"custom", false,
+			nil,
 			&example{
 				Bool:    true,
 				Int:     27,
@@ -219,10 +246,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoStringListInput",
 			"custom", false,
+			nil,
 			&example{
 				Bool:    true,
 				Int:     27,
@@ -239,10 +268,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoIPListInput",
 			"custom", false,
+			nil,
 			&example{
 				Bool:    true,
 				Int:     27,
@@ -260,10 +291,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"ErrorNoStructInput",
 			"custom", false,
+			nil,
 			&example{
 				Bool:    true,
 				Int:     27,
@@ -282,10 +315,12 @@ func TestAskForStruct(t *testing.T) {
 			`,
 			true,
 			nil,
+			nil,
 		},
 		{
 			"SuccessIgnoreOmitted",
 			"custom", true,
+			[]string{},
 			&example{},
 			`27
 			64
@@ -311,10 +346,12 @@ func TestAskForStruct(t *testing.T) {
 				Float64: 3.1415,
 				Text:    "password",
 			},
+			[]string{},
 		},
 		{
 			"SuccessEnterAll",
 			"custom", false,
+			[]string{},
 			&example{},
 			`true
 			27
@@ -354,6 +391,37 @@ func TestAskForStruct(t *testing.T) {
 					String: "nested",
 				},
 			},
+			[]string{},
+		},
+		{
+			"SuccessSkipSomeFields",
+			"custom", true,
+			[]string{"example.String", "example.Text"},
+			&example{},
+			`27
+			64
+			-
+			-
+			1,2,3,4
+			-
+			-
+			-
+			-
+			-
+			-
+			-
+			`,
+			false,
+			&example{
+				Int:      27,
+				Int64:    64,
+				IntSlice: []int{1, 2, 3, 4},
+			},
+			[]string{
+				"example.String", "example.Text",
+				"example.Float32", "example.Float64",
+				"example.Int64Slice", "example.Float32Slice", "example.Float64Slice", "example.StringSlice", "example.IPSlice",
+				"inner.Int", "inner.String"},
 		},
 	}
 
@@ -361,13 +429,14 @@ func TestAskForStruct(t *testing.T) {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
 			mockUI := NewMockUI(r)
-			err := AskForStruct(test.example, test.tagKey, test.ignoreOmitted, mockUI)
+			err := AskForStruct(test.example, test.tagKey, test.ignoreOmitted, &test.skipList, mockUI)
 
 			if test.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, test.expectedExample, test.example)
+				assert.Equal(t, test.expectedSkipList, test.skipList)
 			}
 		})
 	}

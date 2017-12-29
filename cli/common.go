@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/go-box/util"
 	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 )
@@ -33,6 +32,7 @@ const (
 	textEnterSpecTips  = `
 	You can enter a list by comma-separating values.
 	If you don't want to use any of the specs, leave it empty.
+	If you don't want to be asked about a spec every time, enter "-" to skip it.
 	You can later change these specs by editing "spec.toml" file.`
 	textEnterPolicyTips = `
 	You can specify the signing policy for certificate authorities.
@@ -122,28 +122,28 @@ func askForNewState(ui cli.Ui) (*pki.State, error) {
 
 	root := pki.Config{}
 	ui.Output(textRootEnterConfig)
-	err := help.AskForStruct(&root, "yaml", true, ui)
+	err := help.AskForStruct(&root, "yaml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	interm := pki.Config{}
 	ui.Output(textIntermEnterConfig)
-	err = help.AskForStruct(&interm, "yaml", true, ui)
+	err = help.AskForStruct(&interm, "yaml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	server := pki.Config{}
 	ui.Output(textServerEnterConfig)
-	err = help.AskForStruct(&server, "yaml", true, ui)
+	err = help.AskForStruct(&server, "yaml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	client := pki.Config{}
 	ui.Output(textClientEnterConfig)
-	err = help.AskForStruct(&client, "yaml", true, ui)
+	err = help.AskForStruct(&client, "yaml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
@@ -163,36 +163,45 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 
 	// Common specs
 	common := pki.Claim{}
+	commonSkip := []string{}
 	ui.Output(textCommonEnterClaim)
-	err := help.AskForStruct(&common, "toml", true, ui)
-	if err != nil && !util.IsStringIn(err.Error(), "EOF", "unexpected newline ") {
+	err := help.AskForStruct(&common, "toml", true, &commonSkip, ui)
+	if err != nil {
 		return nil, err
 	}
 
 	root := common.Clone()
+	rootSkip := make([]string, len(commonSkip))
+	copy(rootSkip, commonSkip)
 	ui.Output(textRootEnterClaim)
-	err = help.AskForStruct(&root, "toml", true, ui)
+	err = help.AskForStruct(&root, "toml", true, &rootSkip, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	interm := common.Clone()
+	intermSkip := make([]string, len(commonSkip))
+	copy(intermSkip, commonSkip)
 	ui.Output(textIntermEnterClaim)
-	err = help.AskForStruct(&interm, "toml", true, ui)
+	err = help.AskForStruct(&interm, "toml", true, &intermSkip, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	server := common.Clone()
+	serverSkip := make([]string, len(commonSkip))
+	copy(serverSkip, commonSkip)
 	ui.Output(textServerEnterClaim)
-	err = help.AskForStruct(&server, "toml", true, ui)
+	err = help.AskForStruct(&server, "toml", true, &serverSkip, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	client := common.Clone()
+	clientSkip := make([]string, len(commonSkip))
+	copy(clientSkip, commonSkip)
 	ui.Output(textClientEnterClaim)
-	err = help.AskForStruct(&client, "toml", true, ui)
+	err = help.AskForStruct(&client, "toml", true, &clientSkip, ui)
 	if err != nil {
 		return nil, err
 	}
@@ -201,16 +210,30 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 
 	rootPolicy := pki.Policy{}
 	ui.Output(textRootEnterPolicy)
-	err = help.AskForStruct(&rootPolicy, "toml", true, ui)
+	err = help.AskForStruct(&rootPolicy, "toml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	intermPolicy := pki.Policy{}
 	ui.Output(textIntermEnterPolicy)
-	err = help.AskForStruct(&intermPolicy, "toml", true, ui)
+	err = help.AskForStruct(&intermPolicy, "toml", true, nil, ui)
 	if err != nil {
 		return nil, err
+	}
+
+	metadata := pki.Metadata{}
+	if len(rootSkip) > 0 {
+		metadata[mdRootSkip] = rootSkip
+	}
+	if len(intermSkip) > 0 {
+		metadata[mdIntermSkip] = intermSkip
+	}
+	if len(serverSkip) > 0 {
+		metadata[mdServerSkip] = serverSkip
+	}
+	if len(clientSkip) > 0 {
+		metadata[mdClientSkip] = clientSkip
 	}
 
 	spec := &pki.Spec{
@@ -220,12 +243,14 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 		Client:       client,
 		RootPolicy:   rootPolicy,
 		IntermPolicy: intermPolicy,
+		Metadata:     metadata,
 	}
 
 	return spec, nil
 }
 
-func askForConfig(config *pki.Config, c pki.Cert, ui cli.Ui) error {
+func askForConfig(config *pki.Config, c pki.Cert, skipList *[]string, ui cli.Ui) error {
+	// Only Root and Intermediate CAs are asked for password
 	if c.Type == pki.CertTypeRoot || c.Type == pki.CertTypeInterm {
 		ui.Info(textEnterConfigTips)
 	}
@@ -238,19 +263,19 @@ func askForConfig(config *pki.Config, c pki.Cert, ui cli.Ui) error {
 		}()
 	}
 
-	title := fmt.Sprintf(textEnterConfig, strings.ToUpper(c.Title()))
-	ui.Output(title)
+	title := strings.ToUpper(c.Title())
+	text := fmt.Sprintf(textEnterConfig, title)
+	ui.Output(text)
 
-	return help.AskForStruct(config, "yaml", false, ui)
+	return help.AskForStruct(config, "yaml", false, skipList, ui)
 }
 
-func askForClaim(claim *pki.Claim, c pki.Cert, ui cli.Ui) error {
-	if c.Type == pki.CertTypeRoot || c.Type == pki.CertTypeInterm {
-		ui.Info(textEnterClaimTips)
-	}
+func askForClaim(claim *pki.Claim, c pki.Cert, skipList *[]string, ui cli.Ui) error {
+	ui.Info(textEnterClaimTips)
 
-	title := fmt.Sprintf(textEnterClaim, strings.ToUpper(c.Title()))
-	ui.Output(title)
+	title := strings.ToUpper(c.Title())
+	text := fmt.Sprintf(textEnterConfig, title)
+	ui.Output(text)
 
-	return help.AskForStruct(claim, "toml", false, ui)
+	return help.AskForStruct(claim, "toml", false, skipList, ui)
 }
