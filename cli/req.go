@@ -8,7 +8,6 @@ import (
 	"text/template"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 )
 
@@ -111,7 +110,7 @@ func (c *ReqCommand) Run(args []string) int {
 
 	if c.c.Name == "" {
 		c.output(reqEnterName)
-		c.c.Name, err = c.ui.Ask(fmt.Sprintf(help.AskTemplate, "Name", "string"))
+		c.c.Name, err = c.ui.Ask(fmt.Sprintf(promptTemplate, "Name", "string"))
 		if err != nil {
 			return ErrorInvalidName
 		}

@@ -15,11 +15,11 @@ type inner struct {
 
 type example struct {
 	unexported   int
-	Bool         bool    `custom:"-"`
-	Int          int     `custom:"int"`
-	Int64        int64   `custom:"int64"`
-	Float32      float32 `custom:"float32"`
-	Float64      float64 `custom:"float64"`
+	Bool         bool    `custom:"-" default:"true"`
+	Int          int     `custom:"int" default:"27"`
+	Int64        int64   `custom:"int64" default:"64"`
+	Float32      float32 `custom:"float32" default:"2.71"`
+	Float64      float64 `custom:"float64" default:"3.1415"`
 	String       string  `custom:"-" secret:"required,6"`
 	Text         string  `custom:"text,omitempty" secret:"optional"`
 	IntSlice     []int
@@ -394,7 +394,7 @@ func TestAskForStruct(t *testing.T) {
 			[]string{},
 		},
 		{
-			"SuccessSkipSomeFields",
+			"SuccessUsingSkipFields",
 			"custom", true,
 			[]string{"example.String", "example.Text"},
 			&example{},
@@ -422,6 +422,44 @@ func TestAskForStruct(t *testing.T) {
 				"example.Float32", "example.Float64",
 				"example.Int64Slice", "example.Float32Slice", "example.Float64Slice", "example.StringSlice", "example.IPSlice",
 				"inner.Int", "inner.String"},
+		},
+		{
+			"SuccessUsingDefaultsAndSkip",
+			"custom", false,
+			[]string{},
+			&example{},
+			`
+
+
+
+
+			secret
+			secret
+			password
+			password
+			-
+			-
+			-
+			-
+			-
+			-
+			-
+			-
+			`,
+			false,
+			&example{
+				Bool:    true,
+				Int:     27,
+				Int64:   64,
+				Float32: 2.71,
+				Float64: 3.1415,
+				String:  "secret",
+				Text:    "password",
+			},
+			[]string{
+				"example.IntSlice", "example.Int64Slice", "example.Float32Slice", "example.Float64Slice", "example.StringSlice", "example.IPSlice",
+				"inner.Int", "inner.String",
+			},
 		},
 	}
 

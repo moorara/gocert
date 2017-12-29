@@ -75,8 +75,10 @@ func TestInitCommand(t *testing.T) {
 			[client]
 
 			[root_policy]
+				supplied = ["CommonName"]
 
 			[intermediate_policy]
+				supplied = ["CommonName"]
 
 			[metadata]
 			`,

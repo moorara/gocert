@@ -59,7 +59,13 @@ coverage:
 	@ go tool cover -html=$(report_dir)/cover.out -o $(report_dir)/cover.html && \
 	  rm cover.out $(report_dir)/cover.out
 
+dep:
+	dep ensure
+	dep ensure -update
+	dep prune
+
 
 .PHONY: clean
 .PHONY: run install build build-all
 .PHONY: test test-short coverage
+.PHONY: dep
