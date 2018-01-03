@@ -4,8 +4,15 @@
 If you are having a hard time every time using `openssl` for generating self-signed certificates, this tool is for you!
 A lightweight library and also command-line interface for generating self-signed SSL/TLS certificates using pure go.
 
+![gocert demo](docs/demo.gif?raw=true "Demo")
+
 ## Installing
 You can download the appropriate binary from [releases](https://github.com/moorara/gocert/releases) page.
+
+```
+curl -o /usr/local/bin/gocert -sSL https://github.com/moorara/gocert/releases/download/<version>/gocert-<platform>
+sudo chmod 755 /usr/local/bin/gocert
+```
 
 ## Quick Start
 
@@ -62,5 +69,5 @@ They should be signed by an intermediate certificate.
 You can change these configs by editing `state.yaml` file.
 
 
-[travisci-url]: https://travis-ci.com/moorara/gocert
-[travisci-image]: https://travis-ci.com/moorara/gocert.svg?branch=master&token=HyJPFzY74fNDzrcekdXq
+[travisci-url]: https://travis-ci.org/moorara/gocert
+[travisci-image]: https://travis-ci.org/moorara/gocert.svg?branch=master
