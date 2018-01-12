@@ -60,9 +60,9 @@ coverage:
 	  rm cover.out $(report_dir)/cover.out
 
 dep:
-	dep ensure
-	dep ensure -update
-	dep prune
+	@ dep ensure && \
+	  dep ensure -update && \
+	  dep prune
 
 
 .PHONY: clean
