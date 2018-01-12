@@ -1,7 +1,7 @@
 path := $(shell pwd)
 binary := gocert
 build_dir := $(path)/artifacts
-report_dir := $(path)/report_dir
+report_dir := $(path)/reports
 
 go_packages := $(shell go list ./... | grep -v //)
 version_package := $(shell go list ./version)
