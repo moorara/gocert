@@ -1,6 +1,12 @@
 reports := $(shell pwd)/reports
 packages := $(shell go list ./...)
 
+
+dep:
+	@ dep ensure && \
+	  dep ensure -update && \
+	  dep prune
+
 test:
 	@ go test -v -race ./...
 
@@ -16,4 +22,6 @@ coverage:
 	@ go tool cover -html=$(reports)/cover.out -o $(reports)/cover.html && \
 	  rm cover.out $(reports)/cover.out
 
+
+.PHONY: dep
 .PHONY: test benchmark coverage

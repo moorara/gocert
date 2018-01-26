@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/go-box/util"
+	"github.com/moorara/goto/util"
 	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 	"github.com/stretchr/testify/assert"

@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/go-box/util"
+	"github.com/moorara/goto/util"
 	"github.com/stretchr/testify/assert"
 )
 

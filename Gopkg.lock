@@ -50,10 +50,10 @@
   revision = "518dc677a1e1222682f4e7db06721942cb8e9e4c"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/moorara/go-box"
+  name = "github.com/moorara/goto"
   packages = ["dt","util"]
-  revision = "f4837c27861ef7868ffdd7340df7ed78228707eb"
+  revision = "4bbff6197272bc0629e3115d47c59ec4f249c376"
+  version = "v0.1.0"
 
 [[projects]]
   name = "github.com/pmezard/go-difflib"
@@ -77,7 +77,7 @@
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "af50095a40f9041b3b38960738837185c26e9419"
+  revision = "03467258950d845cd1877eab69461b98e8c09219"
 
 [[projects]]
   branch = "v2"
@@ -88,6 +88,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4a0b2804b738b75eab1d836cbfe10a443ec027505a695a04c3616ac27b056a5f"
+  inputs-digest = "29d73fe3dcd14ca878081a2c83a9d93327997d6468b7088d11be8cd2e911013a"
   solver-name = "gps-cdcl"
   solver-version = 1

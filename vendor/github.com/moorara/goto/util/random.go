@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	. "github.com/moorara/go-box/dt"
+	. "github.com/moorara/goto/dt"
 )
 
 // SeedWithNow seeds the random generator with time now

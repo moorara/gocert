@@ -1,7 +1,7 @@
 package util
 
 import (
-	. "github.com/moorara/go-box/dt"
+	. "github.com/moorara/goto/dt"
 )
 
 // IsSorted checks if an array is ascendingly sorted

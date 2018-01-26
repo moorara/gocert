@@ -36,7 +36,7 @@ func TestAbsPath(t *testing.T) {
 			false,
 			[]string{"test"},
 			"file_test.go",
-			path.Join(os.Getenv("GOPATH"), "src/github.com/moorara/go-box/util", "test/file_test.go"),
+			path.Join(os.Getenv("GOPATH"), "src/github.com/moorara/goto/util", "test/file_test.go"),
 		},
 	}
 

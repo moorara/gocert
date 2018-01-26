@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
-	"github.com/moorara/go-box/util"
+	"github.com/moorara/goto/util"
 	yaml "gopkg.in/yaml.v2"
 )
 
