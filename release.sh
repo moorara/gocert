@@ -14,6 +14,7 @@
 
 set -euo pipefail
 
+
 red='\033[1;31m'
 green='\033[1;32m'
 yellow='\033[1;33m'
@@ -24,6 +25,13 @@ nocolor='\033[0m'
 binary="gocert"
 build_dir="./artifacts"
 
+
+function whitelist_variable {
+  if [[ ! $2 =~ (^|[[:space:]])$3($|[[:space:]]) ]]; then
+    printf "${red}Invalid $1 $3${nocolor}\n"
+    exit 1
+  fi
+}
 
 function ensure_command {
   for cmd in $@; do
@@ -90,10 +98,7 @@ function process_args {
   comment=${comment:-""}
   component=${component:-patch}
   # component=${component,,}
-  if [ "$component" != "patch" ] && [ "$component" != "minor" ] && [ "$component" != "major" ]; then
-    printf "${red}Version component $component is not valid.${nocolor}\n"
-    exit 1
-  fi
+  whitelist_variable "version component" "patch minor major" "$component"
 }
 
 function enable_master_push {
