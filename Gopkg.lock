@@ -47,7 +47,7 @@
   branch = "master"
   name = "github.com/mitchellh/cli"
   packages = ["."]
-  revision = "518dc677a1e1222682f4e7db06721942cb8e9e4c"
+  revision = "b068abc08c994321eafd9fd500d0704cb6defcb1"
 
 [[projects]]
   name = "github.com/moorara/goto"
@@ -64,30 +64,30 @@
 [[projects]]
   name = "github.com/posener/complete"
   packages = [".","cmd","cmd/install","match"]
-  revision = "dc2bc5a81accba8782bebea28628224643a8286a"
-  version = "v1.1"
+  revision = "98eb9847f27ba2008d380a32c98be474dea55bdf"
+  version = "v1.1.1"
 
 [[projects]]
   name = "github.com/stretchr/testify"
   packages = ["assert"]
-  revision = "b91bfb9ebec76498946beb6af7c0230c7cc7ba6c"
-  version = "v1.2.0"
+  revision = "12b6f73e6084dad08a7c6e575284b177ecafbc71"
+  version = "v1.2.1"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "03467258950d845cd1877eab69461b98e8c09219"
+  revision = "13d03a9a82fba647c21a0ef8fba44a795d0f0835"
 
 [[projects]]
-  branch = "v2"
   name = "gopkg.in/yaml.v2"
   packages = ["."]
-  revision = "d670f9405373e636a5a2765eea47fac0c9bc91a4"
+  revision = "5420a8b6744d3b0345ab293f6fcba19c978f1183"
+  version = "v2.2.1"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "29d73fe3dcd14ca878081a2c83a9d93327997d6468b7088d11be8cd2e911013a"
+  inputs-digest = "4485ff68f07d58ff4471008e9846113eab2dab67a9350808808acd3be0afd75c"
   solver-name = "gps-cdcl"
   solver-version = 1
