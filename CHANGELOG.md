@@ -1,6 +1,28 @@
 # Change Log
 
-## [v0.1.2](https://github.com/moorara/gocert/tree/v0.1.2) (2017-12-28)
+## [v0.1.3](https://github.com/moorara/gocert/tree/v0.1.3) (2018-06-01)
+[Full Changelog](https://github.com/moorara/gocert/compare/v0.1.2...v0.1.3)
+
+**Implemented enhancements:**
+
+- Update dependencies [\#23](https://github.com/moorara/gocert/issues/23)
+
+**Closed issues:**
+
+- version is broken! [\#20](https://github.com/moorara/gocert/issues/20)
+
+**Merged pull requests:**
+
+- Update vendors [\#29](https://github.com/moorara/gocert/pull/29) ([moorara](https://github.com/moorara))
+- Update dependencies [\#28](https://github.com/moorara/gocert/pull/28) ([moorara](https://github.com/moorara))
+- Update vendors [\#27](https://github.com/moorara/gocert/pull/27) ([moorara](https://github.com/moorara))
+- Refactor release script [\#26](https://github.com/moorara/gocert/pull/26) ([moorara](https://github.com/moorara))
+- Rename go-box to goto [\#25](https://github.com/moorara/gocert/pull/25) ([moorara](https://github.com/moorara))
+- Update vendor [\#24](https://github.com/moorara/gocert/pull/24) ([moorara](https://github.com/moorara))
+- Update Makefile [\#22](https://github.com/moorara/gocert/pull/22) ([moorara](https://github.com/moorara))
+- Update README [\#21](https://github.com/moorara/gocert/pull/21) ([moorara](https://github.com/moorara))
+
+## [v0.1.2](https://github.com/moorara/gocert/tree/v0.1.2) (2017-12-29)
 [Full Changelog](https://github.com/moorara/gocert/compare/v0.1.1...v0.1.2)
 
 **Implemented enhancements:**
