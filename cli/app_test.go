@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/goto/util"
+	"github.com/moorara/goto/io"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -113,7 +113,7 @@ func TestAppRun(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		r, w, restore, err := util.PipeStdoutAndStderr()
+		r, w, restore, err := io.PipeStdoutAndStderr()
 		assert.NoError(t, err)
 
 		app := newMockApp(test.name, test.version)

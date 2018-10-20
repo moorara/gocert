@@ -9,7 +9,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/moorara/goto/util"
+	"github.com/moorara/goto/io"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -189,7 +189,7 @@ func TestWriteReadPrivateKey(t *testing.T) {
 	// Prepare temporary files
 	for _, test := range tests {
 		if test.setPath {
-			path, cleanup, err := util.CreateTempFile("")
+			path, cleanup, err := io.CreateTempFile("")
 			defer cleanup()
 			assert.NoError(t, err)
 			test.path = path
@@ -268,7 +268,7 @@ func TestWritePemFileReadCertificate(t *testing.T) {
 	// Prepare temporary files
 	for _, test := range tests {
 		if test.setPath {
-			path, cleanup, err := util.CreateTempFile("")
+			path, cleanup, err := io.CreateTempFile("")
 			defer cleanup()
 			assert.NoError(t, err)
 			test.path = path
@@ -346,7 +346,7 @@ func TestWritePemFileReadCertificateRequest(t *testing.T) {
 	// Prepare temporary files
 	for _, test := range tests {
 		if test.setPath {
-			path, cleanup, err := util.CreateTempFile("")
+			path, cleanup, err := io.CreateTempFile("")
 			defer cleanup()
 			assert.NoError(t, err)
 			test.path = path

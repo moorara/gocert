@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/BurntSushi/toml"
-	"github.com/moorara/goto/util"
+	"github.com/moorara/goto/io"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -82,7 +82,7 @@ func SaveSpec(spec *Spec, file string) error {
 // NewWorkspace creates a new workspace in current directory
 func NewWorkspace(state *State, spec *Spec) error {
 	// Make sub-directories
-	_, err := util.MkDirs("", DirRoot, DirInterm, DirServer, DirClient, DirCSR)
+	_, err := io.MkDirs("", DirRoot, DirInterm, DirServer, DirClient, DirCSR)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func SaveWorkspace(state *State, spec *Spec) error {
 
 // CleanupWorkspace removes all directories and files in a workspace
 func CleanupWorkspace() error {
-	return util.DeleteAll(
+	return io.DeleteAll(
 		"",
 		DirRoot,
 		DirInterm,
