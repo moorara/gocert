@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/moorara/goto/util"
+	"github.com/moorara/goto/io"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -566,7 +566,7 @@ func verifySpecFile(t *testing.T, specFile, expectedTOML string) {
 func TestLoadState(t *testing.T) {
 	for _, test := range loadTests {
 		yaml := strings.Replace(test.state.yaml, "\t", "  ", -1)
-		file, delete, err := util.CreateTempFile(yaml)
+		file, delete, err := io.CreateTempFile(yaml)
 		defer delete()
 		assert.NoError(t, err)
 
@@ -590,7 +590,7 @@ func TestLoadStateError(t *testing.T) {
 
 func TestSaveState(t *testing.T) {
 	for _, test := range saveTests {
-		file, delete, err := util.CreateTempFile("")
+		file, delete, err := io.CreateTempFile("")
 		defer delete()
 		assert.NoError(t, err)
 
@@ -603,7 +603,7 @@ func TestSaveState(t *testing.T) {
 
 func TestLoadSpec(t *testing.T) {
 	for _, test := range loadTests {
-		file, delete, err := util.CreateTempFile(test.spec.toml)
+		file, delete, err := io.CreateTempFile(test.spec.toml)
 		defer delete()
 		assert.NoError(t, err)
 
@@ -621,7 +621,7 @@ func TestLoadSpec(t *testing.T) {
 
 func TestSaveSpec(t *testing.T) {
 	for _, test := range saveTests {
-		file, delete, err := util.CreateTempFile("")
+		file, delete, err := io.CreateTempFile("")
 		defer delete()
 		assert.NoError(t, err)
 
@@ -711,7 +711,7 @@ func TestCleanupWorkspace(t *testing.T) {
 
 	for _, test := range tests {
 		// Mock directorys and files
-		_, err := util.MkDirs("", DirRoot, DirInterm, DirServer, DirClient, DirCSR)
+		_, err := io.MkDirs("", DirRoot, DirInterm, DirServer, DirClient, DirCSR)
 		assert.NoError(t, err)
 		err = ioutil.WriteFile(FileState, nil, 0644)
 		assert.NoError(t, err)

@@ -9,9 +9,9 @@ import (
 	"testing"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/goto/util"
 	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
+	"github.com/moorara/goto/io"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,7 +24,7 @@ func TestNewColoredUi(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		inR, inW, outR, outW, errR, errW, restore, err := util.PipeStdAll()
+		inR, inW, outR, outW, errR, errW, restore, err := io.PipeStdAll()
 		defer restore()
 		assert.NoError(t, err)
 
@@ -35,15 +35,15 @@ func TestNewColoredUi(t *testing.T) {
 		assert.Equal(t, cli.UiColorRed, ui.ErrorColor)
 		assert.Equal(t, cli.UiColorYellow, ui.WarnColor)
 
-		in, err := util.WriteToStdinPipe(inR, inW, test.in)
+		in, err := io.WriteToStdinPipe(inR, inW, test.in)
 		assert.NoError(t, err)
 		assert.Equal(t, test.in, in)
 
-		out, err := util.ReadFromStdoutPipe(outR, outW, test.out)
+		out, err := io.ReadFromStdoutPipe(outR, outW, test.out)
 		assert.NoError(t, err)
 		assert.Equal(t, test.out, out)
 
-		er, err := util.ReadFromStderrPipe(errR, errW, test.er)
+		er, err := io.ReadFromStderrPipe(errR, errW, test.er)
 		assert.NoError(t, err)
 		assert.Equal(t, test.er, er)
 	}
@@ -290,7 +290,7 @@ func TestLoadWorkspace(t *testing.T) {
 				assert.Equal(t, test.expectedSpec, spec)
 			}
 
-			err = util.DeleteAll("", pki.FileState, pki.FileSpec)
+			err = io.DeleteAll("", pki.FileState, pki.FileSpec)
 			assert.NoError(t, err)
 		})
 	}
@@ -522,7 +522,7 @@ func TestSaveWorkspace(t *testing.T) {
 				assert.Equal(t, expectedSpecTOML, string(specTOML))
 			}
 
-			err := util.DeleteAll("", pki.FileState, pki.FileSpec)
+			err := io.DeleteAll("", pki.FileState, pki.FileSpec)
 			assert.NoError(t, err)
 		})
 	}

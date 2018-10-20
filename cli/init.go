@@ -4,8 +4,8 @@ import (
 	"flag"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/goto/util"
 	"github.com/moorara/gocert/pki"
+	"github.com/moorara/goto/io"
 )
 
 const (
@@ -54,7 +54,7 @@ func (c *InitCommand) Run(args []string) int {
 		return ErrorInvalidFlag
 	}
 
-	_, err = util.MkDirs("", pki.DirRoot, pki.DirInterm, pki.DirServer, pki.DirClient, pki.DirCSR)
+	_, err = io.MkDirs("", pki.DirRoot, pki.DirInterm, pki.DirServer, pki.DirClient, pki.DirCSR)
 	if err != nil {
 		c.ui.Error("Failed to create directories. Error: " + err.Error())
 		return ErrorMakeDir
