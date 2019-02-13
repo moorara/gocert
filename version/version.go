@@ -2,38 +2,39 @@ package version
 
 import (
 	"fmt"
-	"runtime"
+)
+
+const (
+	template = `
+	version:    %s
+	revision:   %s
+	branch:     %s
+	goVersion:  %s
+	buildTool:  %s
+	buildTime:  %s` + "\n"
 )
 
 var (
-	// Version is the binary version
+	// Version is the semantic version
 	Version string
 
-	// Revision is the short form of git commit
+	// Revision is the SHA-1 of the git revision
 	Revision string
 
-	// Branch is the name of git branch
+	// Branch is the name of the git branch
 	Branch string
 
-	// BuildTime is the build time of binary
+	// GoVersion is the go compiler version
+	GoVersion string
+
+	// BuildTool contains the name and version of build tool
+	BuildTool string
+
+	// BuildTime is the time binary built
 	BuildTime string
-
-	// GoVersion is the golang version
-	GoVersion = runtime.Version()
-
-	// GoOS is the binary operating system
-	GoOS = runtime.GOOS
-
-	// GoArch is the binary architecture
-	GoArch = runtime.GOARCH
 )
 
-// GetSemVer returns the semantic versioning format
-func GetSemVer() string {
-	return Version + "+" + Revision
-}
-
-// GetFullSpec returns the full specifiction
-func GetFullSpec() string {
-	return fmt.Sprintf("%s+%s %s %s %s %s/%s", Version, Revision, Branch, BuildTime, GoVersion, GoOS, GoArch)
+// String returns a string describing the version information in details
+func String() string {
+	return fmt.Sprintf(template, Version, Revision, Branch, GoVersion, BuildTool, BuildTime)
 }

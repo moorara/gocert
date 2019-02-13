@@ -1,0 +1,15 @@
+version: "1.0"
+
+language: go
+version_file: version/VERSION
+
+test:
+  covermode: atomic
+
+build:
+  cross_compile: true
+  binary_file: bin/gocert
+  version_package: ./version
+
+release:
+  build: true
