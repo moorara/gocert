@@ -6,7 +6,7 @@
 If you are having a hard time every time using `openssl` for generating self-signed certificates, this tool is for you!
 A lightweight library and also command-line interface for generating self-signed SSL/TLS certificates using pure go.
 
-![gocert demo](docs/demo.gif?raw=true "Demo")
+[![asciicast](https://asciinema.org/a/vGNpB4ClRhBBoR3KOH6EVRzpH.svg)](https://asciinema.org/a/vGNpB4ClRhBBoR3KOH6EVRzpH)
 
 ### Install
 
