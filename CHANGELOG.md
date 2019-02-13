@@ -1,5 +1,20 @@
 # Change Log
 
+## [v0.1.4](https://github.com/moorara/gocert/tree/v0.1.4) (2019-02-13)
+[Full Changelog](https://github.com/moorara/gocert/compare/v0.1.3...v0.1.4)
+
+**Implemented enhancements:**
+
+- Migrate to go modules [\#32](https://github.com/moorara/gocert/issues/32)
+
+**Merged pull requests:**
+
+- House keeping [\#38](https://github.com/moorara/gocert/pull/38) ([moorara](https://github.com/moorara))
+- Renovation! [\#37](https://github.com/moorara/gocert/pull/37) ([moorara](https://github.com/moorara))
+- Configure Renovate [\#34](https://github.com/moorara/gocert/pull/34) ([renovate[bot]](https://github.com/apps/renovate))
+- Migrate to Go modules 🎉 [\#33](https://github.com/moorara/gocert/pull/33) ([moorara](https://github.com/moorara))
+- Update packages [\#31](https://github.com/moorara/gocert/pull/31) ([moorara](https://github.com/moorara))
+
 ## [v0.1.3](https://github.com/moorara/gocert/tree/v0.1.3) (2018-06-01)
 [Full Changelog](https://github.com/moorara/gocert/compare/v0.1.2...v0.1.3)
 
