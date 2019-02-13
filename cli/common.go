@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
+	"github.com/moorara/gocert/util"
 )
 
 const (
@@ -122,28 +122,28 @@ func askForNewState(ui cli.Ui) (*pki.State, error) {
 
 	root := pki.Config{}
 	ui.Output(textRootEnterConfig)
-	err := help.AskForStruct(&root, "yaml", true, nil, ui)
+	err := util.AskForStruct(&root, "yaml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	interm := pki.Config{}
 	ui.Output(textIntermEnterConfig)
-	err = help.AskForStruct(&interm, "yaml", true, nil, ui)
+	err = util.AskForStruct(&interm, "yaml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	server := pki.Config{}
 	ui.Output(textServerEnterConfig)
-	err = help.AskForStruct(&server, "yaml", true, nil, ui)
+	err = util.AskForStruct(&server, "yaml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	client := pki.Config{}
 	ui.Output(textClientEnterConfig)
-	err = help.AskForStruct(&client, "yaml", true, nil, ui)
+	err = util.AskForStruct(&client, "yaml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +165,7 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 	common := pki.Claim{}
 	commonSkip := []string{}
 	ui.Output(textCommonEnterClaim)
-	err := help.AskForStruct(&common, "toml", true, &commonSkip, ui)
+	err := util.AskForStruct(&common, "toml", true, &commonSkip, ui)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +174,7 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 	rootSkip := make([]string, len(commonSkip))
 	copy(rootSkip, commonSkip)
 	ui.Output(textRootEnterClaim)
-	err = help.AskForStruct(&root, "toml", true, &rootSkip, ui)
+	err = util.AskForStruct(&root, "toml", true, &rootSkip, ui)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +183,7 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 	intermSkip := make([]string, len(commonSkip))
 	copy(intermSkip, commonSkip)
 	ui.Output(textIntermEnterClaim)
-	err = help.AskForStruct(&interm, "toml", true, &intermSkip, ui)
+	err = util.AskForStruct(&interm, "toml", true, &intermSkip, ui)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +192,7 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 	serverSkip := make([]string, len(commonSkip))
 	copy(serverSkip, commonSkip)
 	ui.Output(textServerEnterClaim)
-	err = help.AskForStruct(&server, "toml", true, &serverSkip, ui)
+	err = util.AskForStruct(&server, "toml", true, &serverSkip, ui)
 	if err != nil {
 		return nil, err
 	}
@@ -201,7 +201,7 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 	clientSkip := make([]string, len(commonSkip))
 	copy(clientSkip, commonSkip)
 	ui.Output(textClientEnterClaim)
-	err = help.AskForStruct(&client, "toml", true, &clientSkip, ui)
+	err = util.AskForStruct(&client, "toml", true, &clientSkip, ui)
 	if err != nil {
 		return nil, err
 	}
@@ -210,14 +210,14 @@ func askForNewSpec(ui cli.Ui) (*pki.Spec, error) {
 
 	rootPolicy := pki.Policy{}
 	ui.Output(textRootEnterPolicy)
-	err = help.AskForStruct(&rootPolicy, "toml", true, nil, ui)
+	err = util.AskForStruct(&rootPolicy, "toml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
 
 	intermPolicy := pki.Policy{}
 	ui.Output(textIntermEnterPolicy)
-	err = help.AskForStruct(&intermPolicy, "toml", true, nil, ui)
+	err = util.AskForStruct(&intermPolicy, "toml", true, nil, ui)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +267,7 @@ func askForConfig(config *pki.Config, c pki.Cert, skipList *[]string, ui cli.Ui)
 	text := fmt.Sprintf(textEnterConfig, title)
 	ui.Output(text)
 
-	return help.AskForStruct(config, "yaml", false, skipList, ui)
+	return util.AskForStruct(config, "yaml", false, skipList, ui)
 }
 
 func askForClaim(claim *pki.Claim, c pki.Cert, skipList *[]string, ui cli.Ui) error {
@@ -277,5 +277,5 @@ func askForClaim(claim *pki.Claim, c pki.Cert, skipList *[]string, ui cli.Ui) er
 	text := fmt.Sprintf(textEnterConfig, title)
 	ui.Output(text)
 
-	return help.AskForStruct(claim, "toml", false, skipList, ui)
+	return util.AskForStruct(claim, "toml", false, skipList, ui)
 }

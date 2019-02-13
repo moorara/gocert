@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 	"github.com/stretchr/testify/assert"
 )
@@ -231,10 +230,10 @@ func TestReqCommand(t *testing.T) {
 			assert.NoError(t, err)
 
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			cmd := &ReqCommand{
 				ui:  mockUI,
-				pki: &help.MockManager{},
+				pki: &mockManager{},
 				c:   test.c,
 			}
 
@@ -390,10 +389,10 @@ func TestReqCommandError(t *testing.T) {
 			assert.NoError(t, err)
 
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			cmd := &ReqCommand{
 				ui: mockUI,
-				pki: &help.MockManager{
+				pki: &mockManager{
 					GenCertError: test.GenCertError,
 					GenCSRError:  test.GenCSRError,
 				},

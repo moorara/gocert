@@ -1,10 +1,14 @@
-package help
+package util
 
 import (
+	"bufio"
+	"fmt"
+	"io"
 	"net"
 	"strings"
 	"testing"
 
+	"github.com/mitchellh/cli"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,6 +33,33 @@ type example struct {
 	StringSlice  []string
 	IPSlice      []net.IP
 	Inner        inner
+}
+
+type mockUI struct {
+	cli.MockUi
+	reader *bufio.Reader
+}
+
+func newMockUI(r io.Reader) *mockUI {
+	ui := cli.NewMockUi()
+	ui.InputReader = r
+	reader := bufio.NewReader(r)
+	return &mockUI{*ui, reader}
+}
+
+func (u *mockUI) Ask(query string) (string, error) {
+	fmt.Fprint(u.MockUi.OutputWriter, query)
+	line, err := u.reader.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	result := strings.Trim(line, "\t\r\n")
+
+	return result, nil
+}
+
+func (u *mockUI) AskSecret(query string) (string, error) {
+	return u.Ask(query)
 }
 
 func TestAskForStruct(t *testing.T) {
@@ -466,7 +497,7 @@ func TestAskForStruct(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			mockUI := NewMockUI(r)
+			mockUI := newMockUI(r)
 			err := AskForStruct(test.example, test.tagKey, test.ignoreOmitted, &test.skipList, mockUI)
 
 			if test.expectError {

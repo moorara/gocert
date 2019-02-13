@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 	"github.com/stretchr/testify/assert"
 )
@@ -122,10 +121,10 @@ func TestSignCommand(t *testing.T) {
 			writeSignMocks(t, test.mocks)
 
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			cmd := &SignCommand{
 				ui:  mockUI,
-				pki: &help.MockManager{},
+				pki: &mockManager{},
 			}
 
 			exit := cmd.Run(test.args)
@@ -358,10 +357,10 @@ func TestSignCommandError(t *testing.T) {
 			writeSignMocks(t, test.mocks)
 
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			cmd := &SignCommand{
 				ui: mockUI,
-				pki: &help.MockManager{
+				pki: &mockManager{
 					SignCSRError: test.SignCSRError,
 				},
 			}

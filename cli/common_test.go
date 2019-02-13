@@ -9,9 +9,8 @@ import (
 	"testing"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
-	"github.com/moorara/goto/io"
+	"github.com/moorara/gocert/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,7 +23,7 @@ func TestNewColoredUi(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		inR, inW, outR, outW, errR, errW, restore, err := io.PipeStdAll()
+		inR, inW, outR, outW, errR, errW, restore, err := util.PipeStdAll()
 		defer restore()
 		assert.NoError(t, err)
 
@@ -35,15 +34,15 @@ func TestNewColoredUi(t *testing.T) {
 		assert.Equal(t, cli.UiColorRed, ui.ErrorColor)
 		assert.Equal(t, cli.UiColorYellow, ui.WarnColor)
 
-		in, err := io.WriteToStdinPipe(inR, inW, test.in)
+		in, err := util.WriteToStdinPipe(inR, inW, test.in)
 		assert.NoError(t, err)
 		assert.Equal(t, test.in, in)
 
-		out, err := io.ReadFromStdoutPipe(outR, outW, test.out)
+		out, err := util.ReadFromStdoutPipe(outR, outW, test.out)
 		assert.NoError(t, err)
 		assert.Equal(t, test.out, out)
 
-		er, err := io.ReadFromStderrPipe(errR, errW, test.er)
+		er, err := util.ReadFromStderrPipe(errR, errW, test.er)
 		assert.NoError(t, err)
 		assert.Equal(t, test.er, er)
 	}
@@ -281,7 +280,7 @@ func TestLoadWorkspace(t *testing.T) {
 			err = ioutil.WriteFile(pki.FileSpec, []byte(test.specTOML), 0644)
 			assert.NoError(t, err)
 
-			mockUI := help.NewMockUI(nil)
+			mockUI := newMockUI(nil)
 			state, spec, status := loadWorkspace(mockUI)
 
 			assert.Equal(t, test.expectedStatus, status)
@@ -290,7 +289,7 @@ func TestLoadWorkspace(t *testing.T) {
 				assert.Equal(t, test.expectedSpec, spec)
 			}
 
-			err = io.DeleteAll("", pki.FileState, pki.FileSpec)
+			err = util.DeleteAll("", pki.FileState, pki.FileSpec)
 			assert.NoError(t, err)
 		})
 	}
@@ -504,7 +503,7 @@ func TestSaveWorkspace(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			mockUI := help.NewMockUI(nil)
+			mockUI := newMockUI(nil)
 			status := saveWorkspace(test.state, test.spec, mockUI)
 
 			assert.Equal(t, test.expectedStatus, status)
@@ -522,7 +521,7 @@ func TestSaveWorkspace(t *testing.T) {
 				assert.Equal(t, expectedSpecTOML, string(specTOML))
 			}
 
-			err := io.DeleteAll("", pki.FileState, pki.FileSpec)
+			err := util.DeleteAll("", pki.FileState, pki.FileSpec)
 			assert.NoError(t, err)
 		})
 	}
@@ -710,7 +709,7 @@ func TestAskForNewState(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			state, err := askForNewState(mockUI)
 
 			if test.expectError {
@@ -929,7 +928,7 @@ func TestAskForNewSpec(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			spec, err := askForNewSpec(mockUI)
 
 			if test.expectError {
@@ -1059,7 +1058,7 @@ func TestAskForConfig(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			err := askForConfig(test.config, test.c, &test.skipList, mockUI)
 
 			if test.expectError {
@@ -1175,7 +1174,7 @@ func TestAskForClaim(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			err := askForClaim(test.claim, test.c, &test.skipList, mockUI)
 
 			if test.expectError {
