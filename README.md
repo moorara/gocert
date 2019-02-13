@@ -8,7 +8,7 @@ A lightweight library and also command-line interface for generating self-signed
 
 [![asciicast](https://asciinema.org/a/vGNpB4ClRhBBoR3KOH6EVRzpH.svg)](https://asciinema.org/a/vGNpB4ClRhBBoR3KOH6EVRzpH)
 
-### Install
+## Install
 
 ```
 curl -s https://raw.githubusercontent.com/moorara/gocert/master/scripts/install.sh | sh
