@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 	"github.com/stretchr/testify/assert"
 )
@@ -155,7 +154,7 @@ func TestInitCommand(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			cmd := &InitCommand{
 				ui: mockUI,
 			}
@@ -207,7 +206,7 @@ func TestInitCommandError(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			cmd := &InitCommand{
 				ui: mockUI,
 			}

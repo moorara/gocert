@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moorara/goto/io"
+	"github.com/moorara/gocert/util"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -78,7 +78,7 @@ func mockWorkspaceWithChains(t *testing.T) {
 	assert.NoError(t, err)
 	err = writePemFile(pemTypeCert, srePem, sreCertFile)
 	assert.NoError(t, err)
-	err = io.ConcatFiles(sreChainFile, false, sreCertFile, rootCertFile)
+	err = util.ConcatFiles(sreChainFile, false, sreCertFile, rootCertFile)
 	assert.NoError(t, err)
 
 	// Mock second-level intermediate CA
@@ -98,7 +98,7 @@ func mockWorkspaceWithChains(t *testing.T) {
 	assert.NoError(t, err)
 	err = writePemFile(pemTypeCert, rdPem, rdCertFile)
 	assert.NoError(t, err)
-	err = io.ConcatFiles(rdChainFile, false, rdCertFile, sreCertFile, rootCertFile)
+	err = util.ConcatFiles(rdChainFile, false, rdCertFile, sreCertFile, rootCertFile)
 	assert.NoError(t, err)
 }
 
@@ -158,7 +158,7 @@ func TestGenCertError(t *testing.T) {
 			err = manager.GenCert(test.config, test.claim, test.c)
 			assert.Error(t, err)
 
-			err = io.DeleteAll("", test.c.KeyPath(), test.c.CertPath())
+			err = util.DeleteAll("", test.c.KeyPath(), test.c.CertPath())
 			assert.NoError(t, err)
 		})
 	}
@@ -280,7 +280,7 @@ func TestGenCSRError(t *testing.T) {
 			err = manager.GenCSR(test.config, test.claim, test.c)
 			assert.Error(t, err)
 
-			err = io.DeleteAll("", test.c.KeyPath(), test.c.CSRPath(), test.c.CertPath())
+			err = util.DeleteAll("", test.c.KeyPath(), test.c.CSRPath(), test.c.CertPath())
 			assert.NoError(t, err)
 		})
 	}
@@ -368,7 +368,7 @@ func TestSignCSRError(t *testing.T) {
 			err := manager.SignCSR(test.configCA, test.cCA, test.configCSR, test.cCSR, test.trust)
 			assert.Error(t, err)
 
-			err = io.DeleteAll("", files...)
+			err = util.DeleteAll("", files...)
 			assert.NoError(t, err)
 		})
 	}

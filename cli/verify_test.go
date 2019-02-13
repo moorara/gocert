@@ -5,7 +5,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/moorara/gocert/help"
 	"github.com/moorara/gocert/pki"
 	"github.com/stretchr/testify/assert"
 )
@@ -78,10 +77,10 @@ func TestVerifyCommand(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			cmd := &VerifyCommand{
 				ui:  mockUI,
-				pki: &help.MockManager{},
+				pki: &mockManager{},
 			}
 
 			exit := cmd.Run(test.args)
@@ -136,10 +135,10 @@ func TestVerifyCommandError(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			r := strings.NewReader(test.input)
-			mockUI := help.NewMockUI(r)
+			mockUI := newMockUI(r)
 			cmd := &VerifyCommand{
 				ui: mockUI,
-				pki: &help.MockManager{
+				pki: &mockManager{
 					VerifyCertError: test.VerifyCertError,
 				},
 			}

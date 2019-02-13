@@ -1,4 +1,4 @@
-package help
+package util
 
 import (
 	"errors"
@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/mitchellh/cli"
-	"github.com/moorara/goto/util"
 )
 
 const (
@@ -23,16 +22,23 @@ const (
 	promptDefaultTemplate = "%s (type: %s, default: %s):"
 )
 
-type (
-	askFunc func(query string) (string, error)
-)
+type askFunc func(query string) (string, error)
+
+func isStringIn(s string, list ...string) bool {
+	for _, str := range list {
+		if str == s {
+			return true
+		}
+	}
+
+	return false
+}
 
 func getPrompt(name, typeHint, defaultTag string) string {
 	if defaultTag == "" {
 		return fmt.Sprintf(promptTemplate, name, typeHint)
-	} else {
-		return fmt.Sprintf(promptDefaultTemplate, name, typeHint, defaultTag)
 	}
+	return fmt.Sprintf(promptDefaultTemplate, name, typeHint, defaultTag)
 }
 
 func updateSkipList(skipList *[]string, field, value string) bool {
@@ -55,7 +61,7 @@ func getAskFunc(secretTag, defaultTag string, ui cli.Ui) askFunc {
 	secretTagOpts := strings.Split(secretTag, ",")
 	secretObligation := secretTagOpts[0]
 
-	if !util.IsStringIn(secretObligation, "required", "optional") {
+	if !isStringIn(secretObligation, "required", "optional") {
 		// Ask function for non-secret values
 		return func(query string) (string, error) {
 			val, err := ui.Ask(query)
@@ -190,7 +196,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 
 		// Check if the field set to be skipped
 		fullName := t.Name() + "." + name
-		if skipList != nil && *skipList != nil && util.IsStringIn(fullName, *skipList...) {
+		if skipList != nil && *skipList != nil && isStringIn(fullName, *skipList...) {
 			continue
 		}
 
