@@ -17,4 +17,5 @@ reports/
 # Artifacts
 main
 gocert
-artifacts/
+gocert-*
+bin/
