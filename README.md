@@ -1,17 +1,17 @@
 [![Build Status][travisci-image]][travisci-url]
+[![Go Report Card][goreport-image]][goreport-url]
 
 # gocert
+
 If you are having a hard time every time using `openssl` for generating self-signed certificates, this tool is for you!
 A lightweight library and also command-line interface for generating self-signed SSL/TLS certificates using pure go.
 
 ![gocert demo](docs/demo.gif?raw=true "Demo")
 
-## Installing
-You can download the appropriate binary from [releases](https://github.com/moorara/gocert/releases) page.
+### Install
 
 ```
-curl -o /usr/local/bin/gocert -sSL https://github.com/moorara/gocert/releases/download/<version>/gocert-<platform>
-sudo chmod 755 /usr/local/bin/gocert
+curl -s https://raw.githubusercontent.com/moorara/gocert/master/scripts/install.sh | sh
 ```
 
 ## Quick Start
@@ -35,7 +35,9 @@ gocert verify -ca=sre -name=webapp,myservice
 ```
 
 ## Certificates Explained
+
 You can generate the following types of certificates:
+
   * Root Certificate Authority
   * Intermediate Certificate Authority
   * Server Certificate
@@ -43,7 +45,7 @@ You can generate the following types of certificates:
 
 **Root CA** is only used for signing intermediate CA.
 There is only one root CA called `root` by default.
-Root CA never signs user certificates (server or client)                         directly.
+Root CA never signs user certificates (server or client) directly.
 It should be keep secured, offline, and unused as much as possible.
 
 **Intermediate CA** is used for signing server and client certificates.
@@ -71,3 +73,6 @@ You can change these configs by editing `state.yaml` file.
 
 [travisci-url]: https://travis-ci.org/moorara/gocert
 [travisci-image]: https://travis-ci.org/moorara/gocert.svg?branch=master
+
+[goreport-url]: https://goreportcard.com/report/github.com/moorara/gocert
+[goreport-image]: https://goreportcard.com/badge/github.com/moorara/gocert
