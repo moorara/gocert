@@ -1,12 +1,6 @@
 name := gocert
 
 
-clean:
-	@ rm -rf bin coverage $(name)
-
-run:
-	@ go run main.go
-
 build:
 	@ cherry build -cross-compile=false
 
@@ -20,9 +14,9 @@ test-short:
 	@ go test -short ./...
 
 coverage:
-	@ cherry test
+	@ go test -covermode=atomic -coverprofile=c.out ./...
+	@ go tool cover -html=c.out -o coverage.html
 
 
-.PHONY: clean
-.PHONY: run build build-all
+.PHONY: build build-all
 .PHONY: test test-short coverage

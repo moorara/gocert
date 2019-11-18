@@ -1,5 +1,7 @@
-[![Build Status][travisci-image]][travisci-url]
+[![Build Status][workflow-image]][workflow-url]
 [![Go Report Card][goreport-image]][goreport-url]
+[![Test Coverage][coverage-image]][coverage-url]
+[![Maintainability][maintainability-image]][maintainability-url]
 
 # gocert
 
@@ -9,6 +11,12 @@ A lightweight library and also command-line interface for generating self-signed
 [![asciicast](https://asciinema.org/a/vGNpB4ClRhBBoR3KOH6EVRzpH.svg)](https://asciinema.org/a/vGNpB4ClRhBBoR3KOH6EVRzpH)
 
 ## Install
+
+```
+curl -s https://git.io/JeKEm | sh
+```
+
+Or
 
 ```
 curl -s https://raw.githubusercontent.com/moorara/gocert/master/scripts/install.sh | sh
@@ -38,10 +46,10 @@ gocert verify -ca=sre -name=webapp,myservice
 
 You can generate the following types of certificates:
 
-  * Root Certificate Authority
-  * Intermediate Certificate Authority
-  * Server Certificate
-  * Client Certificate
+  - Root Certificate Authority
+  - Intermediate Certificate Authority
+  - Server Certificate
+  - Client Certificate
 
 **Root CA** is only used for signing intermediate CA.
 There is only one root CA called `root` by default.
@@ -71,8 +79,11 @@ They should be signed by an intermediate certificate.
 You can change these configs by editing `state.yaml` file.
 
 
-[travisci-url]: https://travis-ci.org/moorara/gocert
-[travisci-image]: https://travis-ci.org/moorara/gocert.svg?branch=master
-
+[workflow-url]: https://github.com/moorara/gocert/actions
+[workflow-image]: https://github.com/moorara/gocert/workflows/Main/badge.svg
 [goreport-url]: https://goreportcard.com/report/github.com/moorara/gocert
 [goreport-image]: https://goreportcard.com/badge/github.com/moorara/gocert
+[coverage-url]: https://codeclimate.com/github/moorara/gocert/test_coverage
+[coverage-image]: https://api.codeclimate.com/v1/badges/c42cb8902ef865a053eb/test_coverage
+[maintainability-url]: https://codeclimate.com/github/moorara/gocert/maintainability
+[maintainability-image]: https://api.codeclimate.com/v1/badges/c42cb8902ef865a053eb/maintainability
