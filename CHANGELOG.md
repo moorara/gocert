@@ -1,5 +1,21 @@
 # Change Log
 
+## [v0.1.5](https://github.com/moorara/gocert/tree/v0.1.5) (2019-11-18)
+[Full Changelog](https://github.com/moorara/gocert/compare/v0.1.4...v0.1.5)
+
+**Closed issues:**
+
+- Use Cherry [\#35](https://github.com/moorara/gocert/issues/35)
+
+**Merged pull requests:**
+
+- Switch to GitHub Actions [\#46](https://github.com/moorara/gocert/pull/46) ([moorara](https://github.com/moorara))
+- Refactoring [\#45](https://github.com/moorara/gocert/pull/45) ([moorara](https://github.com/moorara))
+- Update .github files [\#42](https://github.com/moorara/gocert/pull/42) ([moorara](https://github.com/moorara))
+- Refactor README [\#41](https://github.com/moorara/gocert/pull/41) ([moorara](https://github.com/moorara))
+- Update .gitignore [\#40](https://github.com/moorara/gocert/pull/40) ([moorara](https://github.com/moorara))
+- Update docs [\#39](https://github.com/moorara/gocert/pull/39) ([moorara](https://github.com/moorara))
+
 ## [v0.1.4](https://github.com/moorara/gocert/tree/v0.1.4) (2019-02-13)
 [Full Changelog](https://github.com/moorara/gocert/compare/v0.1.3...v0.1.4)
 
