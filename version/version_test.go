@@ -11,7 +11,7 @@ func TestString(t *testing.T) {
 		expectedValues []string
 	}{
 		{
-			[]string{"version:", "revision:", "branch:", "goVersion:", "buildTool:", "buildTime:"},
+			[]string{"version:", "commit:", "branch:", "goVersion:", "buildTool:", "buildTime:"},
 		},
 	}
 

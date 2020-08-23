@@ -1,12 +1,11 @@
 version: "1.0"
 
 language: go
-version_file: version/VERSION
 
 build:
   cross_compile: true
+  main_file: main.go
   binary_file: bin/gocert
-  version_package: ./version
 
 release:
   build: true
