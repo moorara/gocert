@@ -19,7 +19,7 @@ curl -s https://git.io/JeKEm | sh
 Or
 
 ```
-curl -s https://raw.githubusercontent.com/moorara/gocert/master/scripts/install.sh | sh
+curl -s https://raw.githubusercontent.com/moorara/gocert/main/scripts/install.sh | sh
 ```
 
 ## Quick Start
