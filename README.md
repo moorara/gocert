@@ -13,14 +13,10 @@ A lightweight library and also command-line interface for generating self-signed
 ## Install
 
 ```
-curl -s https://git.io/JeKEm | sh
+brew install moorara/brew/gocert
 ```
 
-Or
-
-```
-curl -s https://raw.githubusercontent.com/moorara/gocert/main/scripts/install.sh | sh
-```
+For other platforms, you can download the binary from the [latest release](https://github.com/moorara/gocert/releases/latest).
 
 ## Quick Start
 
