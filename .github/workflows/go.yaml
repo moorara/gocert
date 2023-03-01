@@ -5,7 +5,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: moorara/checkout@fix-git-config-issue
         with:
           fetch-depth: o
       - name: Lint
