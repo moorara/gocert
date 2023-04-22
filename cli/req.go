@@ -81,7 +81,7 @@ func (c *ReqCommand) output(text string) {
 func (c *ReqCommand) Synopsis() string {
 	var buf bytes.Buffer
 	t := template.Must(template.New("synopsis").Parse(reqSynopsis))
-	t.Execute(&buf, c.c) // In case of error, empty string will be returned
+	_ = t.Execute(&buf, c.c) // In case of error, empty string will be returned
 	return buf.String()
 }
 
@@ -89,7 +89,7 @@ func (c *ReqCommand) Synopsis() string {
 func (c *ReqCommand) Help() string {
 	var buf bytes.Buffer
 	t := template.Must(template.New("help").Parse(reqHelp))
-	t.Execute(&buf, c.c) // In case of error, empty string will be returned
+	_ = t.Execute(&buf, c.c) // In case of error, empty string will be returned
 	return buf.String()
 }
 

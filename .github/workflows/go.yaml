@@ -1,13 +1,11 @@
-name: Main
-on: push
+name: Go
+on: [push]
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: o
       - name: Lint
         uses: gardenbed/actions/go-lint@main
   test:
@@ -19,7 +17,7 @@ jobs:
         id: test
         uses: gardenbed/actions/go-cover@main
         with:
-          codeclimate_reporter_id: ${{ secrets.CODECLIMATE_REPORTER_ID }}
+          codecov_token: ${{ secrets.CODECOV_TOKEN }}
       - name: Upload Test Report
         uses: actions/upload-artifact@v3
         with:
@@ -30,8 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          submodules: 'true'
+      - uses: actions/setup-go@v3
       - name: Build Binary
         run: go build .

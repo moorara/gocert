@@ -10,7 +10,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 )
 
@@ -52,6 +51,8 @@ func writePrivateKey(private *rsa.PrivateKey, password, path string) (err error)
 			Bytes: keyData,
 		}
 	} else {
+		// FIXME:
+		// nolint directive: SA1019
 		keyPem, err = x509.EncryptPEMBlock(rand.Reader, pemTypeKey, keyData, []byte(password), x509.PEMCipherAES256)
 		if err != nil {
 			return err
@@ -77,7 +78,7 @@ func writePrivateKey(private *rsa.PrivateKey, password, path string) (err error)
 }
 
 func readPrivateKey(password, path string) (*rsa.PrivateKey, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -89,9 +90,13 @@ func readPrivateKey(password, path string) (*rsa.PrivateKey, error) {
 
 	pemBytes := keyPem.Bytes
 
-	// Decrypt private key if a password set
+	// FIXME:
+	// nolint directive: SA1019
 	if x509.IsEncryptedPEMBlock(keyPem) {
+		// Decrypt private key if a password set
 		if password != "" {
+			// FIXME:
+			// nolint directive: SA1019
 			pemBytes, err = x509.DecryptPEMBlock(keyPem, []byte(password))
 			if err != nil {
 				return nil, err
@@ -134,7 +139,7 @@ func writePemFile(pemType string, pemData []byte, path string) error {
 }
 
 func readCertificate(path string) (*x509.Certificate, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +158,7 @@ func readCertificate(path string) (*x509.Certificate, error) {
 }
 
 func readCertificateRequest(path string) (*x509.CertificateRequest, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +251,7 @@ func writeCertificateChain(c, cCA Cert) error {
 func readCertificateChain(path string) ([]*x509.Certificate, error) {
 	certs := make([]*x509.Certificate, 0)
 
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

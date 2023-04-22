@@ -11,7 +11,7 @@ import (
 )
 
 type mockUI struct {
-	cli.MockUi
+	*cli.MockUi
 	reader *bufio.Reader
 }
 
@@ -19,7 +19,7 @@ func newMockUI(r io.Reader) *mockUI {
 	ui := cli.NewMockUi()
 	ui.InputReader = r
 	reader := bufio.NewReader(r)
-	return &mockUI{*ui, reader}
+	return &mockUI{ui, reader}
 }
 
 func (u *mockUI) Ask(query string) (string, error) {

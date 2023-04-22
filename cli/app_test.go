@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"io/ioutil"
+	"io"
 	"testing"
 
 	"github.com/mitchellh/cli"
@@ -13,11 +13,6 @@ var (
 	helpRegexes = []string{
 		`Usage: \w+ \[--version\] \[--help\] <command> \[<args>\]`,
 		`Available commands are:`,
-	}
-
-	helpSubRegexes = []string{
-		`This command is accessed by using one of the subcommands below.`,
-		`Subcommands:`,
 	}
 
 	helpMockInit   = "help text for mocked init command"
@@ -121,7 +116,7 @@ func TestAppRun(t *testing.T) {
 
 		err = w.Close()
 		assert.NoError(t, err)
-		data, err := ioutil.ReadAll(r)
+		data, err := io.ReadAll(r)
 		assert.NoError(t, err)
 		output := string(data)
 

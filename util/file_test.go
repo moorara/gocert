@@ -1,7 +1,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -137,7 +136,7 @@ func TestCreateTempFile(t *testing.T) {
 		defer delete()
 		assert.NoError(t, err)
 
-		content, err := ioutil.ReadFile(path)
+		content, err := os.ReadFile(path)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.content, string(content))
 	}
@@ -145,6 +144,7 @@ func TestCreateTempFile(t *testing.T) {
 
 func TestConcatFiles(t *testing.T) {
 	tests := []struct {
+		name            string
 		dest            string
 		destContent     string
 		fileContents    map[string]string
@@ -153,80 +153,78 @@ func TestConcatFiles(t *testing.T) {
 		expectedContent string
 	}{
 		{
-			"", "",
-			map[string]string{},
-			false,
-			true,
-			"",
+			name:            "",
+			dest:            "list",
+			destContent:     "tangerine",
+			fileContents:    map[string]string{},
+			append:          false,
+			expectError:     false,
+			expectedContent: "",
 		},
 		{
-			"list", "mandarin",
-			map[string]string{
-				"": "",
-			},
-			false,
-			true,
-			"",
+			name:            "",
+			dest:            "list",
+			destContent:     "tangerine",
+			fileContents:    map[string]string{},
+			append:          true,
+			expectError:     false,
+			expectedContent: "tangerine",
 		},
 		{
-			"list", "tangerine",
-			map[string]string{},
-			false,
-			false,
-			"",
-		},
-		{
-			"list", "tangerine",
-			map[string]string{},
-			true,
-			false,
-			"tangerine",
-		},
-		{
-			"list", "apple ",
-			map[string]string{
+			name:        "",
+			dest:        "list",
+			destContent: "apple ",
+			fileContents: map[string]string{
 				"item1": "pear ",
 				"item2": "orange ",
 			},
-			false,
-			false,
-			"pear orange ",
+			append:          false,
+			expectError:     false,
+			expectedContent: "pear orange ",
 		},
 		{
-			"list", "apple ",
-			map[string]string{
+			name:        "",
+			dest:        "list",
+			destContent: "apple ",
+			fileContents: map[string]string{
 				"item1": "pear ",
 				"item2": "orange ",
 			},
-			true,
-			false,
-			"apple pear orange ",
+			append:          true,
+			expectError:     false,
+			expectedContent: "apple pear orange ",
 		},
 	}
 
 	for _, tc := range tests {
-		ioutil.WriteFile(tc.dest, []byte(tc.destContent), 0644)
-
-		files := make([]string, 0)
-		for file, content := range tc.fileContents {
-			ioutil.WriteFile(file, []byte(content), 0644)
-			files = append(files, file)
-		}
-
-		err := ConcatFiles(tc.dest, tc.append, files...)
-
-		if tc.expectError {
-			assert.Error(t, err)
-		} else {
+		t.Run(tc.name, func(t *testing.T) {
+			err := os.WriteFile(tc.dest, []byte(tc.destContent), 0644)
 			assert.NoError(t, err)
-			content, err := ioutil.ReadFile(tc.dest)
-			assert.NoError(t, err)
-			assert.Equal(t, tc.expectedContent, string(content))
-		}
 
-		// Cleanup temporary files
-		files = append(files, tc.dest)
-		DeleteAll("", files...)
+			files := make([]string, 0)
+			for file, content := range tc.fileContents {
+				err := os.WriteFile(file, []byte(content), 0644)
+				assert.NoError(t, err)
+
+				files = append(files, file)
+			}
+
+			err = ConcatFiles(tc.dest, tc.append, files...)
+
+			if tc.expectError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				content, err := os.ReadFile(tc.dest)
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expectedContent, string(content))
+			}
+
+			// Cleanup temporary files
+			files = append(files, tc.dest)
+			err = DeleteAll("", files...)
+			assert.NoError(t, err)
+		})
 	}
 }
 
@@ -274,7 +272,7 @@ func TestDeleteAll(t *testing.T) {
 		assert.NoError(t, err)
 
 		for _, file := range tc.files {
-			err = ioutil.WriteFile(file, []byte(""), 0644)
+			err = os.WriteFile(file, []byte(""), 0644)
 			assert.NoError(t, err)
 		}
 

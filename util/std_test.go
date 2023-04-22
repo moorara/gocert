@@ -2,7 +2,7 @@ package util
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 
@@ -110,7 +110,7 @@ func TestPipeStdoutAndStderr(t *testing.T) {
 
 		err = w.Close()
 		assert.NoError(t, err)
-		data, err := ioutil.ReadAll(r)
+		data, err := io.ReadAll(r)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.expected, string(data))
 

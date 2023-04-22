@@ -386,7 +386,7 @@ func TestWriteReadCertificateChain(t *testing.T) {
 	}
 
 	mockWorkspaceWithCA(t)
-	defer CleanupWorkspace()
+	defer CleanupWorkspace() // nolint: errcheck
 
 	tests := []struct {
 		title       string

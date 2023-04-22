@@ -1,7 +1,7 @@
+[![Go Doc][godoc-image]][godoc-url]
 [![Build Status][workflow-image]][workflow-url]
 [![Go Report Card][goreport-image]][goreport-url]
-[![Test Coverage][coverage-image]][coverage-url]
-[![Maintainability][maintainability-image]][maintainability-url]
+[![Test Coverage][codecov-image]][codecov-url]
 
 # gocert
 
@@ -75,11 +75,11 @@ They should be signed by an intermediate certificate.
 You can change these configs by editing `state.yaml` file.
 
 
+[godoc-url]: https://pkg.go.dev/github.com/moorara/gocert
+[godoc-image]: https://pkg.go.dev/badge/github.com/moorara/gocert
 [workflow-url]: https://github.com/moorara/gocert/actions
 [workflow-image]: https://github.com/moorara/gocert/workflows/Main/badge.svg
 [goreport-url]: https://goreportcard.com/report/github.com/moorara/gocert
 [goreport-image]: https://goreportcard.com/badge/github.com/moorara/gocert
-[coverage-url]: https://codeclimate.com/github/moorara/gocert/test_coverage
-[coverage-image]: https://api.codeclimate.com/v1/badges/c42cb8902ef865a053eb/test_coverage
-[maintainability-url]: https://codeclimate.com/github/moorara/gocert/maintainability
-[maintainability-image]: https://api.codeclimate.com/v1/badges/c42cb8902ef865a053eb/maintainability
+[codecov-url]: https://codecov.io/gh/moorara/gocert
+[codecov-image]: https://codecov.io/gh/moorara/gocert/branch/main/graph/badge.svg

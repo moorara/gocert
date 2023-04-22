@@ -1,7 +1,7 @@
 package cli
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -163,14 +163,14 @@ func TestInitCommand(t *testing.T) {
 			assert.Zero(t, exit)
 
 			// Verify state file
-			stateData, err := ioutil.ReadFile(pki.FileState)
+			stateData, err := os.ReadFile(pki.FileState)
 			assert.NoError(t, err)
 			stateYAML := strings.Replace(test.expectedState, "\t\t\t", "", -1)
 			stateYAML = strings.Replace(stateYAML, "\t", "  ", -1)
 			assert.Equal(t, stateYAML, string(stateData))
 
 			// Verify spec file
-			specData, err := ioutil.ReadFile(pki.FileSpec)
+			specData, err := os.ReadFile(pki.FileSpec)
 			assert.NoError(t, err)
 			specTOML := strings.Replace(test.expectedSpec, "\t\t\t", "", -1)
 			specTOML = strings.Replace(specTOML, "\t", "  ", -1)

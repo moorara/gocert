@@ -2,7 +2,6 @@ package util
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -53,13 +52,13 @@ func MkDirs(basePath string, dirs ...string) (func(), error) {
 
 // CreateTempFile writes a file in your os temp directory
 func CreateTempFile(content string) (string, func(), error) {
-	file, err := ioutil.TempFile(os.TempDir(), "gobox-")
+	file, err := os.CreateTemp(os.TempDir(), "gobox-")
 	if err != nil {
 		return "", nil, err
 	}
 
 	if len(content) > 0 {
-		err = ioutil.WriteFile(file.Name(), []byte(content), defaultFilePerm)
+		err = os.WriteFile(file.Name(), []byte(content), defaultFilePerm)
 		if err != nil {
 			return "", nil, err
 		}
