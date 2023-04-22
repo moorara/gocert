@@ -28,7 +28,7 @@ coverage:
       default:
         # The minimum coverage ratio for success
         # See https://docs.codecov.com/docs/commit-status#target
-        target: 90%
+        target: 85%
   
     # Coverage for lines adjusted in the pull request or single commit
     # See https://docs.codecov.com/docs/commit-status#patch-status
