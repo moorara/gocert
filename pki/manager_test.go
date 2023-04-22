@@ -4,8 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/x509"
 	"crypto/x509/pkix"
-	"io/ioutil"
 	"math/big"
+	"os"
 	"path"
 	"reflect"
 	"testing"
@@ -143,14 +143,14 @@ func TestGenCertError(t *testing.T) {
 
 	err := NewWorkspace(NewState(), NewSpec())
 	assert.NoError(t, err)
-	defer CleanupWorkspace()
+	defer CleanupWorkspace() // nolint: errcheck
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			if test.writeFiles {
-				err = ioutil.WriteFile(test.c.KeyPath(), nil, 0644)
+				err = os.WriteFile(test.c.KeyPath(), nil, 0644)
 				assert.NoError(t, err)
-				err = ioutil.WriteFile(test.c.CertPath(), nil, 0644)
+				err = os.WriteFile(test.c.CertPath(), nil, 0644)
 				assert.NoError(t, err)
 			}
 
@@ -263,16 +263,16 @@ func TestGenCSRError(t *testing.T) {
 
 	err := NewWorkspace(NewState(), NewSpec())
 	assert.NoError(t, err)
-	defer CleanupWorkspace()
+	defer CleanupWorkspace() // nolint: errcheck
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			if test.writeFiles {
-				err = ioutil.WriteFile(test.c.KeyPath(), nil, 0644)
+				err = os.WriteFile(test.c.KeyPath(), nil, 0644)
 				assert.NoError(t, err)
-				err = ioutil.WriteFile(test.c.CSRPath(), nil, 0644)
+				err = os.WriteFile(test.c.CSRPath(), nil, 0644)
 				assert.NoError(t, err)
-				err = ioutil.WriteFile(test.c.CertPath(), nil, 0644)
+				err = os.WriteFile(test.c.CertPath(), nil, 0644)
 				assert.NoError(t, err)
 			}
 
@@ -346,7 +346,7 @@ func TestSignCSRError(t *testing.T) {
 
 	err := NewWorkspace(NewState(), NewSpec())
 	assert.NoError(t, err)
-	defer CleanupWorkspace()
+	defer CleanupWorkspace() // nolint: errcheck
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
@@ -354,13 +354,13 @@ func TestSignCSRError(t *testing.T) {
 			manager := NewX509Manager()
 
 			if !reflect.DeepEqual(test.configCA, Config{}) {
-				manager.GenCert(test.configCA, Claim{}, test.cCA)
+				err := manager.GenCert(test.configCA, Claim{}, test.cCA)
 				assert.NoError(t, err)
 				files = append(files, test.cCA.KeyPath(), test.cCA.CertPath())
 			}
 
 			if !reflect.DeepEqual(test.configCSR, Config{}) {
-				manager.GenCSR(test.configCSR, Claim{}, test.cCSR)
+				err := manager.GenCSR(test.configCSR, Claim{}, test.cCSR)
 				assert.NoError(t, err)
 				files = append(files, test.cCSR.KeyPath(), test.cCSR.CSRPath(), test.cCSR.CertPath())
 			}
@@ -414,7 +414,7 @@ func TestVerifyCertError(t *testing.T) {
 	}
 
 	mockWorkspaceWithChains(t)
-	defer CleanupWorkspace()
+	defer CleanupWorkspace() // nolint: errcheck
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
@@ -640,6 +640,7 @@ func TestX509Manager(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			err := NewWorkspace(test.state, test.spec)
+			defer CleanupWorkspace() // nolint: errcheck
 			assert.NoError(t, err)
 
 			manager := NewX509Manager()
@@ -704,9 +705,6 @@ func TestX509Manager(t *testing.T) {
 				err = manager.VerifyCert(test.cInterm, test.cClient, test.dnsClient)
 				assert.NoError(t, err)
 			}
-
-			err = CleanupWorkspace()
-			assert.NoError(t, err)
 		})
 	}
 }

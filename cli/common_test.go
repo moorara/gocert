@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -275,9 +274,9 @@ func TestLoadWorkspace(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
 			stateYAML := strings.Replace(test.stateYAML, "\t", "  ", -1)
-			err := ioutil.WriteFile(pki.FileState, []byte(stateYAML), 0644)
+			err := os.WriteFile(pki.FileState, []byte(stateYAML), 0644)
 			assert.NoError(t, err)
-			err = ioutil.WriteFile(pki.FileSpec, []byte(test.specTOML), 0644)
+			err = os.WriteFile(pki.FileSpec, []byte(test.specTOML), 0644)
 			assert.NoError(t, err)
 
 			mockUI := newMockUI(nil)
@@ -508,13 +507,13 @@ func TestSaveWorkspace(t *testing.T) {
 
 			assert.Equal(t, test.expectedStatus, status)
 			if test.expectedStatus == 0 {
-				stateYAML, err := ioutil.ReadFile(pki.FileState)
+				stateYAML, err := os.ReadFile(pki.FileState)
 				assert.NoError(t, err)
 				expectedStateYAML := strings.Replace(test.expectedStateYAML, "\t\t\t\t", "  ", -1)
 				expectedStateYAML = strings.Replace(expectedStateYAML, "\t\t\t", "", -1)
 				assert.Equal(t, expectedStateYAML, string(stateYAML))
 
-				specTOML, err := ioutil.ReadFile(pki.FileSpec)
+				specTOML, err := os.ReadFile(pki.FileSpec)
 				assert.NoError(t, err)
 				expectedSpecTOML := strings.Replace(test.expectedSpecTOML, "\t\t\t\t", "  ", -1)
 				expectedSpecTOML = strings.Replace(expectedSpecTOML, "\t\t\t", "", -1)
@@ -573,12 +572,13 @@ func TestResolveByName(t *testing.T) {
 	}
 
 	err := pki.NewWorkspace(nil, nil)
-	defer pki.CleanupWorkspace()
 	assert.NoError(t, err)
+	defer pki.CleanupWorkspace() // nolint: errcheck
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			ioutil.WriteFile(test.keyFile, []byte("mocked cert"), 0644)
+			err := os.WriteFile(test.keyFile, []byte("mocked cert"), 0644)
+			assert.NoError(t, err)
 
 			c := resolveByName(test.name)
 			assert.Equal(t, test.expectedCert, c)

@@ -1,18 +1,15 @@
-package version
+package metadata
 
-import (
-	"fmt"
-)
+import "fmt"
 
-const (
-	template = `
-	version:    %s
-	commit:     %s
-	branch:     %s
-	goVersion:  %s
-	buildTool:  %s
-	buildTime:  %s` + "\n"
-)
+const template = `
+  Version:     %s
+  Commit:      %s
+  Branch:      %s
+  Go Version:  %s
+  Build Tool:  %s
+  Build Time:  %s
+`
 
 var (
 	// Version is the semantic version
@@ -34,7 +31,7 @@ var (
 	BuildTime string
 )
 
-// String returns a string describing the version information in details
+// String returns a string describing the metadata in details.
 func String() string {
 	return fmt.Sprintf(template, Version, Commit, Branch, GoVersion, BuildTool, BuildTime)
 }

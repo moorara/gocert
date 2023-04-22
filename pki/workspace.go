@@ -1,7 +1,6 @@
 package pki
 
 import (
-	"io/ioutil"
 	"os"
 
 	"github.com/BurntSushi/toml"
@@ -11,7 +10,7 @@ import (
 
 // LoadState reads and parses state from a YAML file
 func LoadState(file string) (*State, error) {
-	data, err := ioutil.ReadFile(file)
+	data, err := os.ReadFile(file)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +35,7 @@ func SaveState(state *State, file string) error {
 		return err
 	}
 
-	err = ioutil.WriteFile(file, data, 0644)
+	err = os.WriteFile(file, data, 0644)
 	if err != nil {
 		return err
 	}

@@ -1,0 +1,46 @@
+# https://docs.codecov.com/docs/codecov-yaml
+# https://docs.codecov.com/docs/codecovyml-reference
+# https://docs.codecov.com/docs/coverage-configuration
+
+codecov:
+  # Whether or not to wait for all other statuses to pass
+  # See https://docs.codecov.com/docs/codecovyml-reference#codecovrequire_ci_to_pass
+  require_ci_to_pass: no
+
+# See https://docs.codecov.com/docs/codecovyml-reference#coverage
+# See https://docs.codecov.com/docs/coverage-configuration
+coverage:
+  precision: 2
+  round: down
+  range: '75...95'
+
+  # See https://docs.codecov.com/docs/codecovyml-reference#coveragestatus
+  # See https://docs.codecov.com/docs/commit-status
+  status:
+
+    # See https://docs.codecov.com/docs/commit-status#changes-status
+    # See https://docs.codecov.com/docs/unexpected-coverage-changes
+    changes: yes
+  
+    # Total coverage
+    # See https://docs.codecov.com/docs/commit-status#project-status
+    project:
+      default:
+        # The minimum coverage ratio for success
+        # See https://docs.codecov.com/docs/commit-status#target
+        target: 90%
+  
+    # Coverage for lines adjusted in the pull request or single commit
+    # See https://docs.codecov.com/docs/commit-status#patch-status
+    patch:
+      default:
+        # The minimum coverage ratio for success
+        target: 90%
+
+# See https://docs.codecov.com/docs/codecovyml-reference#comment
+# See https://docs.codecov.com/docs/pull-request-comments
+comment: false
+
+# See https://docs.codecov.com/docs/ignoring-paths
+ignore:
+  - 'metadata/**/*'

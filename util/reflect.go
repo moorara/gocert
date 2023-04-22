@@ -50,11 +50,7 @@ func updateSkipList(skipList *[]string, field, value string) bool {
 }
 
 func secretOK(pass string, minLen int) bool {
-	if len(pass) < minLen {
-		return false
-	}
-
-	return true
+	return len(pass) >= minLen
 }
 
 func getAskFunc(secretTag, defaultTag string, ui cli.Ui) askFunc {
@@ -214,7 +210,7 @@ func askForStructV(v reflect.Value, tagKey string, ignoreOmitted bool, skipList 
 			if err = askForStructV(vField, tagKey, ignoreOmitted, skipList, ui); err != nil {
 				return err
 			}
-		} else if kind == reflect.Bool && vField.Bool() == false {
+		} else if kind == reflect.Bool && !vField.Bool() {
 			if str, err = ask(getPrompt(name, "boolean", defaultTag)); err != nil {
 				return err
 			}

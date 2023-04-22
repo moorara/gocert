@@ -18,7 +18,7 @@ type inner struct {
 }
 
 type example struct {
-	unexported   int
+	unexported   int     // nolint
 	Bool         bool    `custom:"-" default:"true"`
 	Int          int     `custom:"int" default:"27"`
 	Int64        int64   `custom:"int64" default:"64"`
@@ -36,7 +36,7 @@ type example struct {
 }
 
 type mockUI struct {
-	cli.MockUi
+	*cli.MockUi
 	reader *bufio.Reader
 }
 
@@ -44,7 +44,7 @@ func newMockUI(r io.Reader) *mockUI {
 	ui := cli.NewMockUi()
 	ui.InputReader = r
 	reader := bufio.NewReader(r)
-	return &mockUI{*ui, reader}
+	return &mockUI{ui, reader}
 }
 
 func (u *mockUI) Ask(query string) (string, error) {

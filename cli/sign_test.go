@@ -2,7 +2,7 @@ package cli
 
 import (
 	"errors"
-	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -12,12 +12,12 @@ import (
 
 func writeSignMocks(t *testing.T, mocks []pki.Cert) {
 	for _, c := range mocks {
-		err := ioutil.WriteFile(c.KeyPath(), []byte(""), 0644)
+		err := os.WriteFile(c.KeyPath(), []byte(""), 0644)
 		assert.NoError(t, err)
-		err = ioutil.WriteFile(c.CertPath(), []byte(""), 0644)
+		err = os.WriteFile(c.CertPath(), []byte(""), 0644)
 		assert.NoError(t, err)
 		if c.CSRPath() != "" {
-			err = ioutil.WriteFile(c.CSRPath(), []byte(""), 0644)
+			err = os.WriteFile(c.CSRPath(), []byte(""), 0644)
 			assert.NoError(t, err)
 		}
 	}

@@ -129,8 +129,8 @@ func TestVerifyCommandError(t *testing.T) {
 	}
 
 	err := pki.NewWorkspace(nil, nil)
-	defer pki.CleanupWorkspace()
 	assert.NoError(t, err)
+	defer pki.CleanupWorkspace() // nolint: errcheck
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {

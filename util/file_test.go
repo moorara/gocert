@@ -1,7 +1,6 @@
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -137,7 +136,7 @@ func TestCreateTempFile(t *testing.T) {
 		defer delete()
 		assert.NoError(t, err)
 
-		content, err := ioutil.ReadFile(path)
+		content, err := os.ReadFile(path)
 		assert.NoError(t, err)
 		assert.Equal(t, tc.content, string(content))
 	}
@@ -205,28 +204,32 @@ func TestConcatFiles(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		ioutil.WriteFile(tc.dest, []byte(tc.destContent), 0644)
+		err := os.WriteFile(tc.dest, []byte(tc.destContent), 0644)
+		assert.NoError(t, err)
 
 		files := make([]string, 0)
 		for file, content := range tc.fileContents {
-			ioutil.WriteFile(file, []byte(content), 0644)
+			err := os.WriteFile(file, []byte(content), 0644)
+			assert.NoError(t, err)
+
 			files = append(files, file)
 		}
 
-		err := ConcatFiles(tc.dest, tc.append, files...)
+		err = ConcatFiles(tc.dest, tc.append, files...)
 
 		if tc.expectError {
 			assert.Error(t, err)
 		} else {
 			assert.NoError(t, err)
-			content, err := ioutil.ReadFile(tc.dest)
+			content, err := os.ReadFile(tc.dest)
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedContent, string(content))
 		}
 
 		// Cleanup temporary files
 		files = append(files, tc.dest)
-		DeleteAll("", files...)
+		err = DeleteAll("", files...)
+		assert.NoError(t, err)
 	}
 }
 
@@ -274,7 +277,7 @@ func TestDeleteAll(t *testing.T) {
 		assert.NoError(t, err)
 
 		for _, file := range tc.files {
-			err = ioutil.WriteFile(file, []byte(""), 0644)
+			err = os.WriteFile(file, []byte(""), 0644)
 			assert.NoError(t, err)
 		}
 

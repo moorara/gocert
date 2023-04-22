@@ -1,8 +1,8 @@
 package pki
 
 import (
-	"io/ioutil"
 	"net"
+	"os"
 	"strings"
 	"testing"
 
@@ -540,7 +540,7 @@ func verifyStateFile(t *testing.T, stateFile, expectedYAML string) {
 		return
 	}
 
-	stateData, err := ioutil.ReadFile(stateFile)
+	stateData, err := os.ReadFile(stateFile)
 	assert.NoError(t, err)
 
 	expectedYAML = strings.Replace(expectedYAML, "\t\t\t\t", "", -1)
@@ -554,7 +554,7 @@ func verifySpecFile(t *testing.T, specFile, expectedTOML string) {
 		return
 	}
 
-	specData, err := ioutil.ReadFile(specFile)
+	specData, err := os.ReadFile(specFile)
 	assert.NoError(t, err)
 
 	expectedTOML = strings.Replace(expectedTOML, "\t\t\t\t", "", -1)
@@ -648,9 +648,9 @@ func TestNewWorkspace(t *testing.T) {
 func TestLoadWorkspace(t *testing.T) {
 	for _, test := range loadTests {
 		yaml := strings.Replace(test.state.yaml, "\t", "  ", -1)
-		err := ioutil.WriteFile(FileState, []byte(yaml), 0644)
+		err := os.WriteFile(FileState, []byte(yaml), 0644)
 		assert.NoError(t, err)
-		err = ioutil.WriteFile(FileSpec, []byte(test.spec.toml), 0644)
+		err = os.WriteFile(FileSpec, []byte(test.spec.toml), 0644)
 		assert.NoError(t, err)
 
 		state, spec, err := LoadWorkspace()
@@ -713,14 +713,14 @@ func TestCleanupWorkspace(t *testing.T) {
 		// Mock directorys and files
 		_, err := util.MkDirs("", DirRoot, DirInterm, DirServer, DirClient, DirCSR)
 		assert.NoError(t, err)
-		err = ioutil.WriteFile(FileState, nil, 0644)
+		err = os.WriteFile(FileState, nil, 0644)
 		assert.NoError(t, err)
-		err = ioutil.WriteFile(FileSpec, nil, 0644)
+		err = os.WriteFile(FileSpec, nil, 0644)
 		assert.NoError(t, err)
 
 		// Mock artifacts
 		for _, file := range test.files {
-			err = ioutil.WriteFile(file, nil, 0644)
+			err = os.WriteFile(file, nil, 0644)
 			assert.NoError(t, err)
 		}
 
