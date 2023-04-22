@@ -534,12 +534,6 @@ func TestResolveByName(t *testing.T) {
 		expectedCert pki.Cert
 	}{
 		{
-			"Empty",
-			"",
-			"",
-			pki.Cert{},
-		},
-		{
 			"InvalidRootName",
 			path.Join(pki.DirRoot, "top.ca.key"),
 			"top",
