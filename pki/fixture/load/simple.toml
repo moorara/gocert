@@ -1,0 +1,8 @@
+[root]
+  country = [ "CA" ]
+  organization = [ "Moorara" ]
+[server]
+  country = [ "US" ]
+  organization = [ "Milad" ]
+  dns_name = [ "example.com" ]
+  email_address = [ "milad@example.com" ]

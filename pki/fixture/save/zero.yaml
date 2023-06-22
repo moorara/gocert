@@ -1,0 +1,16 @@
+root:
+    serial: 0
+    length: 0
+    days: 0
+intermediate:
+    serial: 0
+    length: 0
+    days: 0
+server:
+    serial: 0
+    length: 0
+    days: 0
+client:
+    serial: 0
+    length: 0
+    days: 0

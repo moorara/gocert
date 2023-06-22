@@ -1,0 +1,38 @@
+[root]
+  country = ["CA"]
+  organization = ["Milad"]
+
+[intermediate]
+  country = ["CA"]
+  organization = ["Milad"]
+  organizational_unit = ["SRE"]
+
+[server]
+  country = ["CA"]
+  province = ["Ontario"]
+  locality = ["Ottawa"]
+  organization = ["Milad"]
+  organizational_unit = ["R&D"]
+  dns_name = ["example.org"]
+  ip_address = ["127.0.0.1"]
+
+[client]
+  country = ["CA"]
+  province = ["Ontario"]
+  locality = ["Ottawa"]
+  organization = ["Milad"]
+  organizational_unit = ["QE"]
+
+[root_policy]
+  match = ["Organization"]
+  supplied = ["CommonName", "OrganizationalUnit"]
+
+[intermediate_policy]
+  match = ["Organization"]
+  supplied = ["CommonName"]
+
+[metadata]
+  clientSkip = ["Claim.StreetAddress", "Claim.PostalCode"]
+  intermSkip = ["Claim.StreetAddress", "Claim.PostalCode", "Claim.DNSName", "Claim.IPAddress", "Claim.EmailAddress"]
+  rootSkip = ["Claim.StreetAddress", "Claim.PostalCode", "Claim.DNSName", "Claim.IPAddress", "Claim.EmailAddress"]
+  serverSkip = ["Claim.StreetAddress", "Claim.PostalCode"]

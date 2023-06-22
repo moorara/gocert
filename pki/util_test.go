@@ -13,9 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	testKeyLen = 1024
-)
+const testKeyLen = 1024
 
 func mockWorkspaceWithCA(t *testing.T) {
 	err := NewWorkspace(NewState(), NewSpec())

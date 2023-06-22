@@ -50,67 +50,42 @@ func TestNewColoredUi(t *testing.T) {
 func TestLoadWorkspace(t *testing.T) {
 	tests := []struct {
 		title          string
-		stateYAML      string
-		specTOML       string
+		stateFixture   string
+		specFixture    string
 		expectedStatus int
 		expectedState  *pki.State
 		expectedSpec   *pki.Spec
 	}{
 		{
-			"Empty",
-			``,
-			``,
-			0,
-			&pki.State{},
-			&pki.Spec{},
+			title:          "Empty",
+			stateFixture:   "./fixture/loadWorkspace/empty.yaml",
+			specFixture:    "./fixture/loadWorkspace/empty.toml",
+			expectedStatus: 0,
+			expectedState:  &pki.State{},
+			expectedSpec:   &pki.Spec{},
 		},
 		{
-			"InvalidYAML",
-			`invalid yaml`,
-			``,
-			ErrorReadState,
-			&pki.State{},
-			&pki.Spec{},
+			title:          "InvalidYAML",
+			stateFixture:   "./fixture/loadWorkspace/invalid.yaml",
+			specFixture:    "./fixture/loadWorkspace/empty.toml",
+			expectedStatus: ErrorReadState,
+			expectedState:  &pki.State{},
+			expectedSpec:   &pki.Spec{},
 		},
 		{
-			"InvalidTOML",
-			``,
-			`invalid toml`,
-			ErrorReadSpec,
-			&pki.State{},
-			&pki.Spec{},
+			title:          "InvalidTOML",
+			stateFixture:   "./fixture/loadWorkspace/empty.yaml",
+			specFixture:    "./fixture/loadWorkspace/invalid.toml",
+			expectedStatus: ErrorReadSpec,
+			expectedState:  &pki.State{},
+			expectedSpec:   &pki.Spec{},
 		},
 		{
-			"Simple",
-			`
-			root:
-				serial: 10
-				length: 4096
-				days: 7300
-			intermediate:
-				serial: 100
-				length: 4096
-				days: 3650
-			`,
-			`
-			[root]
-				country = [ "CA", "US" ]
-				province = [ "Ontario", "Massachusetts" ]
-				locality = [ "Ottawa", "Boston" ]
-				organization = [ "Moorara" ]
-			[intermediate]
-				country = [ "CA" ]
-				province = [ "Ontario" ]
-				locality = [ "Ottawa" ]
-				organization = [ "Moorara" ]
-				email_address = [ "moorara@example.com" ]
-			[root_policy]
-				supplied = ["CommonName"]
-			[intermediate_policy]
-				supplied = ["CommonName"]
-			`,
-			0,
-			&pki.State{
+			title:          "Simple",
+			stateFixture:   "./fixture/loadWorkspace/simple.yaml",
+			specFixture:    "./fixture/loadWorkspace/simple.toml",
+			expectedStatus: 0,
+			expectedState: &pki.State{
 				Root: pki.Config{
 					Serial: int64(10),
 					Length: 4096,
@@ -122,7 +97,7 @@ func TestLoadWorkspace(t *testing.T) {
 					Days:   3650,
 				},
 			},
-			&pki.Spec{
+			expectedSpec: &pki.Spec{
 				Root: pki.Claim{
 					Country:      []string{"CA", "US"},
 					Province:     []string{"Ontario", "Massachusetts"},
@@ -145,64 +120,11 @@ func TestLoadWorkspace(t *testing.T) {
 			},
 		},
 		{
-			"Complex",
-			`
-			root:
-				serial: 10
-				length: 4096
-				days: 7300
-			intermediate:
-				serial: 100
-				length: 4096
-				days: 3650
-			server:
-				serial: 1000
-				length: 2048
-				days: 375
-			client:
-				serial: 10000
-				length: 2048
-				days: 40
-			`,
-			`
-			[root]
-				country = [ "CA", "US" ]
-				province = [ "Ontario", "Massachusetts" ]
-				locality = [ "Ottawa", "Boston" ]
-				organization = [ "Moorara" ]
-			[intermediate]
-				country = [ "CA" ]
-				province = [ "Ontario" ]
-				locality = [ "Ottawa" ]
-				organization = [ "Moorara" ]
-				email_address = [ "moorara@example.com" ]
-			[server]
-				country = [ "US" ]
-				province = [ "Virginia" ]
-				locality = [ "Richmond" ]
-				organization = [ "Moorara" ]
-				dns_name = [ "example.com" ]
-				ip_address = [ "127.0.0.1" ]
-				email_address = [ "moorara@example.com" ]
-			[client]
-				country = [ "UK" ]
-				locality = [ "London" ]
-				organization = [ "Moorara" ]
-				email_address = [ "moorara@example.com" ]
-			[root_policy]
-				match = ["Country", "Organization"]
-				supplied = ["CommonName"]
-			[intermediate_policy]
-				match = ["Organization"]
-				supplied = ["CommonName"]
-			[metadata]
-				RootSkip = ["IPAddress", "StreetAddress", "PostalCode"]
-				IntermSkip = ["IPAddress", "StreetAddress", "PostalCode"]
-				ServerSkip = ["StreetAddress", "PostalCode"]
-				ClientSkip = ["StreetAddress", "PostalCode"]
-			`,
-			0,
-			&pki.State{
+			title:          "Complex",
+			stateFixture:   "./fixture/loadWorkspace/complex.yaml",
+			specFixture:    "./fixture/loadWorkspace/complex.toml",
+			expectedStatus: 0,
+			expectedState: &pki.State{
 				Root: pki.Config{
 					Serial: int64(10),
 					Length: 4096,
@@ -224,7 +146,7 @@ func TestLoadWorkspace(t *testing.T) {
 					Days:   40,
 				},
 			},
-			&pki.Spec{
+			expectedSpec: &pki.Spec{
 				Root: pki.Claim{
 					Country:      []string{"CA", "US"},
 					Province:     []string{"Ontario", "Massachusetts"},
@@ -273,10 +195,14 @@ func TestLoadWorkspace(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.title, func(t *testing.T) {
-			stateYAML := strings.Replace(test.stateYAML, "\t", "  ", -1)
-			err := os.WriteFile(pki.FileState, []byte(stateYAML), 0644)
+			stateYAML, err := os.ReadFile(test.stateFixture)
 			assert.NoError(t, err)
-			err = os.WriteFile(pki.FileSpec, []byte(test.specTOML), 0644)
+			err = os.WriteFile(pki.FileState, stateYAML, 0644)
+			assert.NoError(t, err)
+
+			specTOML, err := os.ReadFile(test.specFixture)
+			assert.NoError(t, err)
+			err = os.WriteFile(pki.FileSpec, specTOML, 0644)
 			assert.NoError(t, err)
 
 			mockUI := newMockUI(nil)
@@ -296,92 +222,32 @@ func TestLoadWorkspace(t *testing.T) {
 
 func TestSaveWorkspace(t *testing.T) {
 	tests := []struct {
-		title             string
-		state             *pki.State
-		spec              *pki.Spec
-		expectedStatus    int
-		expectedStateYAML string
-		expectedSpecTOML  string
+		title                string
+		state                *pki.State
+		spec                 *pki.Spec
+		expectedStatus       int
+		expectedStateFixture string
+		expectedSpecFixture  string
 	}{
 		{
-			"EmptyStateSpec",
-			&pki.State{},
-			&pki.Spec{},
-			0,
-			`root:
-				serial: 0
-				length: 0
-				days: 0
-			intermediate:
-				serial: 0
-				length: 0
-				days: 0
-			server:
-				serial: 0
-				length: 0
-				days: 0
-			client:
-				serial: 0
-				length: 0
-				days: 0
-			`,
-			`[root]
-
-			[intermediate]
-
-			[server]
-
-			[client]
-
-			[root_policy]
-
-			[intermediate_policy]
-			`,
+			title:                "ZeroStateSpec",
+			state:                &pki.State{},
+			spec:                 &pki.Spec{},
+			expectedStatus:       0,
+			expectedStateFixture: "./fixture/saveWorkspace/zero.yaml",
+			expectedSpecFixture:  "./fixture/saveWorkspace/zero.toml",
 		},
 		{
-			"DefaultStateSpec",
-			pki.NewState(),
-			pki.NewSpec(),
-			0,
-			`root:
-				serial: 10
-				length: 4096
-				days: 7300
-			intermediate:
-				serial: 100
-				length: 4096
-				days: 3650
-			server:
-				serial: 1000
-				length: 2048
-				days: 375
-			client:
-				serial: 10000
-				length: 2048
-				days: 40
-			`,
-			`[root]
-
-			[intermediate]
-
-			[server]
-
-			[client]
-
-			[root_policy]
-				match = []
-				supplied = ["CommonName"]
-
-			[intermediate_policy]
-				match = []
-				supplied = ["CommonName"]
-
-			[metadata]
-			`,
+			title:                "DefaultStateSpec",
+			state:                pki.NewState(),
+			spec:                 pki.NewSpec(),
+			expectedStatus:       0,
+			expectedStateFixture: "./fixture/saveWorkspace/default.yaml",
+			expectedSpecFixture:  "./fixture/saveWorkspace/default.toml",
 		},
 		{
-			"CustomStateSpec",
-			&pki.State{
+			title: "CustomStateSpec",
+			state: &pki.State{
 				Root: pki.Config{
 					Serial: 10,
 					Length: 4096,
@@ -403,7 +269,7 @@ func TestSaveWorkspace(t *testing.T) {
 					Days:   40,
 				},
 			},
-			&pki.Spec{
+			spec: &pki.Spec{
 				Root: pki.Claim{
 					Country:      []string{"CA", "US"},
 					Province:     []string{"Ontario", "Massachusetts"},
@@ -442,61 +308,9 @@ func TestSaveWorkspace(t *testing.T) {
 					"ClientSkip": []string{"StreetAddress", "PostalCode"},
 				},
 			},
-			0,
-			`root:
-				serial: 10
-				length: 4096
-				days: 7300
-			intermediate:
-				serial: 100
-				length: 4096
-				days: 3650
-			server:
-				serial: 1000
-				length: 2048
-				days: 375
-			client:
-				serial: 10000
-				length: 2048
-				days: 40
-			`,
-			`[root]
-				country = ["CA", "US"]
-				province = ["Ontario", "Massachusetts"]
-				locality = ["Ottawa", "Boston"]
-				organization = ["Moorara"]
-
-			[intermediate]
-				country = ["CA"]
-				province = ["Ontario"]
-				locality = ["Ottawa"]
-				organization = ["Moorara"]
-
-			[server]
-				country = ["US"]
-				province = ["Virginia"]
-				locality = ["Richmond"]
-				organization = ["Moorara"]
-
-			[client]
-				country = ["UK"]
-				locality = ["London"]
-				organization = ["Moorara"]
-
-			[root_policy]
-				match = ["Country", "Organization"]
-				supplied = ["CommonName"]
-
-			[intermediate_policy]
-				match = ["Organization"]
-				supplied = ["CommonName"]
-
-			[metadata]
-				ClientSkip = ["StreetAddress", "PostalCode"]
-				IntermSkip = ["IPAddress", "StreetAddress", "PostalCode"]
-				RootSkip = ["IPAddress", "StreetAddress", "PostalCode"]
-				ServerSkip = ["StreetAddress", "PostalCode"]
-			`,
+			expectedStatus:       0,
+			expectedStateFixture: "./fixture/saveWorkspace/custom.yaml",
+			expectedSpecFixture:  "./fixture/saveWorkspace/custom.toml",
 		},
 	}
 
@@ -509,15 +323,17 @@ func TestSaveWorkspace(t *testing.T) {
 			if test.expectedStatus == 0 {
 				stateYAML, err := os.ReadFile(pki.FileState)
 				assert.NoError(t, err)
-				expectedStateYAML := strings.Replace(test.expectedStateYAML, "\t\t\t\t", "  ", -1)
-				expectedStateYAML = strings.Replace(expectedStateYAML, "\t\t\t", "", -1)
-				assert.Equal(t, expectedStateYAML, string(stateYAML))
+
+				expectedStateYAML, err := os.ReadFile(test.expectedStateFixture)
+				assert.NoError(t, err)
+				assert.Equal(t, string(expectedStateYAML), string(stateYAML))
 
 				specTOML, err := os.ReadFile(pki.FileSpec)
 				assert.NoError(t, err)
-				expectedSpecTOML := strings.Replace(test.expectedSpecTOML, "\t\t\t\t", "  ", -1)
-				expectedSpecTOML = strings.Replace(expectedSpecTOML, "\t\t\t", "", -1)
-				assert.Equal(t, expectedSpecTOML, string(specTOML))
+
+				expectedSpecTOML, err := os.ReadFile(test.expectedSpecFixture)
+				assert.NoError(t, err)
+				assert.Equal(t, string(expectedSpecTOML), string(specTOML))
 			}
 
 			err := util.DeleteAll("", pki.FileState, pki.FileSpec)

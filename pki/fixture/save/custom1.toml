@@ -1,0 +1,19 @@
+[root]
+  locality = ["Ottawa"]
+  organization = ["Moorara"]
+
+[intermediate]
+
+[server]
+  country = ["US"]
+  organization = ["Milad"]
+
+[client]
+
+[root_policy]
+  match = ["Organization"]
+  supplied = ["CommonName"]
+
+[intermediate_policy]
+
+[metadata]
