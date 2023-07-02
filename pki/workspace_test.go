@@ -3,7 +3,6 @@ package pki
 import (
 	"net"
 	"os"
-	"strings"
 	"testing"
 
 	"github.com/moorara/gocert/util"
@@ -12,25 +11,25 @@ import (
 
 type (
 	stateLoadTest struct {
-		yaml          string
+		fixture       string
 		expectError   bool
 		expectedState *State
 	}
 
 	stateSaveTest struct {
-		state        *State
-		expectedYAML string
+		state           *State
+		expectedFixture string
 	}
 
 	specLoadTest struct {
-		toml         string
+		fixture      string
 		expectError  bool
 		expectedSpec *Spec
 	}
 
 	specSaveTest struct {
-		spec         *Spec
-		expectedTOML string
+		spec            *Spec
+		expectedFixture string
 	}
 )
 
@@ -41,42 +40,33 @@ var (
 	}{
 		{
 			stateLoadTest{
-				`invalid yaml`,
-				true,
-				nil,
+				fixture:       "./fixture/load/invalid.yaml",
+				expectError:   true,
+				expectedState: nil,
 			},
 			specLoadTest{
-				`invalid toml`,
-				true,
-				nil,
+				fixture:      "./fixture/load/invalid.toml",
+				expectError:  true,
+				expectedSpec: nil,
 			},
 		},
 		{
 			stateLoadTest{
-				``,
-				false,
-				&State{},
+				fixture:       "./fixture/load/empty.yaml",
+				expectError:   false,
+				expectedState: &State{},
 			},
 			specLoadTest{
-				``,
-				false,
-				&Spec{},
+				fixture:      "./fixture/load/empty.toml",
+				expectError:  false,
+				expectedSpec: &Spec{},
 			},
 		},
 		{
 			stateLoadTest{
-				`
-				root:
-					serial: 10
-					length: 4096
-					days: 7300
-				intermediate:
-					serial: 100
-					length: 4096
-					days: 3650
-				`,
-				false,
-				&State{
+				fixture:     "./fixture/load/simple.yaml",
+				expectError: false,
+				expectedState: &State{
 					Root: Config{
 						Serial: 10,
 						Length: 4096,
@@ -90,18 +80,9 @@ var (
 				},
 			},
 			specLoadTest{
-				`
-				[root]
-					country = [ "CA" ]
-					organization = [ "Moorara" ]
-				[server]
-					country = [ "US" ]
-					organization = [ "Milad" ]
-					dns_name = [ "example.com" ]
-					email_address = [ "milad@example.com" ]
-				`,
-				false,
-				&Spec{
+				fixture:     "./fixture/load/simple.toml",
+				expectError: false,
+				expectedSpec: &Spec{
 					Root: Claim{
 						Country:      []string{"CA"},
 						Organization: []string{"Moorara"},
@@ -117,26 +98,9 @@ var (
 		},
 		{
 			stateLoadTest{
-				`
-				root:
-					serial: 10
-					length: 4096
-					days: 7300
-				intermediate:
-					serial: 100
-					length: 4096
-					days: 3650
-				server:
-					serial: 1000
-					length: 2048
-					days: 375
-				client:
-					serial: 10000
-					length: 2048
-					days: 40
-				`,
-				false,
-				&State{
+				fixture:     "./fixture/load/complex.yaml",
+				expectError: false,
+				expectedState: &State{
 					Root: Config{
 						Serial: 10,
 						Length: 4096,
@@ -160,45 +124,9 @@ var (
 				},
 			},
 			specLoadTest{
-				`
-				[root]
-					country = [ "CA", "US" ]
-					province = [ "Ontario", "Massachusetts" ]
-					locality = [ "Ottawa", "Boston" ]
-					organization = [ "Moorara" ]
-				[intermediate]
-					country = [ "CA" ]
-					province = [ "Ontario" ]
-					locality = [ "Ottawa" ]
-					organization = [ "Moorara" ]
-					email_address = [ "moorara@example.com" ]
-				[server]
-					country = [ "US" ]
-					province = [ "Virginia" ]
-					locality = [ "Richmond" ]
-					organization = [ "Moorara" ]
-					dns_name = [ "example.com" ]
-					ip_address = [ "127.0.0.1" ]
-					email_address = [ "moorara@example.com" ]
-				[client]
-					country = [ "UK" ]
-					locality = [ "London" ]
-					organization = [ "Moorara" ]
-					email_address = [ "moorara@example.com" ]
-				[root_policy]
-					match = ["Country", "Organization"]
-					supplied = ["CommonName"]
-				[intermediate_policy]
-					match = ["Organization"]
-					supplied = ["CommonName"]
-				[metadata]
-					RootSkip = ["IPAddress", "StreetAddress", "PostalCode"]
-					IntermSkip = ["IPAddress", "StreetAddress", "PostalCode"]
-					ServerSkip = ["StreetAddress", "PostalCode"]
-					ClientSkip = ["StreetAddress", "PostalCode"]
-				`,
-				false,
-				&Spec{
+				fixture:     "./fixture/load/complex.toml",
+				expectError: false,
+				expectedSpec: &Spec{
 					Root: Claim{
 						Country:      []string{"CA", "US"},
 						Province:     []string{"Ontario", "Massachusetts"},
@@ -252,97 +180,37 @@ var (
 	}{
 		{
 			stateSaveTest{
-				nil,
-				``,
+				state:           nil,
+				expectedFixture: "./fixture/save/empty.yaml",
 			},
 			specSaveTest{
-				nil,
-				``,
+				spec:            nil,
+				expectedFixture: "./fixture/save/empty.toml",
 			},
 		},
 		{
 			stateSaveTest{
-				&State{},
-				`root:
-					serial: 0
-					length: 0
-					days: 0
-				intermediate:
-					serial: 0
-					length: 0
-					days: 0
-				server:
-					serial: 0
-					length: 0
-					days: 0
-				client:
-					serial: 0
-					length: 0
-					days: 0
-				`,
+				state:           &State{},
+				expectedFixture: "./fixture/save/zero.yaml",
 			},
 			specSaveTest{
-				&Spec{},
-				`[root]
-
-				[intermediate]
-
-				[server]
-
-				[client]
-
-				[root_policy]
-
-				[intermediate_policy]
-				`,
+				spec:            &Spec{},
+				expectedFixture: "./fixture/save/zero.toml",
 			},
 		},
 		{
 			stateSaveTest{
-				NewState(),
-				`root:
-					serial: 10
-					length: 4096
-					days: 7300
-				intermediate:
-					serial: 100
-					length: 4096
-					days: 3650
-				server:
-					serial: 1000
-					length: 2048
-					days: 375
-				client:
-					serial: 10000
-					length: 2048
-					days: 40
-				`,
+				state:           NewState(),
+				expectedFixture: "./fixture/save/default.yaml",
 			},
 			specSaveTest{
-				NewSpec(),
-				`[root]
-
-				[intermediate]
-
-				[server]
-
-				[client]
-
-				[root_policy]
-					match = []
-					supplied = ["CommonName"]
-
-				[intermediate_policy]
-					match = []
-					supplied = ["CommonName"]
-
-				[metadata]
-				`,
+				spec:            NewSpec(),
+				expectedFixture: "./fixture/save/default.toml",
 			},
 		},
 		{
 			stateSaveTest{
-				&State{
+				state: &State{
 					Root: Config{
 						Serial: 10,
 						Length: 4096,
@@ -354,26 +222,10 @@ var (
 						Days:   3650,
 					},
 				},
-				`root:
-					serial: 10
-					length: 4096
-					days: 7300
-				intermediate:
-					serial: 100
-					length: 4096
-					days: 3650
-				server:
-					serial: 0
-					length: 0
-					days: 0
-				client:
-					serial: 0
-					length: 0
-					days: 0
-				`,
+				expectedFixture: "./fixture/save/custom1.yaml",
 			},
 			specSaveTest{
-				&Spec{
+				spec: &Spec{
 					Root: Claim{
 						Locality:     []string{"Ottawa"},
 						Organization: []string{"Moorara"},
@@ -389,31 +241,12 @@ var (
 					},
 					Metadata: Metadata{},
 				},
-				`[root]
-					locality = ["Ottawa"]
-					organization = ["Moorara"]
-
-				[intermediate]
-
-				[server]
-					country = ["US"]
-					organization = ["Milad"]
-
-				[client]
-
-				[root_policy]
-					match = ["Organization"]
-					supplied = ["CommonName"]
-
-				[intermediate_policy]
-
-				[metadata]
-				`,
+				expectedFixture: "./fixture/save/custom1.toml",
 			},
 		},
 		{
 			stateSaveTest{
-				&State{
+				state: &State{
 					Root: Config{
 						Serial: 10,
 						Length: 4096,
@@ -435,26 +268,10 @@ var (
 						Days:   40,
 					},
 				},
-				`root:
-					serial: 10
-					length: 4096
-					days: 7300
-				intermediate:
-					serial: 100
-					length: 4096
-					days: 3650
-				server:
-					serial: 1000
-					length: 2048
-					days: 375
-				client:
-					serial: 10000
-					length: 2048
-					days: 40
-				`,
+				expectedFixture: "./fixture/save/custom2.yaml",
 			},
 			specSaveTest{
-				&Spec{
+				spec: &Spec{
 					Root: Claim{
 						Country:      []string{"CA", "US"},
 						Province:     []string{"Ontario", "Massachusetts"},
@@ -493,80 +310,42 @@ var (
 						"ClientSkip": []string{"StreetAddress", "PostalCode"},
 					},
 				},
-				`[root]
-					country = ["CA", "US"]
-					province = ["Ontario", "Massachusetts"]
-					locality = ["Ottawa", "Boston"]
-					organization = ["Moorara"]
-
-				[intermediate]
-					country = ["CA"]
-					province = ["Ontario"]
-					locality = ["Ottawa"]
-					organization = ["Moorara"]
-
-				[server]
-					country = ["US"]
-					province = ["Virginia"]
-					locality = ["Richmond"]
-					organization = ["Moorara"]
-
-				[client]
-					country = ["UK"]
-					locality = ["London"]
-					organization = ["Moorara"]
-
-				[root_policy]
-					match = ["Country", "Organization"]
-					supplied = ["CommonName"]
-
-				[intermediate_policy]
-					match = ["Organization"]
-					supplied = ["CommonName"]
-
-				[metadata]
-					ClientSkip = ["StreetAddress", "PostalCode"]
-					IntermSkip = ["IPAddress", "StreetAddress", "PostalCode"]
-					RootSkip = ["IPAddress", "StreetAddress", "PostalCode"]
-					ServerSkip = ["StreetAddress", "PostalCode"]
-				`,
+				expectedFixture: "./fixture/save/custom2.toml",
 			},
 		},
 	}
 )
 
-func verifyStateFile(t *testing.T, stateFile, expectedYAML string) {
-	if expectedYAML == "" {
-		return
-	}
-
-	stateData, err := os.ReadFile(stateFile)
+func verifyStateFile(t *testing.T, expectedFixture, stateFile string) {
+	expectedStateYAML, err := os.ReadFile(expectedFixture)
 	assert.NoError(t, err)
 
-	expectedYAML = strings.Replace(expectedYAML, "\t\t\t\t", "", -1)
-	expectedYAML = strings.Replace(expectedYAML, "\t", "  ", -1)
+	if len(expectedStateYAML) > 0 {
+		stateYAML, err := os.ReadFile(stateFile)
+		assert.NoError(t, err)
 
-	assert.Equal(t, expectedYAML, string(stateData))
+		assert.Equal(t, string(expectedStateYAML), string(stateYAML))
+	}
 }
 
-func verifySpecFile(t *testing.T, specFile, expectedTOML string) {
-	if expectedTOML == "" {
-		return
-	}
-
-	specData, err := os.ReadFile(specFile)
+func verifySpecFile(t *testing.T, expectedFixture, specFile string) {
+	expectedSpecTOML, err := os.ReadFile(expectedFixture)
 	assert.NoError(t, err)
 
-	expectedTOML = strings.Replace(expectedTOML, "\t\t\t\t", "", -1)
-	expectedTOML = strings.Replace(expectedTOML, "\t", "  ", -1)
+	if len(expectedSpecTOML) > 0 {
+		specTOML, err := os.ReadFile(specFile)
+		assert.NoError(t, err)
 
-	assert.Equal(t, expectedTOML, string(specData))
+		assert.Equal(t, string(expectedSpecTOML), string(specTOML))
+	}
 }
 
 func TestLoadState(t *testing.T) {
 	for _, test := range loadTests {
-		yaml := strings.Replace(test.state.yaml, "\t", "  ", -1)
-		file, delete, err := util.CreateTempFile(yaml)
+		stateYAML, err := os.ReadFile(test.state.fixture)
+		assert.NoError(t, err)
+
+		file, delete, err := util.CreateTempFile(string(stateYAML))
 		defer delete()
 		assert.NoError(t, err)
 
@@ -597,17 +376,13 @@ func TestSaveState(t *testing.T) {
 		err = SaveState(test.state.state, file)
 		assert.NoError(t, err)
 
-		verifyStateFile(t, file, test.state.expectedYAML)
+		verifyStateFile(t, test.state.expectedFixture, file)
 	}
 }
 
 func TestLoadSpec(t *testing.T) {
 	for _, test := range loadTests {
-		file, delete, err := util.CreateTempFile(test.spec.toml)
-		defer delete()
-		assert.NoError(t, err)
-
-		spec, err := LoadSpec(file)
+		spec, err := LoadSpec(test.spec.fixture)
 
 		if test.spec.expectError {
 			assert.Error(t, err)
@@ -628,7 +403,7 @@ func TestSaveSpec(t *testing.T) {
 		err = SaveSpec(test.spec.spec, file)
 		assert.NoError(t, err)
 
-		verifySpecFile(t, file, test.spec.expectedTOML)
+		verifySpecFile(t, test.spec.expectedFixture, file)
 	}
 }
 
@@ -637,20 +412,23 @@ func TestNewWorkspace(t *testing.T) {
 		err := NewWorkspace(test.state.state, test.spec.spec)
 		assert.NoError(t, err)
 
-		verifyStateFile(t, FileState, test.state.expectedYAML)
-		verifySpecFile(t, FileSpec, test.spec.expectedTOML)
+		verifyStateFile(t, test.state.expectedFixture, FileState)
+		verifySpecFile(t, test.spec.expectedFixture, FileSpec)
 
-		err = CleanupWorkspace()
-		assert.NoError(t, err)
+		assert.NoError(t, CleanupWorkspace())
 	}
 }
 
 func TestLoadWorkspace(t *testing.T) {
 	for _, test := range loadTests {
-		yaml := strings.Replace(test.state.yaml, "\t", "  ", -1)
-		err := os.WriteFile(FileState, []byte(yaml), 0644)
+		stateYAML, err := os.ReadFile(test.state.fixture)
 		assert.NoError(t, err)
-		err = os.WriteFile(FileSpec, []byte(test.spec.toml), 0644)
+		err = os.WriteFile(FileState, stateYAML, 0644)
+		assert.NoError(t, err)
+
+		specTOML, err := os.ReadFile(test.spec.fixture)
+		assert.NoError(t, err)
+		err = os.WriteFile(FileSpec, specTOML, 0644)
 		assert.NoError(t, err)
 
 		state, spec, err := LoadWorkspace()
@@ -663,8 +441,7 @@ func TestLoadWorkspace(t *testing.T) {
 			assert.Equal(t, test.spec.expectedSpec, spec)
 		}
 
-		err = CleanupWorkspace()
-		assert.NoError(t, err)
+		assert.NoError(t, CleanupWorkspace())
 	}
 }
 
@@ -673,11 +450,10 @@ func TestSaveWorkspace(t *testing.T) {
 		err := SaveWorkspace(test.state.state, test.spec.spec)
 		assert.NoError(t, err)
 
-		verifyStateFile(t, FileState, test.state.expectedYAML)
-		verifySpecFile(t, FileSpec, test.spec.expectedTOML)
+		verifyStateFile(t, test.state.expectedFixture, FileState)
+		verifySpecFile(t, test.spec.expectedFixture, FileSpec)
 
-		err = CleanupWorkspace()
-		assert.NoError(t, err)
+		assert.NoError(t, CleanupWorkspace())
 	}
 }
 
@@ -724,7 +500,6 @@ func TestCleanupWorkspace(t *testing.T) {
 			assert.NoError(t, err)
 		}
 
-		err = CleanupWorkspace()
-		assert.NoError(t, err)
+		assert.NoError(t, CleanupWorkspace())
 	}
 }

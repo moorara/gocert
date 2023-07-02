@@ -5,7 +5,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/moorara/gocert/util"
-	yaml "gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v3"
 )
 
 // LoadState reads and parses state from a YAML file

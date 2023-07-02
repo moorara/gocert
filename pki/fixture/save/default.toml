@@ -1,0 +1,17 @@
+[root]
+
+[intermediate]
+
+[server]
+
+[client]
+
+[root_policy]
+  match = []
+  supplied = ["CommonName"]
+
+[intermediate_policy]
+  match = []
+  supplied = ["CommonName"]
+
+[metadata]

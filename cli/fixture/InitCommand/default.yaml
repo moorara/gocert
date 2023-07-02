@@ -1,0 +1,16 @@
+root:
+    serial: 10
+    length: 4096
+    days: 7300
+intermediate:
+    serial: 100
+    length: 4096
+    days: 3650
+server:
+    serial: 1000
+    length: 2048
+    days: 375
+client:
+    serial: 10000
+    length: 2048
+    days: 40
