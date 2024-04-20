@@ -10,9 +10,9 @@ codecov:
 # See https://docs.codecov.com/docs/codecovyml-reference#coverage
 # See https://docs.codecov.com/docs/coverage-configuration
 coverage:
-  precision: 2
-  round: down
   range: '75...95'
+  round: down
+  precision: 2
 
   # See https://docs.codecov.com/docs/codecovyml-reference#coveragestatus
   # See https://docs.codecov.com/docs/commit-status
@@ -43,4 +43,4 @@ comment: false
 
 # See https://docs.codecov.com/docs/ignoring-paths
 ignore:
-  - 'metadata/**/*'
+  - "metadata/**/*"
