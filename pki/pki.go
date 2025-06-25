@@ -1,3 +1,4 @@
+// Package pki provides functions to generate and manage certificates and certificate requests.
 package pki
 
 import (
@@ -184,7 +185,7 @@ func readCertificateRequest(path string) (*x509.CertificateRequest, error) {
 func writeCertificateChain(c, cCA Cert) error {
 	// Only an intermediate ca needs a certificate chain
 	if c.Type != CertTypeInterm {
-		return errors.New("Only intermediate CAs have certificate chain")
+		return errors.New("only intermediate CAs have certificate chain")
 	}
 
 	// CA can only be root or another intermediate

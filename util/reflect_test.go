@@ -48,7 +48,7 @@ func newMockUI(r io.Reader) *mockUI {
 }
 
 func (u *mockUI) Ask(query string) (string, error) {
-	fmt.Fprint(u.MockUi.OutputWriter, query)
+	_, _ = fmt.Fprint(u.MockUi.OutputWriter, query)
 	line, err := u.reader.ReadString('\n')
 	if err != nil {
 		return "", err

@@ -78,7 +78,8 @@ func PipeStdout() (outR, outW *os.File, restore func(), err error) {
 func ReadFromStdoutPipe(outR, outW *os.File, str string) (string, error) {
 	var buf bytes.Buffer
 
-	fmt.Fprint(os.Stdout, str)
+	_, _ = fmt.Fprint(os.Stdout, str)
+
 	err := outW.Close()
 	if err != nil {
 		return "", err

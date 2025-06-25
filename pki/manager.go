@@ -34,7 +34,7 @@ func NewX509Manager() Manager {
 
 func checkName(name string) error {
 	if name == "" {
-		return errors.New("Name is not set")
+		return errors.New("name is not set")
 	}
 
 	pattern := "./*/" + name + ".*"
@@ -91,7 +91,7 @@ func (m *x509Manager) GenCert(config Config, claim Claim, c Cert) error {
 		EmailAddresses: claim.EmailAddress,
 
 		BasicConstraintsValid: true,
-		IsCA: true,
+		IsCA:                  true,
 
 		SubjectKeyId:   subjectKeyID,
 		AuthorityKeyId: subjectKeyID,
@@ -284,7 +284,7 @@ func (m *x509Manager) SignCSR(configCA Config, cCA Cert, configCSR Config, cCSR 
 // VerifyCert verifies a certificate using a ceritifcate authority
 func (m *x509Manager) VerifyCert(cCA, c Cert, dnsName string) error {
 	if cCA.Type != CertTypeRoot && cCA.Type != CertTypeInterm {
-		return errors.New("Certificate authority is invalid")
+		return errors.New("certificate authority is invalid")
 	}
 
 	chain, err := readCertificateChain(cCA.ChainPath())

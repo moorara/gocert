@@ -393,7 +393,7 @@ func TestResolveByName(t *testing.T) {
 			c := resolveByName(test.name)
 			assert.Equal(t, test.expectedCert, c)
 
-			os.Remove(test.keyFile)
+			assert.NoError(t, os.Remove(test.keyFile))
 		})
 	}
 }

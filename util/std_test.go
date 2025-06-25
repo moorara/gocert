@@ -105,8 +105,8 @@ func TestPipeStdoutAndStderr(t *testing.T) {
 		r, w, restore, err := PipeStdoutAndStderr()
 		assert.NoError(t, err)
 
-		fmt.Fprint(os.Stdout, tc.out)
-		fmt.Fprint(os.Stderr, tc.err)
+		_, _ = fmt.Fprint(os.Stdout, tc.out)
+		_, _ = fmt.Fprint(os.Stderr, tc.err)
 
 		err = w.Close()
 		assert.NoError(t, err)

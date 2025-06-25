@@ -34,7 +34,7 @@ func MkDirs(basePath string, dirs ...string) (func(), error) {
 	items := make([]string, 0)
 	deleteFunc := func() {
 		for _, item := range items {
-			os.RemoveAll(item)
+			_ = os.RemoveAll(item)
 		}
 	}
 
@@ -71,7 +71,7 @@ func CreateTempFile(content string) (string, func(), error) {
 
 	filePath := file.Name()
 	deleteFunc := func() {
-		os.Remove(filePath)
+		_ = os.Remove(filePath)
 	}
 
 	return filePath, deleteFunc, nil
